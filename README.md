@@ -1,10 +1,5 @@
-# CourtCheck
+# # Tennis Bounds Project | CourtCheck
 CourtCheck is a computer vision project aimed at detecting and tracking tennis court boundaries and ball movements. Utilizing advanced technologies such as YOLOv5, TrackNet, and Detectron2, this project integrates multiple models to deliver precise court detection and ball tracking capabilities.
-
-# Tennis Bounds Project
-
-## Introduction
-This project aims to detect tennis court boundaries and track ball movements using deep learning techniques. The model is trained using a dataset of annotated tennis games.
 
 ## Workflow Overview
 1. **Data Preparation:** 
