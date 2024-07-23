@@ -23,15 +23,3 @@ import cv2
 import torch
 import torchvision
 import time
-
-# Google Colab imports
-try:
-    from google.colab import drive
-
-    drive.mount("/content/drive")
-
-    from google.colab.patches import cv2_imshow
-except ImportError:
-    pass
-
-# Any other shared setup or configuration can go here
