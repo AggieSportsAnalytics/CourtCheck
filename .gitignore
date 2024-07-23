@@ -1,0 +1,6 @@
+# Ignore raw images
+/data/raw
+
+# Ignore model files
+models/TrackNet/model_best.pt
+models/court_detection/model_final.pth
