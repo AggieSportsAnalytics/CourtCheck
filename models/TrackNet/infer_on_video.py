@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-import torch
-from model import BallTrackerNet
-=======
 from model import BallTrackerNet
 import torch
->>>>>>> origin/main
 import cv2
 from general import postprocess
 from tqdm import tqdm
@@ -13,11 +8,6 @@ import argparse
 from itertools import groupby
 from scipy.spatial import distance
 
-<<<<<<< HEAD
-=======
-path_video = "/Users/macbookairm1/Documents/ASA_s2024/old_CourtCheck/post_processing_game1_session9.mp4"
-
->>>>>>> origin/main
 
 def read_video(path_video):
     """Read video file
@@ -142,11 +132,8 @@ def interpolation(coords):
     nons, yy = nan_helper(x)
     x[nons] = np.interp(yy(nons), yy(~nons), x[~nons])
     nans, xx = nan_helper(y)
-<<<<<<< HEAD
-    y[nans] = np.interp(xx(nans), xx(~nons), y[~nons])
-=======
+
     y[nans] = np.interp(xx(nans), xx(~nans), y[~nans])
->>>>>>> origin/main
 
     track = [*zip(x, y)]
     return track
@@ -196,11 +183,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model = BallTrackerNet()
-<<<<<<< HEAD
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-=======
-    device = "cuda"
->>>>>>> origin/main
+
     model.load_state_dict(torch.load(args.model_path, map_location=device))
     model = model.to(device)
     model.eval()

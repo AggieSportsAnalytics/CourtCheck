@@ -6,6 +6,7 @@ numpy
 pandas
 scipy
 tensorboardX
+torch torchvision torchaudio
 
 # Add other dependencies here
 git+https://github.com/facebookresearch/detectron2.git
