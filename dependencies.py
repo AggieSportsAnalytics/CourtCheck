@@ -10,16 +10,18 @@ from detectron2.config import get_cfg
 from detectron2.data.datasets import register_coco_instances
 from detectron2 import model_zoo
 from detectron2.evaluation import COCOEvaluator
+from detectron2.config import get_cfg
 
 # Other imports
 from collections import defaultdict, deque
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 import numpy as np
 import logging
-import os
 import json
 import random
 import cv2
 import torch
 import torchvision
 import time
+import os

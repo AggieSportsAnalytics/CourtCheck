@@ -1,7 +1,9 @@
 # Ignore raw images
 /data/raw
 
-# Ignore model files
-models/TrackNet/model_best.pt
-models/court_detection/model_final.pth
+# Ignore processed images
+/data/processed
 
+# Ignore model files
+models/model_weights/tracknet_weights.pt
+models/model_weights/court_detection_weights.pth
