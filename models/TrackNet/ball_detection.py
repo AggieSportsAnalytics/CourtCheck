@@ -5,10 +5,10 @@ from general import postprocess
 from tqdm import tqdm
 import numpy as np
 from scipy.spatial import distance
-from itertools import groupby  # Add this import
+from itertools import groupby
 from model import BallTrackerNet
 
-tracknet_weights_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/tracknet/weights/tracknet_weights.pth"
+tracknet_weights_path = "CourtCheck/models/tracknet/weights/tracknet.pth"
 
 
 def load_tracknet_model(tracknet_weights_path):
