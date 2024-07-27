@@ -1,40 +1,12 @@
-# ball_detection.py
+from model import BallTrackerNet
 import torch
 import cv2
 from general import postprocess
 from tqdm import tqdm
 import numpy as np
-from scipy.spatial import distance
+import argparse
 from itertools import groupby
-from model import BallTrackerNet
-
-tracknet_weights_path = "CourtCheck/models/tracknet/weights/tracknet.pth"
-
-
-def load_tracknet_model(tracknet_weights_path):
-    model = BallTrackerNet()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.load_state_dict(torch.load(tracknet_weights_path, map_location=device))
-    model = model.to(device)
-    model.eval()
-    return model, device
-
-
-def detect_ball(tracknet_model, device, frame, prev_frame, prev_prev_frame):
-    height = 360
-    width = 640
-    img = cv2.resize(frame, (width, height))
-    img_prev = cv2.resize(prev_frame, (width, height))
-    img_preprev = cv2.resize(prev_prev_frame, (width, height))
-    imgs = np.concatenate((img, img_prev, img_preprev), axis=2)
-    imgs = imgs.astype(np.float32) / 255.0
-    imgs = np.rollaxis(imgs, 2, 0)
-    inp = np.expand_dims(imgs, axis=0)
-
-    out = tracknet_model(torch.from_numpy(inp).float().to(device))
-    output = out.argmax(dim=1).detach().cpu().numpy()
-    x_pred, y_pred = postprocess(output)
-    return x_pred, y_pred
+from scipy.spatial import distance
 
 
 def read_video(path_video):
@@ -50,6 +22,33 @@ def read_video(path_video):
             break
     cap.release()
     return frames, fps
+
+
+def infer_model(frames, model, device):
+    height = 360
+    width = 640
+    dists = [-1] * 2
+    ball_track = [(None, None)] * 2
+    for num in tqdm(range(2, len(frames))):
+        img = cv2.resize(frames[num], (width, height))
+        img_prev = cv2.resize(frames[num - 1], (width, height))
+        img_preprev = cv2.resize(frames[num - 2], (width, height))
+        imgs = np.concatenate((img, img_prev, img_preprev), axis=2)
+        imgs = imgs.astype(np.float32) / 255.0
+        imgs = np.rollaxis(imgs, 2, 0)
+        inp = np.expand_dims(imgs, axis=0)
+
+        out = model(torch.from_numpy(inp).float().to(device))
+        output = out.argmax(dim=1).detach().cpu().numpy()
+        x_pred, y_pred = postprocess(output)
+        ball_track.append((x_pred, y_pred))
+
+        if ball_track[-1][0] and ball_track[-2][0]:
+            dist = distance.euclidean(ball_track[-1], ball_track[-2])
+        else:
+            dist = -1
+        dists.append(dist)
+    return ball_track, dists
 
 
 def remove_outliers(ball_track, dists, max_dist=100):
@@ -93,8 +92,62 @@ def interpolation(coords):
     nons, yy = nan_helper(x)
     x[nons] = np.interp(yy(nons), yy(~nons), x[~nons])
     nans, xx = nan_helper(y)
-
-    y[nans] = np.interp(xx(nans), xx(~nons), y[~nons])
+    y[nans] = np.interp(xx(nans), xx(~nans), y[~nans])
 
     track = [*zip(x, y)]
     return track
+
+
+def write_track(frames, ball_track, path_output_video, fps, trace=7):
+    height, width = frames[0].shape[:2]
+    out = cv2.VideoWriter(
+        path_output_video, cv2.VideoWriter_fourcc(*"DIVX"), fps, (width, height)
+    )
+    for num in range(len(frames)):
+        frame = frames[num]
+        for i in range(trace):
+            if num - i > 0:
+                if ball_track[num - i][0]:
+                    x = int(ball_track[num - i][0])
+                    y = int(ball_track[num - i][1])
+                    frame = cv2.circle(
+                        frame, (x, y), radius=0, color=(0, 255, 255), thickness=10 - i
+                    )
+                else:
+                    break
+        out.write(frame)
+    out.release()
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--batch_size", type=int, default=2, help="batch size")
+    parser.add_argument("--model_path", type=str, help="path to model")
+    parser.add_argument("--video_path", type=str, help="path to input video")
+    parser.add_argument("--video_out_path", type=str, help="path to output video")
+    parser.add_argument(
+        "--extrapolation",
+        action="store_true",
+        help="whether to use ball track extrapolation",
+    )
+    args = parser.parse_args()
+
+    model = BallTrackerNet()
+    device = "cuda"
+    model.load_state_dict(torch.load(args.model_path, map_location=device))
+    model = model.to(device)
+    model.eval()
+
+    frames, fps = read_video(args.video_path)
+    ball_track, dists = infer_model(frames, model, device)
+    ball_track = remove_outliers(ball_track, dists)
+
+    if args.extrapolation:
+        subtracks = split_track(ball_track)
+        for r in subtracks:
+            ball_subtrack = ball_track[r[0] : r[1]]
+            ball_subtrack = interpolation(ball_subtrack)
+            ball_track[r[0] : r[1]] = ball_subtrack
+
+    write_track(frames, ball_track, args.video_out_path, fps)
