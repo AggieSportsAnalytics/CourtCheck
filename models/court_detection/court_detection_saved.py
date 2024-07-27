@@ -1,14 +1,7 @@
 import sys
 import os
 import warnings
-import logging
-import cv2
-import numpy as np
-from collections import deque
-from detectron2.utils.visualizer import Visualizer, ColorMode
-from detectron2.data import MetadataCatalog
-from detectron2.engine import DefaultPredictor
-from detectron2.config import get_cfg
+
 
 # Ignore the specific warning
 warnings.filterwarnings(
@@ -23,6 +16,7 @@ sys.path.append(courtcheck_path)
 # Now import dependencies
 try:
     from dependencies import *
+
 except ImportError as e:
     print(f"Error importing dependencies: {e}")
 
@@ -122,12 +116,9 @@ def stabilize_keypoints(keypoints):
     stabilized_keypoints = []
     for i, keypoint in enumerate(keypoints):
         keypoint_history[keypoint_names[i]].append(keypoint[:2])
-        if len(keypoint_history[keypoint_names[i]]) > 1:
-            stabilized_keypoints.append(
-                np.mean(np.array(keypoint_history[keypoint_names[i]]), axis=0)
-            )
-        else:
-            stabilized_keypoints.append(keypoint[:2])
+        stabilized_keypoints.append(
+            np.mean(keypoint_history[keypoint_names[i]], axis=0)
+        )
     return np.array(stabilized_keypoints)
 
 
@@ -233,3 +224,49 @@ def visualize_predictions_with_lines(img, predictor, keypoint_names, lines):
         )
 
     return img_copy
+
+
+def process_video(video_path, output_path, predictor, keypoint_names, lines):
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        logger.error(f"Error opening video file {video_path}")
+        return
+
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    with tqdm(total=frame_count, desc="Processing video frames", unit="frame") as pbar:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            processed_frame = visualize_predictions_with_lines(
+                frame, predictor, keypoint_names, lines
+            )
+            out.write(processed_frame)
+            pbar.update(1)
+
+    cap.release()
+    out.release()
+    logger.info(f"Processed video saved to {output_path}")
+    print(f"Processed video saved to {output_path}")
+
+
+def main():
+    config_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/court_detection/configs/COCO-Keypoints/keypoint_rcnn_R_50_FPN_3x.yaml"
+    model_weights = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/model_weights/court_detection_weights.pth"
+    video_path = "/Users/macbookairm1/Documents/ASA_s2024/.25s_game1.mp4"  # Change this to the path of the input video
+    output_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/data/processed/game1_short_clip_2Dskeleton_v14.mp4"
+
+    predictor = load_model(config_path, model_weights)
+    process_video(video_path, output_path, predictor, keypoint_names, lines)
+
+
+if __name__ == "__main__":
+    main()

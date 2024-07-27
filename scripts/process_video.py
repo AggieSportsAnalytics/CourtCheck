@@ -1,26 +1,16 @@
 import sys
 import os
 import warnings
+import logging
 import cv2
 import numpy as np
-from collections import deque
+import torch
 from tqdm import tqdm
 from detectron2.utils.visualizer import Visualizer, ColorMode
 from detectron2.data import MetadataCatalog
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
-import torch
-
-# Ignore the specific warning
-warnings.filterwarnings(
-    "ignore", category=UserWarning, message="torch.meshgrid: in an upcoming release"
-)
-
-# Absolute path to the CourtCheck directory
-# Ignore the specific warning
-warnings.filterwarnings(
-    "ignore", category=UserWarning, message="torch.meshgrid: in an upcoming release"
-)
+from scipy.spatial import distance
 
 # Absolute path to the CourtCheck directory
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
@@ -35,128 +25,48 @@ sys.path.append(tracknet_path)
 court_detection_path = os.path.join(root_dir, "CourtCheck/models/court_detection")
 sys.path.append(court_detection_path)
 
-# Now add the path to ball_detection.py directly
-ball_detection_path = os.path.join(root_dir, "CourtCheck/models/tracknet")
-sys.path.append(ball_detection_path)
+from court_detection import (
+    load_model as load_court_model,
+    lines,
+    keypoint_names,
+    stabilize_keypoints,
+    transform_keypoints_to_2d,
+    visualize_2d_court_skeleton,
+    visualize_predictions_with_lines,
+)
 
-# Now import dependencies
-try:
-    from dependencies import *
-    from ball_detection import (
-        load_tracknet_model,
-        detect_ball,
-        read_video,
-        remove_outliers,
-        split_track,
-        interpolation,
-    )
-except ImportError as e:
-    print(f"Error importing dependencies: {e}")
+from ball_detection import (
+    postprocess,
+    BallTrackerNet,
+    infer_video,
+    read_video,
+    remove_outliers,
+    split_track,
+    interpolation,
+)
+
+
+def load_tracknet_model(tracknet_weights_path):
+    model = BallTrackerNet()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.load_state_dict(torch.load(tracknet_weights_path, map_location=device))
+    model = model.to(device)
+    model.eval()
+    return model, device
+
+
+warnings.filterwarnings(
+    "ignore", category=UserWarning, message="torch.meshgrid: in an upcoming release"
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Define keypoint names, flip map, and skeleton
-keypoint_names = [
-    "BTL",
-    "BTLI",
-    "BTRI",
-    "BTR",
-    "BBR",
-    "BBRI",
-    "IBR",
-    "NR",
-    "NM",
-    "ITL",
-    "ITM",
-    "ITR",
-    "NL",
-    "BBL",
-    "IBL",
-    "IBM",
-    "BBLI",
-]
 
-keypoint_flip_map = [
-    ("BTL", "BTR"),
-    ("BTLI", "BTRI"),
-    ("BBL", "BBR"),
-    ("BBLI", "BBRI"),
-    ("ITL", "ITR"),
-    ("ITM", "ITM"),
-    ("NL", "NR"),
-    ("IBL", "IBR"),
-    ("IBM", "IBM"),
-    ("NM", "NM"),
-]
-
-skeleton = []
-
-lines = [
-    ("BTL", "BTLI"),
-    ("BTLI", "BTRI"),
-    ("BTL", "NL"),
-    ("BTLI", "ITL"),
-    ("BTRI", "BTR"),
-    ("BTR", "NR"),
-    ("BTRI", "ITR"),
-    ("ITL", "ITM"),
-    ("ITM", "ITR"),
-    ("ITL", "IBL"),
-    ("ITM", "NM"),
-    ("ITR", "IBR"),
-    ("NL", "NM"),
-    ("NL", "BBL"),
-    ("NM", "IBM"),
-    ("NR", "BBR"),
-    ("NM", "NR"),
-    ("IBL", "IBM"),
-    ("IBM", "IBR"),
-    ("IBL", "BBLI"),
-    ("IBR", "BBRI"),
-    ("BBR", "BBRI"),
-    ("BBRI", "BBLI"),
-    ("BBL", "BBLI"),
-]
-
-line_colors = [(0, 255, 0)] * len(lines)
-
-keypoint_history = {name: deque(maxlen=10) for name in keypoint_names}
-
-
-# Utility function to load the trained model
-def load_court_model(config_path, model_weights):
-    cfg = get_cfg()
-    cfg.merge_from_file(config_path)
-    cfg.MODEL.WEIGHTS = model_weights
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
-    cfg.MODEL.ROI_HEADS.NUM_CLASSES = (
-        11  # Ensure the number of classes matches your dataset
-    )
-    cfg.MODEL.KEYPOINT_ON = True
-    cfg.MODEL.DEVICE = "cpu"  # Use CPU
-
-    MetadataCatalog.get("tennis_game_train").keypoint_names = keypoint_names
-    MetadataCatalog.get("tennis_game_train").keypoint_flip_map = keypoint_flip_map
-    MetadataCatalog.get("tennis_game_train").keypoint_connection_rules = skeleton
-
-    predictor = DefaultPredictor(cfg)
-    return predictor
-
-
-def stabilize_keypoints(keypoints):
-    stabilized_keypoints = []
-    for i, keypoint in enumerate(keypoints):
-        keypoint_history[keypoint_names[i]].append(keypoint[:2])
-        stabilized_keypoints.append(
-            np.mean(keypoint_history[keypoint_names[i]], axis=0)
-        )
-    return np.array(stabilized_keypoints)
-
-
-def transform_keypoints_to_2d(keypoints):
+def transform_ball_position_to_2d(x, y, stabilized_keypoints):
     keypoint_dict = {
-        keypoint_names[i]: keypoints[i, :2] for i in range(len(keypoint_names))
+        keypoint_names[i]: stabilized_keypoints[i, :2]
+        for i in range(len(keypoint_names))
     }
     src_points = np.array(
         [
@@ -168,157 +78,129 @@ def transform_keypoints_to_2d(keypoints):
         dtype=np.float32,
     )
     dst_points = np.array(
-        [[21, 47], [273, 47], [21, 509], [273, 509]], dtype=np.float32
+        [[17, 37], [217, 37], [17, 407], [217, 407]], dtype=np.float32
     )
     matrix = cv2.getPerspectiveTransform(src_points, dst_points)
-    transformed_keypoints = cv2.perspectiveTransform(keypoints[None, :, :2], matrix)[0]
-    return transformed_keypoints, matrix
+    ball_pos = np.array([[x, y]], dtype=np.float32).reshape(-1, 1, 2)
+    transformed_ball_pos = cv2.perspectiveTransform(ball_pos, matrix)
+    return transformed_ball_pos[0][0]
 
 
-def transform_ball_position_to_2d(ball_position, matrix):
-    ball_position = np.array([[ball_position]], dtype=np.float32)
-    transformed_ball_position = cv2.perspectiveTransform(ball_position, matrix)
-    return transformed_ball_position[0, 0]
+def combine_results(frames, court_predictor, tracknet_model, device):
+    combined_frames = []
+    dists = [-1] * 2
+    ball_track = [(None, None)] * 2
 
+    for i in tqdm(
+        range(2, len(frames)), desc="Combining results", position=0, leave=True
+    ):
+        frame = frames[i]
+        prev_frame = frames[i - 1]
+        prev_prev_frame = frames[i - 2]
 
-def visualize_2d_court_skeleton(transformed_keypoints, lines, ball_position=None):
-    blank_image = np.zeros((490, 280, 3), np.uint8)
-    start_x = 25
-    start_y = 25
-    end_x = blank_image.shape[1] - 25
-    end_y = blank_image.shape[0] - 25
+        outputs = court_predictor(frame)
+        instances = outputs["instances"]
+        if len(instances) > 0:
+            keypoints = instances.pred_keypoints.cpu().numpy()[0]
+            processed_frame = visualize_predictions_with_lines(
+                frame, court_predictor, keypoint_names, lines
+            )
+        else:
+            keypoints = np.zeros((17, 3))
+            processed_frame = frame.copy()
 
-    for start, end in lines:
-        start_point = tuple(
-            map(int, transformed_keypoints[keypoint_names.index(start)])
+        x_pred, y_pred = detect_ball(
+            tracknet_model, device, frame, prev_frame, prev_prev_frame
         )
-        end_point = tuple(map(int, transformed_keypoints[keypoint_names.index(end)]))
-        start_point = (start_point[0] + start_x, start_point[1] + start_y)
-        end_point = (end_point[0] + start_x, end_point[1] + start_y)
-        cv2.line(blank_image, start_point, end_point, (255, 255, 255), 2)
+        ball_track.append((x_pred, y_pred))
 
-    for point in transformed_keypoints:
-        point = tuple(map(int, point))
-        point = (point[0] + start_x, point[1] + start_y)
-        cv2.circle(blank_image, point, 3, (0, 0, 255), -1)
+        if ball_track[-1][0] and ball_track[-2][0]:
+            dist = distance.euclidean(ball_track[-1], ball_track[-2])
+        else:
+            dist = -1
+        dists.append(dist)
 
-    if ball_position is not None:
-        ball_x, ball_y = int(ball_position[0] + start_x), int(
-            ball_position[1] + start_y
-        )
-        cv2.circle(blank_image, (ball_x, ball_y), 5, (0, 255, 255), -1)
+        if x_pred and y_pred:
+            for j in range(min(7, len(ball_track))):  # Show trace of last 7 frames
+                if ball_track[-j][0] is not None and ball_track[-j][1] is not None:
+                    if (
+                        0 <= int(ball_track[-j][0]) < processed_frame.shape[1]
+                        and 0 <= int(ball_track[-j][1]) < processed_frame.shape[0]
+                    ):
+                        cv2.circle(
+                            processed_frame,
+                            (int(ball_track[-j][0]), int(ball_track[-j][1])),
+                            max(2, 7 - j),  # Increase the ball size
+                            (255, 255, 0),
+                            -1,
+                        )
 
-    return blank_image
+        stabilized_keypoints = stabilize_keypoints(keypoints)
+        transformed_keypoints = transform_keypoints_to_2d(stabilized_keypoints)
+        court_skeleton = visualize_2d_court_skeleton(transformed_keypoints, lines)
 
+        if x_pred and y_pred:
+            ball_pos_2d = transform_ball_position_to_2d(
+                x_pred, y_pred, stabilized_keypoints
+            )
+            if (
+                0 <= int(ball_pos_2d[0]) < court_skeleton.shape[1]
+                and 0 <= int(ball_pos_2d[1]) < court_skeleton.shape[0]
+            ):
+                cv2.circle(
+                    court_skeleton,
+                    (int(ball_pos_2d[0]), int(ball_pos_2d[1])),
+                    3,
+                    (255, 255, 0),
+                    -1,
+                )
 
-def visualize_predictions_with_lines(
-    img, court_predictor, tracknet_model, device, keypoint_names, lines, frame_history
-):
-    outputs = court_predictor(img)
-    v = Visualizer(
-        img[:, :, ::-1],
-        metadata=MetadataCatalog.get("tennis_game_train"),
-        scale=0.8,
-        instance_mode=ColorMode.IMAGE,
-    )
-    instances = outputs["instances"].to("cpu")
-
-    if len(instances) > 0:
-        max_conf_idx = instances.scores.argmax()
-        instances = instances[max_conf_idx : max_conf_idx + 1]
-
-    out = v.draw_instance_predictions(instances)
-    keypoints = instances.pred_keypoints.numpy()[0]
-
-    img_copy = img.copy()
-    stabilized_keypoints = stabilize_keypoints(keypoints)
-    transformed_keypoints, matrix = transform_keypoints_to_2d(stabilized_keypoints)
-
-    if len(frame_history) >= 3:
-        ball_position = detect_ball(
-            tracknet_model,
-            device,
-            frame_history[-1],
-            frame_history[-2],
-            frame_history[-3],
-        )
-        transformed_ball_position = transform_ball_position_to_2d(ball_position, matrix)
-    else:
-        transformed_ball_position = None
-
-    court_skeleton = visualize_2d_court_skeleton(
-        transformed_keypoints, lines, transformed_ball_position
-    )
-
-    img_copy[0 : court_skeleton.shape[0], 0 : court_skeleton.shape[1]] = court_skeleton
-
-    for idx, keypoint in enumerate(stabilized_keypoints):
-        x, y = keypoint
-        label = keypoint_names[idx]
-        cv2.putText(
-            img_copy,
-            label,
-            (int(x) + 5, int(y) - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
-            (0, 255, 0),
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.circle(img_copy, (int(x), int(y)), 3, (0, 0, 255), -1)
-
-    for (start, end), color in zip(lines, line_colors):
-        start_idx = keypoint_names.index(start)
-        end_idx = keypoint_names.index(end)
-        cv2.line(
-            img_copy,
-            (
-                int(stabilized_keypoints[start_idx][0]),
-                int(stabilized_keypoints[start_idx][1]),
-            ),
-            (
-                int(stabilized_keypoints[end_idx][0]),
-                int(stabilized_keypoints[end_idx][1]),
-            ),
-            color,
-            2,
+        processed_frame[0 : court_skeleton.shape[0], 0 : court_skeleton.shape[1]] = (
+            court_skeleton
         )
 
-    return img_copy
+        combined_frames.append(processed_frame)
+
+    ball_track = remove_outliers(ball_track, dists)
+    subtracks = split_track(ball_track)
+    for r in subtracks:
+        ball_subtrack = ball_track[r[0] : r[1]]
+        ball_subtrack = interpolation(ball_subtrack)
+        ball_track[r[0] : r[1]] = ball_subtrack
+
+    return combined_frames
 
 
-def process_video(
-    video_path,
-    output_path,
-    court_predictor,
-    tracknet_model,
-    device,
-    keypoint_names,
-    lines,
-):
+def detect_ball(model, device, frame, prev_frame, prev_prev_frame):
+    height = 360
+    width = 640
+    img = cv2.resize(frame, (width, height))
+    img_prev = cv2.resize(prev_frame, (width, height))
+    img_preprev = cv2.resize(prev_prev_frame, (width, height))
+    imgs = np.concatenate((img, img_prev, img_preprev), axis=2)
+    imgs = imgs.astype(np.float32) / 255.0
+    imgs = np.rollaxis(imgs, 2, 0)
+    inp = np.expand_dims(imgs, axis=0)
+    out = model(torch.from_numpy(inp).float().to(device))
+    output = out.argmax(dim=1).detach().cpu().numpy()
+    x_pred, y_pred = postprocess(output)
+    return x_pred, y_pred
+
+
+def process_video(video_path, output_path, court_predictor, tracknet_model, device):
     frames, fps = read_video(video_path)
-    frame_history = []
-    height, width = frames[0].shape[:2]
+    if not frames:
+        logger.error(f"Error opening video file {video_path}")
+        return
+
+    combined_frames = combine_results(frames, court_predictor, tracknet_model, device)
+
+    height, width = combined_frames[0].shape[:2]
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
-    with tqdm(total=len(frames), desc="Processing video frames", unit="frame") as pbar:
-        for frame in frames:
-            frame_history.append(frame)
-            if len(frame_history) > 3:
-                frame_history.pop(0)
-
-            processed_frame = visualize_predictions_with_lines(
-                frame,
-                court_predictor,
-                tracknet_model,
-                device,
-                keypoint_names,
-                lines,
-                frame_history,
-            )
-            out.write(processed_frame)
-            pbar.update(1)
+    for frame in combined_frames:
+        out.write(frame)
 
     out.release()
     logger.info(f"Processed video saved to {output_path}")
@@ -326,24 +208,16 @@ def process_video(
 
 
 def main():
-    config_path = "/path/to/court_detection/config.yaml"
-    model_weights = "/path/to/court_detection_weights.pth"
-    tracknet_weights = "/path/to/tracknet_weights.pt"
-    video_path = "/path/to/input_video.mp4"
-    output_path = "/path/to/output_video.mp4"
+    court_config_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/court_detection/configs/COCO-Keypoints/keypoint_rcnn_R_50_FPN_3x.yaml"
+    court_model_weights = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/model_weights/court_detection_weights.pth"
+    tracknet_weights_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/model_weights/tracknet_weights.pt"
+    video_path = "/Users/macbookairm1/Documents/ASA_s2024/.25s_game1.mp4"
+    output_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/data/processed/game1_combined_output_v15.mp4"
 
-    court_predictor = load_court_model(config_path, model_weights)
-    tracknet_model, device = load_tracknet_model(tracknet_weights)
+    court_predictor = load_court_model(court_config_path, court_model_weights)
+    tracknet_model, device = load_tracknet_model(tracknet_weights_path)
 
-    process_video(
-        video_path,
-        output_path,
-        court_predictor,
-        tracknet_model,
-        device,
-        keypoint_names,
-        lines,
-    )
+    process_video(video_path, output_path, court_predictor, tracknet_model, device)
 
 
 if __name__ == "__main__":
