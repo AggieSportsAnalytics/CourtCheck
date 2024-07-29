@@ -1,7 +1,4 @@
-import sys
-import os
 import warnings
-import logging
 import cv2
 import numpy as np
 from collections import deque
@@ -14,20 +11,6 @@ from detectron2.config import get_cfg
 warnings.filterwarnings(
     "ignore", category=UserWarning, message="torch.meshgrid: in an upcoming release"
 )
-
-# Absolute path to the CourtCheck directory
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
-courtcheck_path = os.path.join(root_dir, "CourtCheck")
-sys.path.append(courtcheck_path)
-
-# Now import dependencies
-try:
-    from dependencies import *
-except ImportError as e:
-    print(f"Error importing dependencies: {e}")
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Define keypoint names, flip map, and skeleton
 keypoint_names = [
@@ -66,8 +49,14 @@ keypoint_flip_map = [
 skeleton = []
 
 
-# Utility function to load the trained model
-def load_model(config_path, model_weights):
+def load_court_model(config_path, model_weights):
+    """Utility function to load the trained model
+    :params
+        config_path: path to the model configuration file
+        model_weights: path to the model weights file
+    :return
+        predictor: loaded model predictor
+    """
     cfg = get_cfg()
     cfg.merge_from_file(config_path)
     cfg.MODEL.WEIGHTS = model_weights
@@ -76,7 +65,7 @@ def load_model(config_path, model_weights):
         11  # Ensure the number of classes matches your dataset
     )
     cfg.MODEL.KEYPOINT_ON = True
-    cfg.MODEL.DEVICE = "cpu"  # Use CPU
+    cfg.MODEL.DEVICE = "cpu"
 
     MetadataCatalog.get("tennis_game_train").keypoint_names = keypoint_names
     MetadataCatalog.get("tennis_game_train").keypoint_flip_map = keypoint_flip_map
@@ -118,23 +107,61 @@ line_colors = [(0, 255, 0)] * len(lines)
 keypoint_history = {name: deque(maxlen=10) for name in keypoint_names}
 
 
-def stabilize_keypoints(keypoints):
-    stabilized_keypoints = []
+def stabilize_points(keypoints):
+    """Stabilize keypoints by averaging over a history of detected points
+    :params
+        keypoints: list of detected keypoints
+    :return
+        stabilized_points: list of stabilized keypoints
+    """
+    stabilized_points = []
     for i, keypoint in enumerate(keypoints):
         keypoint_history[keypoint_names[i]].append(keypoint[:2])
         if len(keypoint_history[keypoint_names[i]]) > 1:
-            stabilized_keypoints.append(
+            stabilized_points.append(
                 np.mean(np.array(keypoint_history[keypoint_names[i]]), axis=0)
             )
         else:
-            stabilized_keypoints.append(keypoint[:2])
-    return np.array(stabilized_keypoints)
+            stabilized_points.append(keypoint[:2])
+    return np.array(stabilized_points)
 
 
-def transform_keypoints_to_2d(keypoints):
+def transform_points(keypoints, black_frame_width, black_frame_height):
+    """Transform keypoints to fit within a black frame
+    :params
+        keypoints: list of keypoints to transform
+        black_frame_width: width of the black frame
+        black_frame_height: height of the black frame
+    :return
+        transformed_keypoints: transformed keypoints
+        matrix: perspective transformation matrix
+    """
+    width_frac = 6
+    height_frac = 7
+
     keypoint_dict = {
         keypoint_names[i]: keypoints[i, :2] for i in range(len(keypoint_names))
     }
+
+    dst_points = np.array(
+        [
+            [black_frame_width // width_frac, black_frame_height // height_frac],  # BTL
+            [
+                black_frame_width - black_frame_width // width_frac,
+                black_frame_height // height_frac,
+            ],  # BTR
+            [
+                black_frame_width // width_frac,
+                black_frame_height - black_frame_height // height_frac,
+            ],  # BBL
+            [
+                black_frame_width - black_frame_width // width_frac,
+                black_frame_height - black_frame_height // height_frac,
+            ],  # BBR
+        ],
+        dtype=np.float32,
+    )
+
     src_points = np.array(
         [
             keypoint_dict["BTL"],
@@ -144,39 +171,54 @@ def transform_keypoints_to_2d(keypoints):
         ],
         dtype=np.float32,
     )
-    dst_points = np.array(
-        [[17, 37], [217, 37], [17, 407], [217, 407]], dtype=np.float32
-    )
+
     matrix = cv2.getPerspectiveTransform(src_points, dst_points)
     transformed_keypoints = cv2.perspectiveTransform(keypoints[None, :, :2], matrix)[0]
-    return transformed_keypoints
+    return transformed_keypoints, matrix
 
 
-def visualize_2d_court_skeleton(transformed_keypoints, lines):
-    blank_image = np.zeros((490, 280, 3), np.uint8)
-    start_x = 25
-    start_y = 25
-    end_x = blank_image.shape[1] - 25
-    end_y = blank_image.shape[0] - 25
+def visualize_2d(transformed_keypoints, lines, black_frame_width, black_frame_height):
+    """Visualize 2D court skeleton with transformed keypoints
+    :params
+        transformed_keypoints: list of transformed keypoints
+        lines: list of lines connecting keypoints
+        black_frame_width: width of the black frame
+        black_frame_height: height of the black frame
+    :return
+        blank_image: image with the visualized 2D court skeleton
+    """
+    blank_image = np.zeros(
+        (black_frame_height, black_frame_width, 3), np.uint8
+    )  # Adjust the black frame size
 
     for start, end in lines:
-        start_point = tuple(
-            map(int, transformed_keypoints[keypoint_names.index(start)])
-        )
-        end_point = tuple(map(int, transformed_keypoints[keypoint_names.index(end)]))
-        start_point = (start_point[0] + start_x, start_point[1] + start_y)
-        end_point = (end_point[0] + start_x, end_point[1] + start_y)
+        start_idx = keypoint_names.index(start)
+        end_idx = keypoint_names.index(end)
+        start_point = tuple(map(int, transformed_keypoints[start_idx][:2]))
+        end_point = tuple(map(int, transformed_keypoints[end_idx][:2]))
         cv2.line(blank_image, start_point, end_point, (255, 255, 255), 2)
 
     for point in transformed_keypoints:
-        point = tuple(map(int, point))
-        point = (point[0] + start_x, point[1] + start_y)
-        cv2.circle(blank_image, point, 3, (0, 0, 255), -1)
+        point = tuple(map(int, point[:2]))
+        cv2.circle(blank_image, point, 4, (0, 0, 255), -1)
 
     return blank_image
 
 
-def visualize_predictions_with_lines(img, predictor, keypoint_names, lines):
+def visualize_predictions(
+    img, predictor, keypoint_names, lines, black_frame_width, black_frame_height
+):
+    """Visualize model predictions on the input image
+    :params
+        img: input image
+        predictor: model predictor
+        keypoint_names: list of keypoint names
+        lines: list of lines connecting keypoints
+        black_frame_width: width of the black frame
+        black_frame_height: height of the black frame
+    :return
+        img_copy: image with visualized predictions and court skeleton
+    """
     outputs = predictor(img)
     v = Visualizer(
         img[:, :, ::-1],
@@ -194,13 +236,18 @@ def visualize_predictions_with_lines(img, predictor, keypoint_names, lines):
     keypoints = instances.pred_keypoints.numpy()[0]
 
     img_copy = img.copy()
-    stabilized_keypoints = stabilize_keypoints(keypoints)
-    transformed_keypoints = transform_keypoints_to_2d(stabilized_keypoints)
-    court_skeleton = visualize_2d_court_skeleton(transformed_keypoints, lines)
+    stabilized_points = stabilize_points(keypoints)
+
+    transformed_keypoints, matrix = transform_points(
+        stabilized_points, black_frame_width, black_frame_height
+    )
+    court_skeleton = visualize_2d(
+        transformed_keypoints, lines, black_frame_width, black_frame_height
+    )
 
     img_copy[0 : court_skeleton.shape[0], 0 : court_skeleton.shape[1]] = court_skeleton
 
-    for idx, keypoint in enumerate(stabilized_keypoints):
+    for idx, keypoint in enumerate(stabilized_points):
         x, y = keypoint
         label = keypoint_names[idx]
         cv2.putText(
@@ -213,7 +260,7 @@ def visualize_predictions_with_lines(img, predictor, keypoint_names, lines):
             2,
             cv2.LINE_AA,
         )
-        cv2.circle(img_copy, (int(x), int(y)), 3, (0, 0, 255), -1)
+        cv2.circle(img_copy, (int(x), int(y)), 5, (0, 0, 255), -1)
 
     for (start, end), color in zip(lines, line_colors):
         start_idx = keypoint_names.index(start)
@@ -221,12 +268,12 @@ def visualize_predictions_with_lines(img, predictor, keypoint_names, lines):
         cv2.line(
             img_copy,
             (
-                int(stabilized_keypoints[start_idx][0]),
-                int(stabilized_keypoints[start_idx][1]),
+                int(stabilized_points[start_idx][0]),
+                int(stabilized_points[start_idx][1]),
             ),
             (
-                int(stabilized_keypoints[end_idx][0]),
-                int(stabilized_keypoints[end_idx][1]),
+                int(stabilized_points[end_idx][0]),
+                int(stabilized_points[end_idx][1]),
             ),
             color,
             2,

@@ -3,13 +3,9 @@ import os
 import warnings
 import logging
 import cv2
+import time
 import numpy as np
-import torch
 from tqdm import tqdm
-from detectron2.utils.visualizer import Visualizer, ColorMode
-from detectron2.data import MetadataCatalog
-from detectron2.engine import DefaultPredictor
-from detectron2.config import get_cfg
 from scipy.spatial import distance
 
 # Absolute path to the CourtCheck directory
@@ -26,83 +22,75 @@ court_detection_path = os.path.join(root_dir, "CourtCheck/models/court_detection
 sys.path.append(court_detection_path)
 
 from court_detection import (
-    load_model as load_court_model,
+    load_court_model,
     lines,
     keypoint_names,
-    stabilize_keypoints,
-    transform_keypoints_to_2d,
-    visualize_2d_court_skeleton,
-    visualize_predictions_with_lines,
+    stabilize_points,
+    transform_points,
+    visualize_2d,
+    visualize_predictions,
 )
 
 from ball_detection import (
-    postprocess,
-    BallTrackerNet,
+    detect_ball,
+    load_tracknet_model,
+    transform_ball_2d,
     read_video,
     remove_outliers,
     split_track,
     interpolation,
 )
 
-
-def load_tracknet_model(tracknet_weights_path):
-    model = BallTrackerNet()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.load_state_dict(torch.load(tracknet_weights_path, map_location=device))
-    model = model.to(device)
-    model.eval()
-    return model, device
-
-
+# Suppress specific warnings and set logging levels for certain modules
 warnings.filterwarnings(
     "ignore", category=UserWarning, message="torch.meshgrid: in an upcoming release"
 )
-
-logging.basicConfig(level=logging.INFO)
+logging.getLogger("detectron2.checkpoint.detection_checkpoint").setLevel(
+    logging.WARNING
+)
+logging.getLogger("fvcore.common.checkpoint").setLevel(logging.WARNING)
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 
-def transform_ball_position_to_2d(x, y, stabilized_keypoints):
-    keypoint_dict = {
-        keypoint_names[i]: stabilized_keypoints[i, :2]
-        for i in range(len(keypoint_names))
-    }
-    src_points = np.array(
-        [
-            keypoint_dict["BTL"],
-            keypoint_dict["BTR"],
-            keypoint_dict["BBL"],
-            keypoint_dict["BBR"],
-        ],
-        dtype=np.float32,
-    )
-    dst_points = np.array(
-        [[17, 37], [217, 37], [17, 407], [217, 407]], dtype=np.float32
-    )
-    matrix = cv2.getPerspectiveTransform(src_points, dst_points)
-    ball_pos = np.array([[x, y]], dtype=np.float32).reshape(-1, 1, 2)
-    transformed_ball_pos = cv2.perspectiveTransform(ball_pos, matrix)
-    return transformed_ball_pos[0][0]
-
-
 def combine_results(frames, court_predictor, tracknet_model, device):
+    """Combine court detection and ball tracking results, process each video frame
+    :params
+        frames: list of video frames
+        court_predictor: court detection model
+        tracknet_model: ball tracking model
+        device: device to run the model on (CPU or GPU)
+    :return
+        combined_frames: list of processed video frames
+    """
     combined_frames = []
     dists = [-1] * 2
     ball_track = [(None, None)] * 2
+    keypoints_found = 0
+    total_frames = len(frames)
+    start_time = time.time()
 
     for i in tqdm(
-        range(2, len(frames)), desc="Combining results", position=0, leave=True
+        range(2, total_frames), desc="Combining results", position=0, leave=True
     ):
         frame = frames[i]
         prev_frame = frames[i - 1]
         prev_prev_frame = frames[i - 2]
 
+        black_frame_width = (2 * frame.shape[1]) // 13
+        black_frame_height = (5 * frame.shape[0]) // 11
         outputs = court_predictor(frame)
         instances = outputs["instances"]
         if len(instances) > 0:
             keypoints = instances.pred_keypoints.cpu().numpy()[0]
-            processed_frame = visualize_predictions_with_lines(
-                frame, court_predictor, keypoint_names, lines
+            keypoints_found += 1
+            processed_frame = visualize_predictions(
+                frame,
+                court_predictor,
+                keypoint_names,
+                lines,
+                black_frame_width,
+                black_frame_height,
             )
         else:
             keypoints = np.zeros((17, 3))
@@ -120,7 +108,7 @@ def combine_results(frames, court_predictor, tracknet_model, device):
         dists.append(dist)
 
         if x_pred and y_pred:
-            for j in range(min(7, len(ball_track))):  # Show trace of last 7 frames
+            for j in range(min(7, len(ball_track))):
                 if ball_track[-j][0] is not None and ball_track[-j][1] is not None:
                     if (
                         0 <= int(ball_track[-j][0]) < processed_frame.shape[1]
@@ -129,19 +117,21 @@ def combine_results(frames, court_predictor, tracknet_model, device):
                         cv2.circle(
                             processed_frame,
                             (int(ball_track[-j][0]), int(ball_track[-j][1])),
-                            max(2, 7 - j),  # Increase the ball size
+                            max(2, 7 - j),
                             (255, 255, 0),
                             -1,
                         )
 
-        stabilized_keypoints = stabilize_keypoints(keypoints)
-        transformed_keypoints = transform_keypoints_to_2d(stabilized_keypoints)
-        court_skeleton = visualize_2d_court_skeleton(transformed_keypoints, lines)
+        stabilized_points = stabilize_points(keypoints)
+        transformed_keypoints, matrix = transform_points(
+            stabilized_points, black_frame_width, black_frame_height
+        )
+        court_skeleton = visualize_2d(
+            transformed_keypoints, lines, black_frame_width, black_frame_height
+        )
 
         if x_pred and y_pred:
-            ball_pos_2d = transform_ball_position_to_2d(
-                x_pred, y_pred, stabilized_keypoints
-            )
+            ball_pos_2d = transform_ball_2d(x_pred, y_pred, matrix)
             if (
                 0 <= int(ball_pos_2d[0]) < court_skeleton.shape[1]
                 and 0 <= int(ball_pos_2d[1]) < court_skeleton.shape[0]
@@ -160,6 +150,19 @@ def combine_results(frames, court_predictor, tracknet_model, device):
 
         combined_frames.append(processed_frame)
 
+    end_time = time.time()
+    total_time = end_time - start_time
+    avg_time_per_frame = total_time / (total_frames - 2)
+    hours, rem = divmod(total_time, 3600)
+    minutes, seconds = divmod(rem, 60)
+
+    logger.info(f"Keypoints found in {keypoints_found} frames out of {total_frames}")
+    logger.info(f"Total frames processed: {total_frames}")
+    logger.info(f"Average time per frame: {avg_time_per_frame:.2f} seconds")
+    logger.info(
+        f"Total processing time: {int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}"
+    )
+
     ball_track = remove_outliers(ball_track, dists)
     subtracks = split_track(ball_track)
     for r in subtracks:
@@ -170,23 +173,15 @@ def combine_results(frames, court_predictor, tracknet_model, device):
     return combined_frames
 
 
-def detect_ball(model, device, frame, prev_frame, prev_prev_frame):
-    height = 360
-    width = 640
-    img = cv2.resize(frame, (width, height))
-    img_prev = cv2.resize(prev_frame, (width, height))
-    img_preprev = cv2.resize(prev_prev_frame, (width, height))
-    imgs = np.concatenate((img, img_prev, img_preprev), axis=2)
-    imgs = imgs.astype(np.float32) / 255.0
-    imgs = np.rollaxis(imgs, 2, 0)
-    inp = np.expand_dims(imgs, axis=0)
-    out = model(torch.from_numpy(inp).float().to(device))
-    output = out.argmax(dim=1).detach().cpu().numpy()
-    x_pred, y_pred = postprocess(output, (frame.shape[0], frame.shape[1]))
-    return x_pred, y_pred
-
-
 def process_video(video_path, output_path, court_predictor, tracknet_model, device):
+    """Process a video by reading frames, combining results, and saving the output video
+    :params
+        video_path: path to the input video file
+        output_path: path to save the processed video
+        court_predictor: court detection model
+        tracknet_model: ball tracking model
+        device: device to run the model on (CPU or GPU)
+    """
     frames, fps = read_video(video_path)
     if not frames:
         logger.error(f"Error opening video file {video_path}")
@@ -206,11 +201,12 @@ def process_video(video_path, output_path, court_predictor, tracknet_model, devi
 
 
 def main():
+    """Main function to set up models, process a video, and save the result"""
     court_config_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/court_detection/configs/COCO-Keypoints/keypoint_rcnn_R_50_FPN_3x.yaml"
     court_model_weights = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/model_weights/court_detection_weights.pth"
     tracknet_weights_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/model_weights/tracknet_weights.pt"
-    video_path = "/Users/macbookairm1/Documents/ASA_s2024/10s_game2.mp4"
-    output_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/data/processed/game1_combined_output_v31.mp4"
+    video_path = "/Users/macbookairm1/Documents/ASA_s2024/_.25s_game1.mp4"
+    output_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/data/processed/game1_combined_output_v38.mp4"
 
     court_predictor = load_court_model(court_config_path, court_model_weights)
     tracknet_model, device = load_tracknet_model(tracknet_weights_path)
@@ -219,4 +215,5 @@ def main():
 
 
 if __name__ == "__main__":
+    """Execute main function""" ""
     main()
