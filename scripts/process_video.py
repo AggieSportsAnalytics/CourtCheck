@@ -38,7 +38,6 @@ from court_detection import (
 from ball_detection import (
     postprocess,
     BallTrackerNet,
-    infer_video,
     read_video,
     remove_outliers,
     split_track,
@@ -183,7 +182,7 @@ def detect_ball(model, device, frame, prev_frame, prev_prev_frame):
     inp = np.expand_dims(imgs, axis=0)
     out = model(torch.from_numpy(inp).float().to(device))
     output = out.argmax(dim=1).detach().cpu().numpy()
-    x_pred, y_pred = postprocess(output)
+    x_pred, y_pred = postprocess(output, (frame.shape[0], frame.shape[1]))
     return x_pred, y_pred
 
 
@@ -203,7 +202,6 @@ def process_video(video_path, output_path, court_predictor, tracknet_model, devi
         out.write(frame)
 
     out.release()
-    logger.info(f"Processed video saved to {output_path}")
     print(f"Processed video saved to {output_path}")
 
 
@@ -211,8 +209,8 @@ def main():
     court_config_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/court_detection/configs/COCO-Keypoints/keypoint_rcnn_R_50_FPN_3x.yaml"
     court_model_weights = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/model_weights/court_detection_weights.pth"
     tracknet_weights_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/model_weights/tracknet_weights.pt"
-    video_path = "/Users/macbookairm1/Documents/ASA_s2024/.25s_game1.mp4"
-    output_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/data/processed/game1_combined_output_v15.mp4"
+    video_path = "/Users/macbookairm1/Documents/ASA_s2024/10s_game2.mp4"
+    output_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/data/processed/game1_combined_output_v31.mp4"
 
     court_predictor = load_court_model(court_config_path, court_model_weights)
     tracknet_model, device = load_tracknet_model(tracknet_weights_path)
