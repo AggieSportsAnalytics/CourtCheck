@@ -7,3 +7,18 @@
 # Ignore model files
 models/model_weights/tracknet_weights.pt
 models/model_weights/court_detection_weights.pth
+
+# Ignore Python cache directories
+*.py[cod]
+__pycache__/
+**/__pycache__/
+
+# Ignore macOS .DS_Store files
+.DS_Store
+
+# Ignore data directory .DS_Store files
+data/.DS_Store
+
+# Ignore Python cache directories inside specific folders
+CourtCheck/__pycache__/
+CourtCheck/models/court_detection/__pycache__/
