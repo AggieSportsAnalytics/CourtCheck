@@ -1,7 +1,5 @@
 # CourtCheck Tennis Project 🎾
 
-### For a more detailed description, visit [aggiesportsanalytics.com](https://aggiesportsanalytics.com/projects/tennis-courtcheck).
-
 ## 🏁 Automate tennis match analysis using the power of computer vision.
 
 The CourtCheck Tennis Project leverages advanced computer vision techniques to accurately track tennis ball movements and court boundaries in tennis matches. This project aims to provide real-time insights and automated decision-making in tennis, reducing human error and enhancing the accuracy of in/out calls. The project integrates Python, machine learning, and computer vision to create a seamless and efficient system for tennis match analysis.
