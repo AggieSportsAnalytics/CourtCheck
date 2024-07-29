@@ -8,6 +8,22 @@ from itertools import groupby
 from scipy.spatial import distance
 
 
+def load_tracknet_model(tracknet_weights_path):
+    """Load the TrackNet model with the specified weights
+    :params
+        tracknet_weights_path: path to the model weights file
+    :return
+        model: loaded model
+        device: device used for computation (CPU)
+    """
+    model = BallTrackerNet()
+    device = torch.device("cpu")
+    model.load_state_dict(torch.load(tracknet_weights_path, map_location=device))
+    model = model.to(device)
+    model.eval()
+    return model, device
+
+
 def read_video(path_video):
     """Read video file
     :params
@@ -31,6 +47,15 @@ def read_video(path_video):
 
 
 def postprocess(feature_map, original_shape, model_input_shape=(360, 640)):
+    """Postprocess the output of the model to get the ball coordinates
+    :params
+        feature_map: output feature map from the model
+        original_shape: original shape of the video frame
+        model_input_shape: shape of the model input
+    :return
+        x_pred: x-coordinate of the detected ball
+        y_pred: y-coordinate of the detected ball
+    """
     height, width = model_input_shape
     feature_map = feature_map.reshape((height, width))
     y_pred, x_pred = np.unravel_index(np.argmax(feature_map), feature_map.shape)
@@ -136,6 +161,7 @@ def interpolation(coords):
     """
 
     def nan_helper(y):
+        """Helper to handle indexes and logical indices of NaNs."""
         return np.isnan(y), lambda z: z.nonzero()[0]
 
     x = np.array([x[0] if x[0] is not None else np.nan for x in coords])
@@ -148,6 +174,20 @@ def interpolation(coords):
 
     track = [*zip(x, y)]
     return track
+
+
+def transform_ball_2d(x, y, matrix):
+    """Transform ball coordinates to 2D perspective
+    :params
+        x: x-coordinate of the ball
+        y: y-coordinate of the ball
+        matrix: transformation matrix
+    :return
+        transformed_ball_pos: transformed ball position in 2D perspective
+    """
+    ball_pos = np.array([[x, y]], dtype=np.float32).reshape(-1, 1, 2)
+    transformed_ball_pos = cv2.perspectiveTransform(ball_pos, matrix)
+    return transformed_ball_pos[0][0]
 
 
 def write_track(frames, ball_track, path_output_video, fps, trace=7):
@@ -177,3 +217,30 @@ def write_track(frames, ball_track, path_output_video, fps, trace=7):
                     break
         out.write(frame)
     out.release()
+
+
+def detect_ball(model, device, frame, prev_frame, prev_prev_frame):
+    """Detect ball in a given frame using the model
+    :params
+        model: pretrained model
+        device: device to run the model on
+        frame: current video frame
+        prev_frame: previous video frame
+        prev_prev_frame: frame before the previous video frame
+    :return
+        x_pred: x-coordinate of the detected ball
+        y_pred: y-coordinate of the detected ball
+    """
+    height = 360
+    width = 640
+    img = cv2.resize(frame, (width, height))
+    img_prev = cv2.resize(prev_frame, (width, height))
+    img_preprev = cv2.resize(prev_prev_frame, (width, height))
+    imgs = np.concatenate((img, img_prev, img_preprev), axis=2)
+    imgs = imgs.astype(np.float32) / 255.0
+    imgs = np.rollaxis(imgs, 2, 0)
+    inp = np.expand_dims(imgs, axis=0)
+    out = model(torch.from_numpy(inp).float().to(device))
+    output = out.argmax(dim=1).detach().cpu().numpy()
+    x_pred, y_pred = postprocess(output, (frame.shape[0], frame.shape[1]))
+    return x_pred, y_pred
