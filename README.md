@@ -14,7 +14,11 @@ The project employs keypoint detection algorithms to identify and track the tenn
 
 - Uses Detectron2 for keypoint detection and court boundary identification.
 
-![court-detection-demo](https://github.com/SACUCD/CourtCheckTennis/assets/your-court-detection-image-url)
+<!-- Embedding video clip -->
+<video width="320" height="240" controls>
+  <source src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game2_processed_10s.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 **_Visual representation of the detected tennis court boundaries._**
 
 ### Ball Tracking
