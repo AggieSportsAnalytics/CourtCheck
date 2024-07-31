@@ -20,7 +20,12 @@ We started by annotating images using OpenCV in the COCO format, generating JSON
 
 [Link to JSON files and dataset](#)
 
-<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/opencv_annotation.gif" alt="annotation-demo" width="800"/>
+Below is an overview of the Detectron2 architecture:
+
+<div align="center">
+    <img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/detectron2_architecture.png" alt="Detectron2 Architecture" width="800"/>
+</div>
+
 
 Each label in the skeleton represents a keypoint on the tennis court, identifying an important corner or intersection of lines that are crucial for the overall court detection when training the model. Here are the keypoints and their corresponding labels:
 
@@ -39,7 +44,7 @@ Leveraging the GPUs available in Google Colab, we trained the Detectron2 model. 
 
 Below is an overview of the Detectron2 architecture:
 
-<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/detectron2_architecture.png" alt="Detectron2 Architecture" width="500"/>
+<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/detectron2_architecture.png" alt="Detectron2 Architecture" width="800"/>
 
 Below is a summary of the code used for training the model in Google Colab:
 
