@@ -20,7 +20,7 @@ We started by annotating images using OpenCV in the COCO format, generating JSON
 
 [Link to JSON files and dataset](#)
 
-<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/opencv_annotation.gif" alt="annotation-demo" width="850"/>
+<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/opencv_annotation.gif" alt="annotation-demo" width="800"/>
 
 Each label in the skeleton represents a keypoint on the tennis court, identifying an important corner or intersection of lines that are crucial for the overall court detection when training the model. Here are the keypoints and their corresponding labels:
 
