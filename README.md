@@ -44,7 +44,10 @@ Leveraging the GPUs available in Google Colab, we trained the Detectron2 model. 
 
 Below is an overview of the Detectron2 architecture:
 
-<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/detectron2_architecture.png" alt="Detectron2 Architecture" width="800"/>
+<div align="center">
+    <img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/detectron2_architecture.png" alt="Detectron2 Architecture" width="700"/>
+</div>
+
 
 Below is a summary of the code used for training the model in Google Colab:
 
