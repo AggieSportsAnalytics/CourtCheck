@@ -108,6 +108,64 @@ train_model(max_iter, resume=True)
 
 ### 📽️ Post Processing
 
+After training the model, the next crucial step is post-processing the results to ensure accurate and meaningful outputs. Post-processing involves refining the model's predictions and visualizing the detected key points on the tennis court for better interpretation and analysis.
+
+To visualize the court, we draw polylines between key points that align with the court lines and boundaries. These lines help in creating a clear and precise representation of the tennis court structure. Here are the specific polylines to be drawn:
+
+```python
+lines = [
+    ("BTL", "BTLI"), ("BTLI", "BTRI"), ("BTL", "NL"), ("BTLI", "ITL"),
+    ("BTRI", "BTR"), ("BTR", "NR"), ("BTRI", "ITR"), ("ITL", "ITM"), ("ITM", "ITR"),
+    ("ITL", "IBL"), ("ITM", "NM"), ("ITR", "IBR"), ("NL", "NM"), ("NL", "BBL"),
+    ("NM", "IBM"), ("NR", "BBR"), ("NM", "NR"), ("IBL", "IBM"),
+    ("IBM", "IBR"), ("IBL", "BBLI"), ("IBR", "BBRI"), ("BBR", "BBRI"),
+    ("BBRI", "BBLI"), ("BBL", "BBLI"),
+]
+```
+
+The `visualize_predictions` function is essential for visualizing model predictions on an input image. Here are two key parts of the function:
+
+```python
+outputs = predictor(img)
+v = Visualizer(
+    img[:, :, ::-1],
+    metadata=MetadataCatalog.get("tennis_game_train"),
+    scale=0.8,
+    instance_mode=ColorMode.IMAGE,
+)
+instances = outputs["instances"].to("cpu")
+
+if len(instances) > 0:
+    max_conf_idx = instances.scores.argmax()
+    instances = instances[max_conf_idx : max_conf_idx + 1]
+
+out = v.draw_instance_predictions(instances)
+keypoints = instances.pred_keypoints.numpy()[0]
+```
+This part of the function generates predictions from the model and selects the instance with the highest confidence score. The keypoints of this instance are extracted for further processing.
+
+To ensure that the detected key points on the tennis court are stable and less jittery, especially when dealing with video frames, we use a stabilization technique. This involves averaging the positions of detected key points over a history of frames.
+
+#### Key Point History Initialization
+```python
+keypoint_history = {name: deque(maxlen=10) for name in keypoint_names}
+```
+We initialize a dictionary called keypoint_history where each key is a key point name, and the value is a deque (double-ended queue) with a maximum length of 10. This deque will store the positions of each key point over the last 10 frames.
+
+```python
+def stabilize_points(keypoints):
+    stabilized_points = []
+    for i, keypoint in enumerate(keypoints):
+        keypoint_history[keypoint_names[i]].append(keypoint[:2])
+        if len(keypoint_history[keypoint_names[i]]) > 1:
+            stabilized_points.append(
+                np.mean(np.array(keypoint_history[keypoint_names[i]]), axis=0)
+            )
+        else:
+            stabilized_points.append(keypoint[:2])
+    return np.array(stabilized_points)
+```
+The `stabilize_points` function processes the detected key points to reduce jitter by averaging their positions over the last 10 frames. For each detected key point, its position is appended to the corresponding deque in the keypoint_history dictionary. If the deque contains more than one position, the average of these positions is computed and added to the stabilized_points list. If the deque contains only one position, the key point is added to the list as is. This results in more consistent and smooth key point positions for further processing and visualization.
 
 
 ## Ball Tracking
