@@ -18,9 +18,8 @@ The project employs keypoint detection algorithms to identify and track the tenn
 
 We started by annotating images using OpenCV in the COCO format, generating JSON files for each annotated image. The OpenCV Annotation Tool has a fantastic interface to annotate images and export them in different formats. It also features a great interpolation tool that allows the use of a skeleton, enabling the labeling of key frames that can be interpolated and applied over consecutive frames in the video.
 
-[Link to JSON files and dataset](#)
+<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/opencv_annotation.gif" alt="annotation-demo" width="700" height="600"/>
 
-<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/opencv_annotation.gif" alt="annotation-demo" width="800"/>
 
 Each label in the skeleton represents a keypoint on the tennis court, identifying an important corner or intersection of lines that are crucial for the overall court detection when training the model. Here are the keypoints and their corresponding labels:
 
@@ -36,6 +35,14 @@ Each label in the skeleton represents a keypoint on the tennis court, identifyin
 ### 🤖 Training the Model
 
 Leveraging the GPUs available in Google Colab, we trained the Detectron2 model. The model was configured to detect and classify the key points of the tennis court from the annotated images.
+
+Below is an overview of the Detectron2 architecture:
+
+<div align="center">
+    <img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/detectron2_architecture.png" alt="Detectron2 Architecture" width="700"/>
+</div>
+
+We used the `COCO-Keypoints/keypoint_rcnn_R_50_FPN_3x.yaml` configuration file because it is specifically designed for keypoint detection tasks. The `keypoint_rcnn_R_50_FPN_3x.yaml` configuration is well-suited for this task because it includes a pre-trained ResNet-50 backbone that provides strong feature extraction capabilities, coupled with a Feature Pyramid Network (FPN) that helps detect objects at multiple scales. This combination ensures that the model can accurately identify and track the key points on the tennis court, providing precise court boundary detection and enabling accurate in/out call determinations.
 
 Below is a summary of the code used for training the model in Google Colab:
 
