@@ -16,9 +16,22 @@ The project employs keypoint detection algorithms to identify and track the tenn
 
 ### 📑 Annotation
 
-We started by annotating images using OpenCV in the COCO format, generating JSON files for each annotated image. This process involved marking key points on the tennis court to define the boundaries and important lines. These annotations are stored in JSON files.
+We started by annotating images using OpenCV in the COCO format, generating JSON files for each annotated image. The OpenCV Annotation Tool has a fantastic interface to annotate images and export them in different formats. It also features a great interpolation tool that allows the use of a skeleton, enabling the labeling of key frames that can be interpolated and applied over consecutive frames in the video.
 
 [Link to JSON files and dataset](#)
+
+<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/opencv_annotation.gif" alt="annotation-demo" width="800"/>
+
+Each label in the skeleton represents a keypoint on the tennis court, identifying an important corner or intersection of lines that are crucial for the overall court detection when training the model. Here are the keypoints and their corresponding labels:
+
+| Keypoint | Label                       | Keypoint | Label                           | Keypoint | Label                       |
+|----------|-----------------------------|----------|---------------------------------|----------|-----------------------------|
+| BTL      | Bottom Top Left             | ITM      | Inner Top Middle                | ITR      | Inner Top Right             |
+| BTLI     | Bottom Top Left Inner       | IBR      | Inner Bottom Right              | NL       | Net Left                    |
+| BTRI     | Bottom Top Right Inner      | NR       | Net Right                       | BBL      | Bottom Bottom Left          |
+| BTR      | Bottom Top Right            | NM       | Net Middle                      | IBL      | Inner Bottom Left           |
+| BBR      | Bottom Bottom Right         | ITL      | Inner Top Left                  | IBM      | Inner Bottom Middle         |
+| BBRI     | Bottom Bottom Right Inner   |          |                                 | BBLI     | Bottom Bottom Left Inner    |
 
 ### 🤖 Training the Model
 
