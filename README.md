@@ -14,13 +14,13 @@ The CourtCheck Tennis Project leverages advanced computer vision techniques to a
 
 The project employs keypoint detection algorithms to identify and track the tennis court's boundaries, ensuring accurate mapping and analysis of the court's dimensions.
 
-### - 📑 Annotation
+- ### 📑 Annotation
 
 We started by annotating images using OpenCV in the COCO format, generating JSON files for each annotated image. This process involved marking key points on the tennis court to define the boundaries and important lines. These annotations are stored in JSON files.
 
 [Link to JSON files and dataset](#)
 
-### - 🤖 Training the Model
+- ### 🤖 Training the Model
 
 Leveraging the GPUs available in Google Colab, we trained the Detectron2 model. The model was configured to detect and classify the key points of the tennis court from the annotated images.
 
