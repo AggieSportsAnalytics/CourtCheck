@@ -18,7 +18,7 @@ The project employs keypoint detection algorithms to identify and track the tenn
 
 We started by annotating images using OpenCV in the COCO format, generating JSON files for each annotated image. The OpenCV Annotation Tool has a fantastic interface to annotate images and export them in different formats. It also features a great interpolation tool that allows the use of a skeleton, enabling the labeling of key frames that can be interpolated and applied over consecutive frames in the video.
 
-<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/opencv_annotation.gif" alt="annotation-demo" width="800" height="500"/>
+<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/opencv_annotation.gif" alt="annotation-demo" width="850" height="650"/>
 
 [Link to JSON files and dataset](#)
 
