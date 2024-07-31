@@ -18,7 +18,8 @@ The project employs keypoint detection algorithms to identify and track the tenn
 
 We started by annotating images using OpenCV in the COCO format, generating JSON files for each annotated image. The OpenCV Annotation Tool has a fantastic interface to annotate images and export them in different formats. It also features a great interpolation tool that allows the use of a skeleton, enabling the labeling of key frames that can be interpolated and applied over consecutive frames in the video.
 
-![annotation-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/opencv_annotation.gif)
+<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/opencv_annotation.gif" alt="annotation-demo" width="700" height="600"/>
+
 
 Each label in the skeleton represents a keypoint on the tennis court, identifying an important corner or intersection of lines that are crucial for the overall court detection when training the model. Here are the keypoints and their corresponding labels:
 
