@@ -20,6 +20,7 @@ We started by annotating images using OpenCV in the COCO format, generating JSON
 
 ![annotation-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/opencv_annotation.gif)
 
+You can find the annotations [here](https://drive.google.com/drive/folders/16HugQeDoXUX420yKjg7pGVu3NG6linMV?usp=drive_link).
 
 Each label in the skeleton represents a keypoint on the tennis court, identifying an important corner or intersection of lines that are crucial for the overall court detection when training the model. Here are the keypoints and their corresponding labels:
 
@@ -43,7 +44,7 @@ Below is an overview of the Detectron2 architecture:
 </div>
 <br>
 
-We used the `COCO-Keypoints/keypoint_rcnn_R_50_FPN_3x.yaml` configuration file because it is specifically designed for keypoint detection tasks. The `keypoint_rcnn_R_50_FPN_3x.yaml` configuration is well-suited for this task because it includes a pre-trained ResNet-50 backbone that provides strong feature extraction capabilities, coupled with a Feature Pyramid Network (FPN) that helps detect objects at multiple scales. This combination ensures that the model can accurately identify and track the key points on the tennis court, providing precise court boundary detection and enabling accurate in/out call determinations.
+We used the `COCO-Keypoints/keypoint_rcnn_R_50_FPN_3x.yaml` configuration file because it is specifically designed for keypoint detection tasks. The [keypoint_rcnn_R_50_FPN_3x.yaml](https://drive.google.com/drive/folders/18t8oUo5_jzYYD1vnFzjLw7uhxmagXINX?usp=drive_link) configuration is well-suited for this task because it includes a pre-trained ResNet-50 backbone that provides strong feature extraction capabilities, coupled with a Feature Pyramid Network (FPN) that helps detect objects at multiple scales. This combination ensures that the model can accurately identify and track the key points on the tennis court, providing precise court boundary detection and enabling accurate in/out call determinations.
 
 
 #### 🧬 Model Code
@@ -55,6 +56,8 @@ The code below sets up and trains the Detectron2 model using multiple datasets:
 3. **Metadata Configuration**: Configures metadata for keypoints, keypoint flip map, and skeleton.
 4. **Configuration Setup**: Sets up the model configuration, including dataset paths, data loader workers, batch size, learning rate, maximum iterations, learning rate decay steps, and checkpoint period.
 5. **Trainer Initialization and Training**: Initializes a custom trainer and starts or resumes the training process.
+
+You can find the Google Colab Notebook [here](https://colab.research.google.com/drive/1huJ4f0yOApwM4NR8gpXIHktHkTgrbL_m?usp=drive_link).
 
 ```python
 # Function to set up and train the model with mixed datasets incrementally
