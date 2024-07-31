@@ -37,6 +37,10 @@ Each label in the skeleton represents a keypoint on the tennis court, identifyin
 
 Leveraging the GPUs available in Google Colab, we trained the Detectron2 model. The model was configured to detect and classify the key points of the tennis court from the annotated images.
 
+Below is an overview of the Detectron2 architecture:
+
+<img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/detectron2_architecture.png" alt="Detectron2 Architecture" width="500"/>
+
 Below is a summary of the code used for training the model in Google Colab:
 
 ```python
