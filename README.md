@@ -24,18 +24,18 @@ We started by annotating images using OpenCV in the COCO format, generating JSON
 
 Each label in the skeleton represents a keypoint on the tennis court, identifying an important corner or intersection of lines that are crucial for the overall court detection when training the model. Here are the keypoints and their corresponding labels:
 
-| Keypoint | Label | | Keypoint | Label |
-|----------|-------| |----------|-------|
-| BTL      | Bottom Top Left | | ITM      | Inner Top Middle |
-| BTLI     | Bottom Top Left Inner | | ITR      | Inner Top Right |
-| BTRI     | Bottom Top Right Inner | | NL       | Net Left |
-| BTR      | Bottom Top Right | | BBL      | Bottom Bottom Left |
-| BBR      | Bottom Bottom Right | | IBL      | Inner Bottom Left |
-| BBRI     | Bottom Bottom Right Inner | | IBM      | Inner Bottom Middle |
-| IBR      | Inner Bottom Right | | BBLI     | Bottom Bottom Left Inner |
-| NR       | Net Right | | | |
-| NM       | Net Middle | | | |
-| ITL      | Inner Top Left | | | |
+| Keypoint | Label                       | Keypoint | Label                           |
+|----------|-----------------------------|----------|---------------------------------|
+| BTL      | Bottom Top Left             | ITM      | Inner Top Middle                |
+| BTLI     | Bottom Top Left Inner       | ITR      | Inner Top Right                 |
+| BTRI     | Bottom Top Right Inner      | NL       | Net Left                        |
+| BTR      | Bottom Top Right            | BBL      | Bottom Bottom Left              |
+| BBR      | Bottom Bottom Right         | IBL      | Inner Bottom Left               |
+| BBRI     | Bottom Bottom Right Inner   | IBM      | Inner Bottom Middle             |
+| IBR      | Inner Bottom Right          | BBLI     | Bottom Bottom Left Inner        |
+| NR       | Net Right                   |          |                                 |
+| NM       | Net Middle                  |          |                                 |
+| ITL      | Inner Top Left              |          |                                 |
 
 ### 🤖 Training the Model
 
