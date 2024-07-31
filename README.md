@@ -56,8 +56,6 @@ The code below sets up and trains the Detectron2 model using multiple datasets:
 4. **Configuration Setup**: Sets up the model configuration, including dataset paths, data loader workers, batch size, learning rate, maximum iterations, learning rate decay steps, and checkpoint period.
 5. **Trainer Initialization and Training**: Initializes a custom trainer and starts or resumes the training process.
 
-Below is a summary of the code used for training the model in Google Colab:
-
 ```python
 # Function to set up and train the model with mixed datasets incrementally
 def train_model(max_iter, resume=False):
