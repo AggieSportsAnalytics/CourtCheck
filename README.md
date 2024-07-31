@@ -10,11 +10,48 @@ The CourtCheck Tennis Project leverages advanced computer vision techniques to a
 
 
 
-## Court Detection
+## 🔎 Court Detection
 
 The project employs keypoint detection algorithms to identify and track the tennis court's boundaries, ensuring accurate mapping and analysis of the court's dimensions.
 
-- Uses Detectron2 for keypoint detection and court boundary identification.
+### 📑 Annotation
+
+We started by annotating images using OpenCV in the COCO format, generating JSON files for each annotated image. This process involved marking key points on the tennis court to define the boundaries and important lines. These annotations are stored in JSON files.
+
+[Link to JSON files and dataset](#)
+
+### 🤖 Training the Model
+
+Leveraging the GPUs available in Google Colab, we trained the Detectron2 model. The model was configured to detect and classify the key points of the tennis court from the annotated images.
+
+Below is a summary of the code used for training the model in Google Colab:
+
+```python
+# Register the dataset
+for d in ["train", "val"]:
+    DatasetCatalog.register("tennis_" + d, lambda d=d: get_tennis_dicts("path/to/your/" + d))
+    MetadataCatalog.get("tennis_" + d).set(thing_classes=["court"])
+
+# Configure the model
+cfg = get_cfg()
+cfg.merge_from_file(model_zoo.get_config_file("COCO-Keypoints/keypoint_rcnn_R_50_FPN_3x.yaml"))
+cfg.DATASETS.TRAIN = ("tennis_train",)
+cfg.DATASETS.TEST = ()
+cfg.DATALOADER.NUM_WORKERS = 2
+cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Keypoints/keypoint_rcnn_R_50_FPN_3x.yaml")
+cfg.SOLVER.IMS_PER_BATCH = 2
+cfg.SOLVER.BASE_LR = 0.00025
+cfg.SOLVER.MAX_ITER = 1000
+cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 128
+cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1  # only has one class (court)
+cfg.MODEL.KEYPOINT_ON = True
+
+# Train the model
+os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+trainer = DefaultTrainer(cfg)
+trainer.resume_or_load(resume=False)
+trainer.train()
+
 
 ## Ball Tracking
 
