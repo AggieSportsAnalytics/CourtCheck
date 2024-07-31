@@ -14,7 +14,6 @@ The project employs keypoint detection algorithms to identify and track the tenn
 
 - Uses Detectron2 for keypoint detection and court boundary identification.
 
-
 ### Ball Tracking
 
 The system uses a deep learning model to track the tennis ball's position throughout the match, allowing for precise in/out call determinations.
