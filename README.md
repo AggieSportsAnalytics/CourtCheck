@@ -1,4 +1,4 @@
-# CourtCheck 🎾
+# <img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/courtcheck_ball_logo.png" alt="CourtCheck Logo" width="40" height="40" align="left"> CourtCheck
 
 ## 🏁 Automate tennis match analysis using the power of computer vision.
 
@@ -7,6 +7,7 @@ The CourtCheck Tennis Project leverages advanced computer vision techniques to a
 ![courtcheck-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game2_processed_10s.gif)
 
 ## 🔑 Key Features
+
 
 ### Court Detection
 
