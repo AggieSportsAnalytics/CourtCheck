@@ -6,17 +6,17 @@ The CourtCheck Tennis Project leverages advanced computer vision techniques to a
 
 ![courtcheck-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game2_processed_10s.gif)
 
-## 🔑 Key Features
+# 🔑 Key Features
 
 
 
-### Court Detection
+## Court Detection
 
 The project employs keypoint detection algorithms to identify and track the tennis court's boundaries, ensuring accurate mapping and analysis of the court's dimensions.
 
 - Uses Detectron2 for keypoint detection and court boundary identification.
 
-### Ball Tracking
+## Ball Tracking
 
 The system uses a deep learning model to track the tennis ball's position throughout the match, allowing for precise in/out call determinations.
 
@@ -25,7 +25,7 @@ The system uses a deep learning model to track the tennis ball's position throug
 ![ball-tracking-demo](https://github.com/SACUCD/CourtCheckTennis/assets/your-ball-tracking-image-url)
 **_The yellow circle represents the detected position of the tennis ball._**
 
-### 2D Court Simulation
+## 2D Court Simulation
 
 One of the critical aspects of the project is transforming the detected ball and court positions onto a 2D map, enabling a clear and concise view of the ball's trajectory and court boundaries.
 
@@ -35,20 +35,20 @@ One of the critical aspects of the project is transforming the detected ball and
 ![2d-simulation-demo](https://github.com/SACUCD/CourtCheckTennis/assets/your-2d-simulation-image-url)
 **_Red dots indicate transformed keypoints on the 2D court simulation._**
 
-## 🪴 Areas of Improvement
+# 🪴 Areas of Improvement
 
 - **Accuracy**: Enhance the accuracy of ball and court detection to ensure reliable analysis.
 - **Real-Time Processing**: Implement real-time video feed analysis for instant decision-making during matches.
 - **Automatic Court Detection**: Automate the court detection process to handle different court types and angles without manual input.
 - **Player Tracking**: Integrate player tracking to provide comprehensive match statistics and insights.
 
-## 🚀 Further Uses
+# 🚀 Further Uses
 
 - **Match Analytics**: Utilize the system for detailed match analytics, including player performance and shot accuracy.
 - **Training and Coaching**: Provide coaches and players with valuable data to improve training sessions and match strategies.
 - **Broadcast Enhancement**: Enhance sports broadcasting with real-time analysis and insights for viewers.
 
-## 💻 Technology
+# 💻 Technology
 
 - **OpenCV**: For image and video processing.
 - **Detectron2**: For keypoint detection and court boundary identification.
