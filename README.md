@@ -216,25 +216,24 @@ The destination points are defined within the black frame for the four corners o
 ```
 Using OpenCV's `getPerspectiveTransform`, a transformation matrix is calculated to map the source points to the destination points. The perspective transformation is then applied to the key points, fitting them into the black frame for a top-down 2D view.
 
+## 🎾 Ball Tracking
 
-## Ball Tracking
+CourtCheck is integrated with a ball tracking model called TrackNet. TrackNet is an advanced deep learning model specifically designed for tracking tennis balls, and it has been instrumental in enhancing the overall functionality of this project. The TrackNet model used here is adapted from [yastrebksv's TrackNet implementation on GitHub](https://github.com/yastrebksv/TrackNet).
 
-The system uses a deep learning model to track the tennis ball's position throughout the match, allowing for precise in/out call determinations.
+### ↔️ Integration Process
 
-- Utilizes a custom-trained TrackNet model for ball detection and tracking.
+The integration of court detection with TrackNet involves the following steps:
 
-![ball-tracking-demo](https://github.com/SACUCD/CourtCheckTennis/assets/your-ball-tracking-image-url)
-**_The yellow circle represents the detected position of the tennis ball._**
+1. **Court Detection**: First, the court detection model processes each frame of the video to identify and map the court's key points. This ensures that the court is accurately detected and transformed into a 2D plane.
 
-## 2D Court Simulation
+2. **Ball Tracking with TrackNet**: The TrackNet model is then applied to the same frames to detect and track the tennis ball. TrackNet's robust tracking capability allows for precise ball movement analysis throughout the video.
 
-One of the critical aspects of the project is transforming the detected ball and court positions onto a 2D map, enabling a clear and concise view of the ball's trajectory and court boundaries.
+3. **Combining Results**: The results from both models are combined to provide a comprehensive visualization of the tennis game. This includes the detected court and the tracked ball, offering insights into ball positions relative to the court boundaries.
 
-- Implements perspective transform using OpenCV.
-- Transforms detected keypoints and ball positions to a 2D representation for easy analysis.
+#### Crediting TrackNet
 
-![2d-simulation-demo](https://github.com/SACUCD/CourtCheckTennis/assets/your-2d-simulation-image-url)
-**_Red dots indicate transformed keypoints on the 2D court simulation._**
+The TrackNet model used in this project is credited to [yastrebksv](https://github.com/yastrebksv/TrackNet). Their implementation provided the foundation for the ball tracking functionality integrated into this project.
+
 
 # 🪴 Areas of Improvement
 
