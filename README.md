@@ -295,8 +295,6 @@ Here are a couple key steps of the function
 The `combine_results` function effectively integrates court detection and ball tracking to produce a comprehensive visualization of the tennis game, showing both the court and the ball's movement in each frame.
 
 ![annotation-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game4_processed_15s.gif)
-![annotation-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game1_processed_10s.gif)
-![annotation-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game9_processed_10s.gif)
 
 #### Crediting TrackNet
 
@@ -330,7 +328,7 @@ The TrackNet model used in this project is credited to [yastrebksv](https://gith
 To set up the project, clone the repository and install the dependencies using the `requirements.txt` file:
 
 ```bash
-git clone https://github.com/SACUCD/CourtCheckTennis.git
-cd CourtCheckTennis
+git clone https://github.com/AggieSportsAnalytics/CourtCheck.git
+cd CourtCheck
 pip install -r requirements.txt
 ```
