@@ -180,9 +180,9 @@ To visualize the tennis court and transform it into a 2D plane, the following st
     - The detected court is then converted into a black-and-white image to simplify the structure.
     - This black-and-white image is transposed into a 2D plane, providing a clear and concise representation of the tennis court, as depicted in the second image.
 
-| Court Detection in Main Frame | Black & White Court | Transposed 2D Plane |
-|:-----------------------------:|:-------------------:|:-------------------:|
-| ![Court Detection in Main Frame](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game1_court_processed..gif) | ![Black & White Court](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/2d_plane_game1.gif) | ![Transposed 2D Plane](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game2_2Dskeleton_10s.gif) |
+| Court Detection in Main Frame | Transposed 2D Plane |
+|:-----------------------------:|:-------------------:|
+| ![Court Detection in Main Frame](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game1_court_processed..gif) | ![Transposed 2D Plane](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game2_2Dskeleton_10s.gif) |
 
 
 ## Ball Tracking
