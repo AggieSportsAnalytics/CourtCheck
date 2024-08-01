@@ -292,7 +292,7 @@ Here are a couple key steps of the function
 The `combine_results` function effectively integrates court detection and ball tracking to produce a comprehensive visualization of the tennis game, showing both the court and the ball's movement in each frame.
 
 ![annotation-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game4_processed_15s.gif)
-![annotation-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game7_processed_15s.gif)
+![annotation-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game4_processed_15s.gif)
 ![annotation-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game9_processed_10s.gif)
 
 #### Crediting TrackNet
