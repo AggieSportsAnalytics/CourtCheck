@@ -146,12 +146,13 @@ This part of the function generates predictions from the model and selects the i
 
 To ensure that the detected key points on the tennis court are stable and less jittery, especially when dealing with video frames, we use a stabilization technique. This involves averaging the positions of detected key points over a history of frames.
 
-#### Key Point History Initialization
+Key Point History Initialization
 ```python
 keypoint_history = {name: deque(maxlen=10) for name in keypoint_names}
 ```
 We initialize a dictionary called keypoint_history where each key is a key point name, and the value is a deque (double-ended queue) with a maximum length of 10. This deque will store the positions of each key point over the last 10 frames.
 
+Stabalizing Keypoints
 ```python
 def stabilize_points(keypoints):
     stabilized_points = []
