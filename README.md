@@ -168,7 +168,7 @@ def stabilize_points(keypoints):
 ```
 The `stabilize_points` function then uses the `keypoint_history` dictionary to process the detected key points and reduce jitter by averaging their positions over the last 10 frames. For each detected key point, its position is appended to the corresponding deque in the `keypoint_history` dictionary. If the deque contains more than one position, the average of these positions is computed and added to the `stabilized_points` list. If the deque contains only one position, the key point is added to the list as is. This results in more consistent and smooth key point positions for further processing and visualization.
 
-### Visualizing and Transforming the Court
+#### Visualizing and Transforming the Court
 
 To visualize the tennis court and transform it into a 2D plane, the following steps are taken:
 
@@ -180,9 +180,9 @@ To visualize the tennis court and transform it into a 2D plane, the following st
     - The detected court is then converted into a black-and-white image to simplify the structure.
     - This black-and-white image is transposed into a 2D plane, providing a clear and concise representation of the tennis court, as depicted in the second image.
 
-| Court Detection in Main Frame | Transposed 2D Plane |
-|:-----------------------------:|:-------------------:|
-| ![Court Detection in Main Frame](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game1_court_processed..gif) | ![Transposed 2D Plane](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/2d_plane_game1.gif) |
+| Court Detection in Main Frame | Black & White Court | Transposed 2D Plane |
+|:-----------------------------:|:-------------------:|:-------------------:|
+| ![Court Detection in Main Frame](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game1_court_processed..gif) | ![Black & White Court](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/2d_plane_game1.gif) | ![Transposed 2D Plane](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/2d_plane_game1_transposed.gif) |
 
 
 ## Ball Tracking
