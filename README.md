@@ -281,8 +281,11 @@ Here are a couple key steps of the function
             cv2.circle(court_skeleton, (int(ball_pos_2d[0]), int(ball_pos_2d[1])), 3, (255, 255, 0), -1)
     ```
     The ball's position is transformed into the 2D plane of the court skeleton and visualized.
+   
+    ![annotation-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/game2_2Dskeleton_court_ball.gif)
+   
 
-6. **Combining and Storing the Processed Frame**:
+7. **Combining and Storing the Processed Frame**:
     ```python
     processed_frame[0 : court_skeleton.shape[0], 0 : court_skeleton.shape[1]] = court_skeleton
     combined_frames.append(processed_frame)
