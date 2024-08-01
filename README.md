@@ -230,29 +230,11 @@ The integration of court detection with TrackNet involves the following steps:
 
 3. **Combining Results**: The results from both models are combined to provide a comprehensive visualization of the tennis game. This includes the detected court and the tracked ball, offering insights into ball positions relative to the court boundaries.
 
-The `combine_results` function integrates the outputs from `court_detection.py` and `ball_detection.py` to process each video frame and produce the final visualization.
+The `combine_results` function in `process_video.py` integrates the outputs from `court_detection.py` and `ball_detection.py` to process each video frame and produce the final visualization.
 
-1. **Initialization and Setup**:
-    ```python
-    combined_frames = []
-    dists = [-1] * 2
-    ball_track = [(None, None)] * 2
-    keypoints_found = 0
-    total_frames = len(frames)
-    start_time = time.time()
-    ```
-    This sets up the necessary variables for processing, including a list to store combined frames, distance metrics for ball tracking, and a list to track the ball's position.
+Here are a couple key steps of the function
 
-2. **Processing Each Frame**:
-    ```python
-    for i in tqdm(range(2, total_frames), desc="Combining results", position=0, leave=True):
-        frame = frames[i]
-        prev_frame = frames[i - 1]
-        prev_prev_frame = frames[i - 2]
-    ```
-    This loop iterates over each frame in the video, processing them one by one.
-
-3. **Court Detection**:
+1. **Court Detection**:
     ```python
     outputs = court_predictor(frame)
     instances = outputs["instances"]
@@ -266,14 +248,14 @@ The `combine_results` function integrates the outputs from `court_detection.py` 
     ```
     The court detection model is applied to the current frame. If keypoints are found, they are visualized on the frame; otherwise, the frame is copied as is.
 
-4. **Ball Tracking**:
+2. **Ball Tracking**:
     ```python
     x_pred, y_pred = detect_ball(tracknet_model, device, frame, prev_frame, prev_prev_frame)
     ball_track.append((x_pred, y_pred))
     ```
     The TrackNet model is used to detect the ball's position in the current frame, and the position is added to the `ball_track` list.
 
-5. **Visualizing Ball Movement**:
+3. **Visualizing Ball Movement**:
     ```python
     if x_pred and y_pred:
         for j in range(min(7, len(ball_track))):
@@ -283,7 +265,7 @@ The `combine_results` function integrates the outputs from `court_detection.py` 
     ```
     The detected ball positions are visualized on the frame, drawing circles to represent the ball's trajectory.
 
-6. **Stabilizing and Transforming Key Points**:
+4. **Stabilizing and Transforming Key Points**:
     ```python
     stabilized_points = stabilize_points(keypoints)
     transformed_keypoints, matrix = transform_points(stabilized_points, black_frame_width, black_frame_height)
@@ -291,7 +273,7 @@ The `combine_results` function integrates the outputs from `court_detection.py` 
     ```
     Key points are stabilized and transformed to fit within a defined black frame, and the court skeleton is visualized.
 
-7. **Transforming Ball Position to 2D Plane**:
+5. **Transforming Ball Position to 2D Plane**:
     ```python
     if x_pred and y_pred:
         ball_pos_2d = transform_ball_2d(x_pred, y_pred, matrix)
@@ -300,7 +282,7 @@ The `combine_results` function integrates the outputs from `court_detection.py` 
     ```
     The ball's position is transformed into the 2D plane of the court skeleton and visualized.
 
-8. **Combining and Storing the Processed Frame**:
+6. **Combining and Storing the Processed Frame**:
     ```python
     processed_frame[0 : court_skeleton.shape[0], 0 : court_skeleton.shape[1]] = court_skeleton
     combined_frames.append(processed_frame)
