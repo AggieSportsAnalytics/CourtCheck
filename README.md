@@ -184,6 +184,47 @@ To visualize the tennis court and transform it into a 2D plane, the following st
 |:-----------------------------:|:-------------------:|
 | ![Court Detection in Main Frame](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game1_court_processed.gif) | <img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game2_2Dskeleton_10s.gif" alt="Transposed 2D Plane" style="width: 50%;"> |
 
+Transforming Key Points
+
+The `transform_points` function is designed to transpose the detected key points to fit within a defined black frame. This transformation ensures that the court is displayed correctly in a 2D plane. Below is an explanation of the function, broken down into its important parts:
+
+Function Explanation
+```python
+def transform_points(keypoints, black_frame_width, black_frame_height):
+    """Transform keypoints to fit within a black frame
+    :params
+        keypoints: list of keypoints to transform
+        black_frame_width: width of the black frame
+        black_frame_height: height of the black frame
+    :return
+        transformed_keypoints: transformed keypoints
+        matrix: perspective transformation matrix
+    """
+    width_frac = 6
+    height_frac = 7
+```
+The function takes in the key points, the width, and the height of the black frame. It uses fractions to determine the relative positions within the frame.
+
+```python
+    src_points = np.array(
+        [
+            keypoint_dict["BTL"],
+            keypoint_dict["BTR"],
+            keypoint_dict["BBL"],
+            keypoint_dict["BBR"],
+        ],
+        dtype=np.float32,
+    )
+```
+The destination points are defined within the black frame for the four corners of the court: BTL (Bottom-Top-Left), BTR (Bottom-Top-Right), BBL (Bottom-Bottom-Left), and BBR (Bottom-Bottom-Right). These points are used to establish the skeleton of the court within the black frame.
+
+```python
+    matrix = cv2.getPerspectiveTransform(src_points, dst_points)
+    transformed_keypoints = cv2.perspectiveTransform(keypoints[None, :, :2], matrix)[0]
+    return transformed_keypoints, matrix
+```
+Using OpenCV's `getPerspectiveTransform`, a transformation matrix is calculated to map the source points to the destination points. The perspective transformation is then applied to the key points, fitting them into the black frame for a top-down 2D view.
+
 
 ## Ball Tracking
 
