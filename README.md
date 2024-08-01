@@ -182,7 +182,7 @@ To visualize the tennis court and transform it into a 2D plane, the following st
 
 | Court Detection in Main Frame | Black & White Court | Transposed 2D Plane |
 |:-----------------------------:|:-------------------:|:-------------------:|
-| ![Court Detection in Main Frame](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game1_court_processed..gif) | ![Black & White Court](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/2d_plane_game1.gif) | ![Transposed 2D Plane](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/2d_plane_game1_transposed.gif) |
+| ![Court Detection in Main Frame](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game1_court_processed..gif) | ![Black & White Court](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/2d_plane_game1.gif) | ![Transposed 2D Plane](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game2_2Dskeleton_10s.gif) |
 
 
 ## Ball Tracking
