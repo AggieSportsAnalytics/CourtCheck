@@ -166,7 +166,7 @@ def stabilize_points(keypoints):
             stabilized_points.append(keypoint[:2])
     return np.array(stabilized_points)
 ```
-The `stabilize_points` function processes the detected key points to reduce jitter by averaging their positions over the last 10 frames. For each detected key point, its position is appended to the corresponding deque in the keypoint_history dictionary. If the deque contains more than one position, the average of these positions is computed and added to the stabilized_points list. If the deque contains only one position, the key point is added to the list as is. This results in more consistent and smooth key point positions for further processing and visualization.
+The `stabilize_points` function then uses the `keypoint_history` dictionary to process the detected key points and reduce jitter by averaging their positions over the last 10 frames. For each detected key point, its position is appended to the corresponding deque in the `keypoint_history dictionary`. If the deque contains more than one position, the average of these positions is computed and added to the `stabilized_points` list. If the deque contains only one position, the key point is added to the list as is. This results in more consistent and smooth key point positions for further processing and visualization.
 
 
 ## Ball Tracking
