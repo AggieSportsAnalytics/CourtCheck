@@ -183,7 +183,7 @@ To visualize the tennis court and transform it into a 2D plane, the following st
 <div style="display: flex; justify-content: space-between; align-items: center;">
   <div style="text-align: center;">
     <h4>Court Detection in Main Frame</h4>
-    <img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game1_court_processed..gif" alt="Court Detection in Main Frame" style="width: 45%;">
+    <img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game1_court_processed.gif" alt="Court Detection in Main Frame" style="width: 45%;">
   </div>
   <div style="text-align: center;">
     <h4>Transposed 2D Plane</h4>
