@@ -181,7 +181,7 @@ To visualize the tennis court and transform it into a 2D plane, the following st
     - This black-and-white image is transposed into a 2D plane, providing a clear and concise representation of the tennis court, as depicted in the second image.
 
 <div style="display: flex; justify-content: space-between;">
-  <img src="https://github.com/AggieSportsAnalytics/CourtCheck/tree/main/images#:~:text=game1_court_processed..gif" alt="Court Detection in Main Frame" style="width: 49%;">
+  <img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game1_court_processed..gif" alt="Court Detection in Main Frame" style="width: 49%;">
   <img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/2d_plane_game1.gif" alt="Transposed 2D Plane" style="width: 49%;">
 </div>
 
