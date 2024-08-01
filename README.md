@@ -191,15 +191,6 @@ The `transform_points` function is designed to transpose the detected key points
 Function Explanation
 ```python
 def transform_points(keypoints, black_frame_width, black_frame_height):
-    """Transform keypoints to fit within a black frame
-    :params
-        keypoints: list of keypoints to transform
-        black_frame_width: width of the black frame
-        black_frame_height: height of the black frame
-    :return
-        transformed_keypoints: transformed keypoints
-        matrix: perspective transformation matrix
-    """
     width_frac = 6
     height_frac = 7
 ```
