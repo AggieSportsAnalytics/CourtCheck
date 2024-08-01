@@ -166,8 +166,24 @@ def stabilize_points(keypoints):
             stabilized_points.append(keypoint[:2])
     return np.array(stabilized_points)
 ```
-The `stabilize_points` function then uses the `keypoint_history` dictionary to process the detected key points and reduce jitter by averaging their positions over the last 10 frames. For each detected key point, its position is appended to the corresponding deque in the `keypoint_history dictionary`. If the deque contains more than one position, the average of these positions is computed and added to the `stabilized_points` list. If the deque contains only one position, the key point is added to the list as is. This results in more consistent and smooth key point positions for further processing and visualization.
+The `stabilize_points` function then uses the `keypoint_history` dictionary to process the detected key points and reduce jitter by averaging their positions over the last 10 frames. For each detected key point, its position is appended to the corresponding deque in the `keypoint_history` dictionary. If the deque contains more than one position, the average of these positions is computed and added to the `stabilized_points` list. If the deque contains only one position, the key point is added to the list as is. This results in more consistent and smooth key point positions for further processing and visualization.
 
+### Visualizing and Transforming the Court
+
+To visualize the tennis court and transform it into a 2D plane, the following steps are taken:
+
+1. **Court Detection in the Main Frame**:
+    - The model detects key points on the tennis court in the main video frame.
+    - Polylines are drawn between these key points to visualize the court lines and boundaries clearly, as shown in the first image.
+
+2. **Transformation to Black and White and 2D Plane**:
+    - The detected court is then converted into a black-and-white image to simplify the structure.
+    - This black-and-white image is transposed into a 2D plane, providing a clear and concise representation of the tennis court, as depicted in the second image.
+
+<div style="display: flex; justify-content: space-between;">
+  <img src="https://github.com/AggieSportsAnalytics/CourtCheck/tree/main/images#:~:text=game1_court_processed..gif" alt="Court Detection in Main Frame" style="width: 49%;">
+  <img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/2d_plane_game1.gif" alt="Transposed 2D Plane" style="width: 49%;">
+</div>
 
 ## Ball Tracking
 
