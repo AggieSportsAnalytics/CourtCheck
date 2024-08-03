@@ -1,3 +1,4 @@
+
 # CourtCheck <img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/courtcheck_ball_logo.png" alt="CourtCheck Logo" style="width: 80px; vertical-align: middle;"> 
 
 ### 🏁 Automate tennis match analysis using the power of computer vision.
@@ -16,7 +17,7 @@ CourtCheck employs keypoint detection algorithms to identify and track the tenni
 
 ### 📑 Annotation
 
-We began by annotating images using OpenCV in the COCO format, generating JSON files for each annotated image. The (OpenCV Annotation Tool)[https://app.cvat.ai/] provides an excellent interface for image annotation and export in various formats. It also features an interpolation tool that allows the use of a skeleton to label key frames, which can be interpolated over consecutive frames in the video.
+We began by annotating images using OpenCV in the COCO format, generating JSON files for each annotated image. The [OpenCV Annotation Tool](https://app.cvat.ai/) provides an excellent interface for image annotation and export in various formats. It also features an interpolation tool that allows the use of a skeleton to label key frames, which can be interpolated over consecutive frames in the video.
 
 ![annotation-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/opencv_annotation.gif)
 
