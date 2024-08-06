@@ -3,7 +3,7 @@
 
 ### 🏁 Automate tennis match analysis using the power of computer vision.
 
-ourtCheck leverages advanced computer vision techniques to accurately track tennis ball movements and court boundaries in tennis matches. This project aims to provide real-time insights and automated decision-making in tennis, reducing human error and enhancing the accuracy of in/out calls. CourtCheck integrates Python, machine learning, and computer vision to create a seamless and efficient system for tennis match analysis.
+CourtCheck leverages advanced computer vision techniques to accurately track tennis ball movements and court boundaries in tennis matches. This project aims to provide real-time insights and automated decision-making in tennis, reducing human error and enhancing the accuracy of in/out calls. CourtCheck integrates Python, machine learning, and computer vision to create a seamless and efficient system for tennis match analysis.
 
 ![courtcheck-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game2_processed_10s.gif)
 
@@ -36,7 +36,7 @@ Each label in the skeleton represents a keypoint on the tennis court, identifyin
 
 ### 🤖 Training the Model
 
-We utilized the A100 Nvidia GPU to train our Detectron2 model on different types of datasets. These datasets included varying court surfaces and slightly different camera angles to ensure robustness and generalizability of the model. Below, we explain the process and provide the code used for training the model incrementally with mixed datasets.
+We utilized the A100 Nvidia GPU on Google Colab to train our Detectron2 model on different types of datasets. These datasets included varying court surfaces and slightly different camera angles to ensure robustness and generalizability of the model. Below, we explain the process and provide the code used for training the model incrementally with mixed datasets.
 
 Below is an overview of the Detectron2 architecture:
 
@@ -324,7 +324,7 @@ The TrackNet model used in this project is credited to [yastrebksv](https://gith
 - **PyTorch**: For building and training machine learning models.
 - **tqdm**: For progress bar visualization in loops and processing tasks.
 
-## Installation
+## 🛠️ Installation
 
 To set up the project, clone the repository and install the dependencies using the `requirements.txt` file:
 
@@ -333,3 +333,13 @@ git clone https://github.com/AggieSportsAnalytics/CourtCheck.git
 cd CourtCheck
 pip install -r requirements.txt
 ```
+After installing the requirements, navigate to the `scripts/process_video.py` directory. At the bottom of the script, update the video paths to your desired input and output locations:
+
+```
+video_path = "..."  # Input Video Path (mp4 format)
+output_path = "..."  # Output Video Path (mp4 format)
+```
+
+⚠️ Note: This process is for post-processing, meaning it will infer on a video input to detect the court and the ball. This operation is intensive on computer hardware and may take quite a bit of time to complete. If you want to use Google Colab's online GPU/processor instead, then head to [Google Colab Notebook](https://colab.research.google.com/drive/11wkF5_nDDkTFaKCEX-e7doO-I55bn3NW?usp=sharing). Make sure to run all cells in chronological order.
+
+
