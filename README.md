@@ -11,11 +11,11 @@ CourtCheck leverages advanced computer vision techniques to accurately track ten
 
 
 
-## 🔎 Court Detection
+## 1. 🔎 Court Detection
 
 CourtCheck employs keypoint detection algorithms to identify and track the tennis court's boundaries, ensuring accurate mapping and analysis of the court's dimensions.
 
-### 📑 Annotation
+### a. 📑 Annotation
 
 We began by annotating images using OpenCV in the COCO format, generating JSON files for each annotated image. The [OpenCV Annotation Tool](https://app.cvat.ai/) provides an excellent interface for image annotation and export in various formats. It also features an interpolation tool that allows the use of a skeleton to label key frames, which can be interpolated over consecutive frames in the video.
 
@@ -34,7 +34,7 @@ Each label in the skeleton represents a keypoint on the tennis court, identifyin
 | BBR      | Bottom Bottom Right         | ITL      | Inner Top Left                  | IBM      | Inner Bottom Middle         |
 | BBRI     | Bottom Bottom Right Inner   |          |                                 | BBLI     | Bottom Bottom Left Inner    |
 
-### 🤖 Training the Model
+### b. 🤖 Training the Model
 
 We utilized the A100 Nvidia GPU on Google Colab to train our Detectron2 model on different types of datasets. These datasets included varying court surfaces and slightly different camera angles to ensure robustness and generalizability of the model. Below, we explain the process and provide the code used for training the model incrementally with mixed datasets.
 
@@ -48,7 +48,7 @@ Below is an overview of the Detectron2 architecture:
 We used the `COCO-Keypoints/keypoint_rcnn_R_50_FPN_3x.yaml` configuration file because it is specifically designed for keypoint detection tasks. The [keypoint_rcnn_R_50_FPN_3x.yaml](https://drive.google.com/drive/folders/18t8oUo5_jzYYD1vnFzjLw7uhxmagXINX?usp=drive_link) configuration is well-suited for this task because it includes a pre-trained ResNet-50 backbone that provides strong feature extraction capabilities, coupled with a Feature Pyramid Network (FPN) that helps detect objects at multiple scales. This combination ensures that the model can accurately identify and track the key points on the tennis court, providing precise court boundary detection and enabling accurate in/out call determinations.
 
 
-#### 🧬 Model Code
+#### c. 🧬 Model Code
 
 The code below sets up and trains the Detectron2 model using multiple datasets:
 
@@ -107,15 +107,15 @@ max_iter = last_iter + custom_iter  # Change this for the number of iterations p
 train_model(max_iter, resume=True)
 ```
 
-## 📽️ Post Processing
+## 2. 📽️ Post Processing
 
 After training the model, the next crucial step is post-processing the results to ensure accurate and meaningful outputs. Post-processing involves refining the model's predictions and visualizing the detected key points on the tennis court for better interpretation and analysis.
 
-### 🔲 Visualizing the Court on the Main Frame
+### a. 🔲 Visualizing the Court on the Main Frame
 
 To accurately visualize the tennis court on the main video frame, we start by detecting key points on the court using the trained model. These key points correspond to specific locations on the court, such as the corners and intersections of lines. Visualizing these key points on the frame helps us understand how well the model is detecting the court's structure.
 
-#### Extracting Key Points from the Model
+#### i. Extracting Key Points from the Model
 
 The court detection model `(court_predictor)` outputs instances that include predicted key points. These key points are stored in an array where each element corresponds to a specific point on the court, identified by its (x, y) coordinates.
 
@@ -134,7 +134,7 @@ else:
 
 If no key points are detected, a default array of zeros is used to avoid errors in subsequent processing.
 
-#### Visualizing Key Points and Court Lines
+#### i. Visualizing Key Points and Court Lines
 
 Once the key points are extracted, the next step is to visualize them by drawing polylines between the points that align with the court lines and boundaries. These lines help in creating a clear and precise representation of the tennis court structure. Here are the specific polylines to be drawn:
 
@@ -198,15 +198,15 @@ def stabilize_points(keypoints):
 ```
 The `stabilize_points` function then uses the `keypoint_history` dictionary to process the detected key points and reduce jitter by averaging their positions over the last 10 frames. For each detected key point, its position is appended to the corresponding deque in the `keypoint_history` dictionary. If the deque contains more than one position, the average of these positions is computed and added to the `stabilized_points` list. If the deque contains only one position, the key point is added to the list as is. This results in more consistent and smooth key point positions for further processing and visualization.
 
-### Transforming the Court into a 2D Plane Using Homography
+### b. 📐 Transforming the Court into a 2D Plane Using Homography
 
 After visualizing the court on the main frame, the next step is to transform these detected key points into a 2D, top-down view of the court. This transformation is essential for accurate analysis of the ball's position in relation to the court lines.
 
-#### Homography Transformation
+#### i. Homography Transformation
 
 Homography Transformation is a mathematical technique used to map points from one plane to another, such as transforming the court from the camera’s perspective view to a top-down 2D view. In this project, homography transformation is crucial because it allows us to create an accurate 2D representation of the court, which is necessary for determining ball positions and making in/out calls.
 
-#### Extracting and Preparing Data for Transformation
+#### ii. Extracting and Preparing Data for Transformation
 
 The process starts with extracting the key points as discussed earlier. These key points are then used to define the court’s boundaries in both the original perspective and the target 2D plane.
 
@@ -234,7 +234,7 @@ dst_points = np.array(
 - `src_points`: These are the coordinates of the key points in the original frame, representing the four corners of the court.
 - `dst_points`: These are the coordinates where these points should be mapped in the 2D plane. They represent where the corners of the court should be in the top-down view.
 
-#### Computing the Homography Matrix
+#### iii. Computing the Homography Matrix
 
 The homography matrix is then computed using the source and destination points:
 ```python
@@ -246,7 +246,7 @@ transformed_keypoints = cv2.perspectiveTransform(keypoints[None, :, :2], matrix)
 
 The result is a set of transformed key points that represent the court in a top-down 2D view.
 
-#### Visualizing the 2D Court
+#### iv. Visualizing the 2D Court
 
 Finally, the transformed key points are used to visualize the court in 2D:
 
