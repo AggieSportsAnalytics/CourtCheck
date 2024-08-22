@@ -9,8 +9,6 @@ CourtCheck leverages advanced computer vision techniques to accurately track ten
 
 # 🔑 Process & Key Features
 
-
-
 ## 1. 🔎 Court Detection
 
 CourtCheck employs keypoint detection algorithms to identify and track the tennis court's boundaries, ensuring accurate mapping and analysis of the court's dimensions.
@@ -263,87 +261,73 @@ This function draws the court lines and boundaries based on the transformed key 
 
 This 2D transformation is a crucial step in ensuring the accuracy and effectiveness of the CourtCheck system, enabling precise in/out calls and detailed match analysis.
 
-## 🎾 Ball Tracking
+## 3. 🎾 Ball Tracking
 
-CourtCheck is integrated with a ball tracking model called TrackNet. TrackNet is an advanced deep learning model specifically designed for tracking tennis balls, and it has been instrumental in enhancing the overall functionality of this project. The TrackNet model used here is adapted from [yastrebksv's TrackNet implementation on GitHub](https://github.com/yastrebksv/TrackNet).
+Ball tracking is a critical component of CourtCheck, as it allows for precise analysis of tennis ball movements in relation to the court boundaries. The ball tracking model used in this project is TrackNet, an advanced deep learning model designed specifically for this purpose. The model's robust capabilities enable accurate tracking of the ball across frames, even in fast-paced tennis matches. The TrackNet model used here is adapted from [yastrebksv's TrackNet implementation on GitHub](https://github.com/yastrebksv/TrackNet).
 
-### ↔️ Integration Process
+### a. 🛠️ How TrackNet is Integrated
+The integration of TrackNet with the existing court detection pipeline ensures that both the court and ball movements are accurately represented in each frame of the video. Here’s a breakdown of how the ball tracking model is used, and how its output data is manipulated and visualized:
 
-The integration of court detection with TrackNet involves the following steps:
+#### i. Loading and Using the TrackNet Model
 
-1. **Court Detection**: First, the court detection model processes each frame of the video to identify and map the court's key points. This ensures that the court is accurately detected and transformed into a 2D plane.
+TrackNet is loaded and applied to each frame to detect the ball's position. The model takes in a sequence of frames and outputs the predicted coordinates of the ball.
 
-2. **Ball Tracking with TrackNet**: The TrackNet model is then applied to the same frames to detect and track the tennis ball. TrackNet's robust tracking capability allows for precise ball movement analysis throughout the video.
+```python
+x_pred, y_pred = detect_ball(tracknet_model, device, frame, prev_frame, prev_prev_frame)
+ball_track.append((x_pred, y_pred))
+```
+- `detect_ball` Function: This function uses the TrackNet model to predict the ball's position `(x_pred, y_pred)` in the current frame based on the current and previous frames.
+- Frame Sequence: TrackNet utilizes a sequence of three consecutive frames (current, previous, and the one before that) to predict the ball's position, helping it account for the ball's movement across time.
 
-3. **Combining Results**: The results from both models are combined to provide a comprehensive visualization of the tennis game. This includes the detected court and the tracked ball, offering insights into ball positions relative to the court boundaries.
+The predicted ball position is then stored in `ball_track`, a list that accumulates the ball's trajectory over time.
 
-The `combine_results` function in `process_video.py` integrates the outputs from `court_detection.py` and `ball_detection.py` to process each video frame and produce the final visualization.
+#### ii. Visualizing Ball Movement on the Main Frame
 
-Here are a couple key steps of the function
+Once the ball's position is detected, it is visualized directly on the main video frame. This visualization involves drawing circles on the frame to represent the ball's trajectory.
 
-1. **Court Detection**:
-    ```python
-    outputs = court_predictor(frame)
-    instances = outputs["instances"]
-    if len(instances) > 0:
-        keypoints = instances.pred_keypoints.cpu().numpy()[0]
-        keypoints_found += 1
-        processed_frame = visualize_predictions(frame, court_predictor, keypoint_names, lines, black_frame_width, black_frame_height)
-    else:
-        keypoints = np.zeros((17, 3))
-        processed_frame = frame.copy()
-    ```
-    The court detection model is applied to the current frame. If keypoints are found, they are visualized on the frame; otherwise, the frame is copied as is.
+```python
+if x_pred and y_pred:
+    for j in range(min(7, len(ball_track))):
+        if ball_track[-j][0] is not None and ball_track[-j][1] is not None:
+            if 0 <= int(ball_track[-j][0]) < processed_frame.shape[1] and 0 <= int(ball_track[-j][1]) < processed_frame.shape[0]:
+                cv2.circle(processed_frame, (int(ball_track[-j][0]), int(ball_track[-j][1])), max(2, 7 - j), (255, 255, 0), -1)
+```
+- Ball Trajectory Visualization: Circles are drawn on the frame at the detected ball positions. The size of the circles decreases for previous positions, providing a visual trail of the ball's movement.
+- Color and Positioning: The color `(255, 255, 0)` is used for the circles, and the positions are carefully checked to ensure they fall within the frame’s boundaries.
 
-2. **Ball Tracking**:
-    ```python
-    x_pred, y_pred = detect_ball(tracknet_model, device, frame, prev_frame, prev_prev_frame)
-    ball_track.append((x_pred, y_pred))
-    ```
-    The TrackNet model is used to detect the ball's position in the current frame, and the position is added to the `ball_track` list.
+#### iii. Transforming Ball Position to the 2D Plane
 
-3. **Visualizing Ball Movement**:
-    ```python
-    if x_pred and y_pred:
-        for j in range(min(7, len(ball_track))):
-            if ball_track[-j][0] is not None and ball_track[-j][1] is not None:
-                if 0 <= int(ball_track[-j][0]) < processed_frame.shape[1] and 0 <= int(ball_track[-j][1]) < processed_frame.shape[0]:
-                    cv2.circle(processed_frame, (int(ball_track[-j][0]), int(ball_track[-j][1])), max(2, 7 - j), (255, 255, 0), -1)
-    ```
-    The detected ball positions are visualized on the frame, drawing circles to represent the ball's trajectory.
+After visualizing the ball's trajectory on the main frame, the next step is to map the ball's detected position onto the 2D plane of the court. This is done using a homography matrix, which was previously computed during court detection.
 
-4. **Stabilizing and Transforming Key Points**:
-    ```python
-    stabilized_points = stabilize_points(keypoints)
-    transformed_keypoints, matrix = transform_points(stabilized_points, black_frame_width, black_frame_height)
-    court_skeleton = visualize_2d(transformed_keypoints, lines, black_frame_width, black_frame_height)
-    ```
-    Key points are stabilized and transformed to fit within a defined black frame, and the court skeleton is visualized.
+```python
+if x_pred and y_pred:
+    ball_pos_2d = transform_ball_2d(x_pred, y_pred, matrix)
+    if 0 <= int(ball_pos_2d[0]) < court_skeleton.shape[1] and 0 <= int(ball_pos_2d[1]) < court_skeleton.shape[0]:
+        cv2.circle(court_skeleton, (int(ball_pos_2d[0]), int(ball_pos_2d[1])), 3, (255, 255, 0), -1)
+```
+- `transform_ball_2d` Function: This function applies the homography matrix to the ball's position, transforming it from the original perspective view to the 2D top-down view of the court.
+- 2D Visualization: The transformed ball position is then drawn on the 2D court skeleton using a circle, ensuring that the ball's movement is accurately represented relative to the court boundaries in the 2D plane.
 
-5. **Transforming Ball Position to 2D Plane**:
-    ```python
-    if x_pred and y_pred:
-        ball_pos_2d = transform_ball_2d(x_pred, y_pred, matrix)
-        if 0 <= int(ball_pos_2d[0]) < court_skeleton.shape[1] and 0 <= int(ball_pos_2d[1]) < court_skeleton.shape[0]:
-            cv2.circle(court_skeleton, (int(ball_pos_2d[0]), int(ball_pos_2d[1])), 3, (255, 255, 0), -1)
-    ```
-    The ball's position is transformed into the 2D plane of the court skeleton and visualized.
-   
+#### iv. Combining and Finalizing the Visualization
+
+Finally, the court skeleton (with the ball's 2D position) is overlaid onto the processed main frame, and the combined frame is stored for generating the final output video.
+
+```python
+processed_frame[0 : court_skeleton.shape[0], 0 : court_skeleton.shape[1]] = court_skeleton
+combined_frames.append(processed_frame)
+```
+
+- Overlaying the 2D Court: The processed frame now contains both the main frame visualization (with the court and ball trajectory) and the 2D court skeleton (with the ball’s position in the 2D plane).
+- Frame Storage: The combined frame is added to the `combined_frames` list, which holds all the processed frames for the final video output.
+
+### 🏆 Outcome
+By integrating TrackNet with court detection, CourtCheck provides a comprehensive analysis of tennis matches. The system not only visualizes the ball’s movement relative to the court boundaries in the original video frame but also offers a clear 2D simulation of the court. This dual representation is essential for accurate in/out calls and for providing insights into ball trajectories during the match.  
+
     ![ball-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/game2_2Dskeleton_court_ball.gif)
-   
-
-7. **Combining and Storing the Processed Frame**:
-    ```python
-    processed_frame[0 : court_skeleton.shape[0], 0 : court_skeleton.shape[1]] = court_skeleton
-    combined_frames.append(processed_frame)
-    ```
-    The court skeleton is overlaid onto the processed frame, and the frame is added to the list of combined frames.
-
-The `combine_results` function effectively integrates court detection and ball tracking to produce a comprehensive visualization of the tennis game, showing both the court and the ball's movement in each frame.
 
 ![demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game9_processed_10s.gif)
 
-#### Crediting TrackNet
+The combination of these techniques ensures that every aspect of the ball's movement is accurately captured and visualized, making CourtCheck a powerful tool for tennis match analysis.
 
 The TrackNet model used in this project is credited to [yastrebksv](https://github.com/yastrebksv/TrackNet). Their implementation provided the foundation for the ball tracking functionality integrated into this project.
 
