@@ -306,7 +306,11 @@ if x_pred and y_pred:
         cv2.circle(court_skeleton, (int(ball_pos_2d[0]), int(ball_pos_2d[1])), 3, (255, 255, 0), -1)
 ```
 - `transform_ball_2d` Function: This function applies the homography matrix to the ball's position, transforming it from the original perspective view to the 2D top-down view of the court using OpenCV's `cv2.perspectiveTransform(ball_pos, matrix)` function.
-- 2D Visualization: The transformed ball position is then drawn on the 2D court skeleton using a circle, ensuring that the ball's movement is accurately represented relative to the court boundaries in the 2D plane.
+    - Transformation Process: The function first converts the ball's position `(x_pred, y_pred)` into a format suitable for transformation `(ball_pos = np.array([[x, y]], dtype=np.float32).reshape(-1, 1, 2))`.
+
+    - Application of Homography Matrix: The `cv2.perspectiveTransform` function then applies the homography matrix to this position, resulting in `transformed_ball_pos`, which represents the ball's position in the 2D plane.
+
+    - Visualizing in 2D: The transformed ball position is then drawn on the 2D court skeleton using a circle, ensuring that the ball's movement is accurately represented relative to the court boundaries in the 2D plane.
 
 ![ball-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/game2_2Dskeleton_court_ball.gif)
 
