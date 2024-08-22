@@ -111,6 +111,25 @@ train_model(max_iter, resume=True)
 
 After training the model, the next crucial step is post-processing the results to ensure accurate and meaningful outputs. Post-processing involves refining the model's predictions and visualizing the detected key points on the tennis court for better interpretation and analysis.
 
+#### Visualizing the Court on the Main Frame
+
+To accurately visualize the tennis court on the main video frame, we start by detecting key points on the court using the trained model. These key points correspond to specific locations on the court, such as the corners and intersections of lines. Visualizing these key points on the frame helps us understand how well the model is detecting the court's structure.
+
+Extracting Key Points from the Model
+
+The court detection model (court_predictor) outputs instances that include predicted key points. These key points are stored in an array where each element corresponds to a specific point on the court, identified by its (x, y) coordinates.
+
+Here's how the key points are extracted:
+```
+outputs = court_predictor(img)
+instances = outputs["instances"]
+
+if len(instances) > 0:
+    keypoints = instances.pred_keypoints.cpu().numpy()[0]
+else:
+    keypoints = np.zeros((17, 3))
+```
+
 To visualize the court, we draw polylines between key points that align with the court lines and boundaries. These lines help in creating a clear and precise representation of the tennis court structure. Here are the specific polylines to be drawn:
 
 ```python
