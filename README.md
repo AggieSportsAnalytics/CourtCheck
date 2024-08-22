@@ -308,6 +308,8 @@ if x_pred and y_pred:
 - `transform_ball_2d` Function: This function applies the homography matrix to the ball's position, transforming it from the original perspective view to the 2D top-down view of the court using OpenCV's `cv2.perspectiveTransform(ball_pos, matrix)` function.
 - 2D Visualization: The transformed ball position is then drawn on the 2D court skeleton using a circle, ensuring that the ball's movement is accurately represented relative to the court boundaries in the 2D plane.
 
+![ball-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/game2_2Dskeleton_court_ball.gif)
+
 #### iv. Combining and Finalizing the Visualization
 
 Finally, the court skeleton (with the ball's 2D position) is overlaid onto the processed main frame, and the combined frame is stored for generating the final output video.
@@ -323,7 +325,6 @@ combined_frames.append(processed_frame)
 ### 🏆 Outcome
 By integrating TrackNet with court detection, CourtCheck provides a comprehensive analysis of tennis matches. The system not only visualizes the ball’s movement relative to the court boundaries in the original video frame but also offers a clear 2D simulation of the court. This dual representation is essential for accurate in/out calls and for providing insights into ball trajectories during the match.  
 
-    ![ball-demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/cory/images/game2_2Dskeleton_court_ball.gif)
 
 ![demo](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game9_processed_10s.gif)
 
