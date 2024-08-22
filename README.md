@@ -107,17 +107,17 @@ max_iter = last_iter + custom_iter  # Change this for the number of iterations p
 train_model(max_iter, resume=True)
 ```
 
-### 📽️ Post Processing
+## 📽️ Post Processing
 
 After training the model, the next crucial step is post-processing the results to ensure accurate and meaningful outputs. Post-processing involves refining the model's predictions and visualizing the detected key points on the tennis court for better interpretation and analysis.
 
-#### Visualizing the Court on the Main Frame
+### 🔲 Visualizing the Court on the Main Frame
 
 To accurately visualize the tennis court on the main video frame, we start by detecting key points on the court using the trained model. These key points correspond to specific locations on the court, such as the corners and intersections of lines. Visualizing these key points on the frame helps us understand how well the model is detecting the court's structure.
 
-Extracting Key Points from the Model
+#### Extracting Key Points from the Model
 
-The court detection model (court_predictor) outputs instances that include predicted key points. These key points are stored in an array where each element corresponds to a specific point on the court, identified by its (x, y) coordinates.
+The court detection model `(court_predictor)` outputs instances that include predicted key points. These key points are stored in an array where each element corresponds to a specific point on the court, identified by its (x, y) coordinates.
 
 Here's how the key points are extracted:
 ```
@@ -129,8 +129,14 @@ if len(instances) > 0:
 else:
     keypoints = np.zeros((17, 3))
 ```
+- `outputs["instances"]`: This contains all detected instances in the frame, including the detected court.
+- `instances.pred_keypoints.cpu().numpy()[0]`: This extracts the key points of the detected court. The key points are converted from a tensor to a numpy array for further processing.
 
-To visualize the court, we draw polylines between key points that align with the court lines and boundaries. These lines help in creating a clear and precise representation of the tennis court structure. Here are the specific polylines to be drawn:
+If no key points are detected, a default array of zeros is used to avoid errors in subsequent processing.
+
+#### Visualizing Key Points and Court Lines
+
+Once the key points are extracted, the next step is to visualize them by drawing polylines between the points that align with the court lines and boundaries. These lines help in creating a clear and precise representation of the tennis court structure. Here are the specific polylines to be drawn:
 
 ```python
 lines = [
@@ -142,6 +148,7 @@ lines = [
     ("BBRI", "BBLI"), ("BBL", "BBLI"),
 ]
 ```
+Each pair in the `lines` list represents two key points between which a line will be drawn. These lines outline the court's structure on the video frame.
 
 The `visualize_predictions` function is essential for visualizing model predictions on an input image. Here are two key parts of the function:
 
@@ -162,7 +169,10 @@ if len(instances) > 0:
 out = v.draw_instance_predictions(instances)
 keypoints = instances.pred_keypoints.numpy()[0]
 ```
-This part of the function generates predictions from the model and selects the instance with the highest confidence score. The keypoints of this instance are extracted for further processing.
+- `Visualizer`: This tool is used to overlay the detected key points and lines on the original image.
+- `draw_instance_predictions`: This function draws the visual elements on the frame, including key points and the connecting lines.
+
+This process results in a visual overlay of the court on the original video frame, allowing for immediate visual verification of the court detection accuracy.
 
 To ensure that the detected key points on the tennis court are stable and less jittery, especially when dealing with video frames, we use a stabilization technique. This involves averaging the positions of detected key points over a history of frames.
 
@@ -188,53 +198,70 @@ def stabilize_points(keypoints):
 ```
 The `stabilize_points` function then uses the `keypoint_history` dictionary to process the detected key points and reduce jitter by averaging their positions over the last 10 frames. For each detected key point, its position is appended to the corresponding deque in the `keypoint_history` dictionary. If the deque contains more than one position, the average of these positions is computed and added to the `stabilized_points` list. If the deque contains only one position, the key point is added to the list as is. This results in more consistent and smooth key point positions for further processing and visualization.
 
-#### Visualizing and Transforming the Court
+### Transforming the Court into a 2D Plane Using Homography
 
-To visualize the tennis court and transform it into a 2D plane, the following steps are taken:
+After visualizing the court on the main frame, the next step is to transform these detected key points into a 2D, top-down view of the court. This transformation is essential for accurate analysis of the ball's position in relation to the court lines.
 
-1. **Court Detection in the Main Frame**:
-    - The model detects key points on the tennis court in the main video frame.
-    - Polylines are drawn between these key points to visualize the court lines and boundaries clearly, as shown in the first image.
+#### Homography Transformation
 
-2. **Transformation to Black and White and 2D Plane**:
-    - The detected court is then converted into a black-and-white image to simplify the structure.
-    - This black-and-white image is transposed into a 2D plane, providing a clear and concise representation of the tennis court, as depicted in the second image.
+Homography Transformation is a mathematical technique used to map points from one plane to another, such as transforming the court from the camera’s perspective view to a top-down 2D view. In this project, homography transformation is crucial because it allows us to create an accurate 2D representation of the court, which is necessary for determining ball positions and making in/out calls.
 
+#### Extracting and Preparing Data for Transformation
+
+The process starts with extracting the key points as discussed earlier. These key points are then used to define the court’s boundaries in both the original perspective and the target 2D plane.
+
+```python
+src_points = np.array(
+    [
+        keypoint_dict["BTL"],  # Bottom-Top-Left
+        keypoint_dict["BTR"],  # Bottom-Top-Right
+        keypoint_dict["BBL"],  # Bottom-Bottom-Left
+        keypoint_dict["BBR"],  # Bottom-Bottom-Right
+    ],
+    dtype=np.float32,
+)
+
+dst_points = np.array(
+    [
+        [black_frame_width // 6, black_frame_height // 7],  # BTL in 2D
+        [black_frame_width * 5 // 6, black_frame_height // 7],  # BTR in 2D
+        [black_frame_width // 6, black_frame_height * 6 // 7],  # BBL in 2D
+        [black_frame_width * 5 // 6, black_frame_height * 6 // 7],  # BBR in 2D
+    ],
+    dtype=np.float32,
+)
+```
+- `src_points`: These are the coordinates of the key points in the original frame, representing the four corners of the court.
+- `dst_points`: These are the coordinates where these points should be mapped in the 2D plane. They represent where the corners of the court should be in the top-down view.
+
+#### Computing the Homography Matrix
+
+The homography matrix is then computed using the source and destination points:
+```python
+matrix = cv2.getPerspectiveTransform(src_points, dst_points)
+transformed_keypoints = cv2.perspectiveTransform(keypoints[None, :, :2], matrix)[0]
+```
+- `cv2.getPerspectiveTransform`: This function calculates the homography matrix that maps src_points to dst_points.
+- `cv2.perspectiveTransform`: This function applies the homography matrix to the key points, transforming them from the original perspective view to the 2D plane.
+
+The result is a set of transformed key points that represent the court in a top-down 2D view.
+
+#### Visualizing the 2D Court
+
+Finally, the transformed key points are used to visualize the court in 2D:
+
+```python
+court_skeleton = visualize_2d(
+    transformed_keypoints, lines, black_frame_width, black_frame_height
+)
+```
+
+This function draws the court lines and boundaries based on the transformed key points, providing a clear and accurate 2D representation of the court.
 | Court Detection in Main Frame | Transposed 2D Plane |
 |:-----------------------------:|:-------------------:|
 | ![Court Detection in Main Frame](https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game1_court_processed.gif) | <img src="https://github.com/AggieSportsAnalytics/CourtCheck/blob/main/images/game2_2Dskeleton_10s.gif" alt="Transposed 2D Plane" style="width: 50%;"> |
 
-Transforming Key Points
-
-The `transform_points` function is designed to transpose the detected key points to fit within a defined black frame. This transformation ensures that the court is displayed correctly in a 2D plane. Below is an explanation of the function, broken down into its important parts:
-
-Function Explanation
-```python
-def transform_points(keypoints, black_frame_width, black_frame_height):
-    width_frac = 6
-    height_frac = 7
-```
-The function takes in the key points, the width, and the height of the black frame. It uses fractions to determine the relative positions within the frame.
-
-```python
-    src_points = np.array(
-        [
-            keypoint_dict["BTL"],
-            keypoint_dict["BTR"],
-            keypoint_dict["BBL"],
-            keypoint_dict["BBR"],
-        ],
-        dtype=np.float32,
-    )
-```
-The destination points are defined within the black frame for the four corners of the court: BTL (Bottom-Top-Left), BTR (Bottom-Top-Right), BBL (Bottom-Bottom-Left), and BBR (Bottom-Bottom-Right). These points are used to establish the skeleton of the court within the black frame.
-
-```python
-    matrix = cv2.getPerspectiveTransform(src_points, dst_points)
-    transformed_keypoints = cv2.perspectiveTransform(keypoints[None, :, :2], matrix)[0]
-    return transformed_keypoints, matrix
-```
-Using OpenCV's `getPerspectiveTransform`, a transformation matrix is calculated to map the source points to the destination points. The perspective transformation is then applied to the key points, fitting them into the black frame for a top-down 2D view.
+This 2D transformation is a crucial step in ensuring the accuracy and effectiveness of the CourtCheck system, enabling precise in/out calls and detailed match analysis.
 
 ## 🎾 Ball Tracking
 
