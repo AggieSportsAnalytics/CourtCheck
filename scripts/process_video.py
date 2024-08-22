@@ -202,12 +202,15 @@ def process_video(video_path, output_path, court_predictor, tracknet_model, devi
 
 def main():
     """Main function to set up models, process a video, and save the result"""
-    court_config_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/court_detection/configs/COCO-Keypoints/keypoint_rcnn_R_50_FPN_3x.yaml"
-    court_model_weights = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/model_weights/court_detection_weights.pth"
-    tracknet_weights_path = "/Users/macbookairm1/Documents/ASA_s2024/CourtCheck/models/model_weights/tracknet_weights.pt"
 
-    video_path = "..."  # Input Video Path (mp4 format)
-    output_path = "..."  # Output Video Path (mp4 format)
+    court_config_path = (
+        "models/court_detection/configs/COCO-Keypoints/keypoint_rcnn_R_50_FPN_3x.yaml"
+    )
+    court_model_weights = "models/model_weights/court_detection_weights.pth"
+    tracknet_weights_path = "models/model_weights/tracknet_weights.pt"
+
+    video_path = ""  # Input Video Path (mp4 format)
+    output_path = ""  # Output Video Path (mp4 format)
 
     court_predictor = load_court_model(court_config_path, court_model_weights)
     tracknet_model, device = load_tracknet_model(tracknet_weights_path)
