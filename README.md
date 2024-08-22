@@ -117,7 +117,7 @@ To accurately visualize the tennis court on the main video frame, we start by de
 
 #### i. Extracting Key Points from the Model
 
-The court detection model `(court_predictor)` outputs instances that include predicted key points. These key points are stored in an array where each element corresponds to a specific point on the court, identified by its (x, y) coordinates.
+The court detection model `(court_predictor)` outputs instances that include predicted key points. These key points are stored in an array where each element corresponds to a specific point on the court, identified by its (x, y) coordinates. The described code snippets below are from `court_detection.py`.
 
 Here's how the key points are extracted:
 ```
