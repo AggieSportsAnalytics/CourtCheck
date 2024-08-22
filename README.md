@@ -109,7 +109,7 @@ train_model(max_iter, resume=True)
 
 ## 2. 📽️ Post Processing
 
-After training the model, the next crucial step is post-processing the results to ensure accurate and meaningful outputs. Post-processing involves refining the model's predictions and visualizing the detected key points on the tennis court for better interpretation and analysis.
+After training the model, the next crucial step is post-processing the results to ensure accurate and meaningful outputs. Post-processing involves refining the model's predictions and visualizing the detected key points on the tennis court for better interpretation and analysis. The described code snippets below are from `court_detection.py`.
 
 ### a. 🖼️ Visualizing the Court on the Main Frame
 
@@ -117,7 +117,7 @@ To accurately visualize the tennis court on the main video frame, we start by de
 
 #### i. Extracting Key Points from the Model
 
-The court detection model `(court_predictor)` outputs instances that include predicted key points. These key points are stored in an array where each element corresponds to a specific point on the court, identified by its (x, y) coordinates. The described code snippets below are from `court_detection.py`.
+The court detection model `(court_predictor)` outputs instances that include predicted key points. These key points are stored in an array where each element corresponds to a specific point on the court, identified by its (x, y) coordinates.
 
 Here's how the key points are extracted:
 ```
