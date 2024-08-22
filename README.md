@@ -305,7 +305,7 @@ if x_pred and y_pred:
     if 0 <= int(ball_pos_2d[0]) < court_skeleton.shape[1] and 0 <= int(ball_pos_2d[1]) < court_skeleton.shape[0]:
         cv2.circle(court_skeleton, (int(ball_pos_2d[0]), int(ball_pos_2d[1])), 3, (255, 255, 0), -1)
 ```
-- `transform_ball_2d` Function: This function applies the homography matrix to the ball's position, transforming it from the original perspective view to the 2D top-down view of the court.
+- `transform_ball_2d` Function: This function applies the homography matrix to the ball's position, transforming it from the original perspective view to the 2D top-down view of the court using OpenCV's `cv2.perspectiveTransform(ball_pos, matrix)` function.
 - 2D Visualization: The transformed ball position is then drawn on the 2D court skeleton using a circle, ensuring that the ball's movement is accurately represented relative to the court boundaries in the 2D plane.
 
 #### iv. Combining and Finalizing the Visualization
