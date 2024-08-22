@@ -111,7 +111,7 @@ train_model(max_iter, resume=True)
 
 After training the model, the next crucial step is post-processing the results to ensure accurate and meaningful outputs. Post-processing involves refining the model's predictions and visualizing the detected key points on the tennis court for better interpretation and analysis.
 
-### a. 🔲 Visualizing the Court on the Main Frame
+### a. 🖼️ Visualizing the Court on the Main Frame
 
 To accurately visualize the tennis court on the main video frame, we start by detecting key points on the court using the trained model. These key points correspond to specific locations on the court, such as the corners and intersections of lines. Visualizing these key points on the frame helps us understand how well the model is detecting the court's structure.
 
