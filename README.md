@@ -134,7 +134,7 @@ else:
 
 If no key points are detected, a default array of zeros is used to avoid errors in subsequent processing.
 
-#### i. Visualizing Key Points and Court Lines
+#### ii. Visualizing Key Points and Court Lines
 
 Once the key points are extracted, the next step is to visualize them by drawing polylines between the points that align with the court lines and boundaries. These lines help in creating a clear and precise representation of the tennis court structure. Here are the specific polylines to be drawn:
 
