@@ -528,7 +528,7 @@ def process_video(
             scaled_y = ball_2d[0, 0, 1] * minimap_scale_y
 
             # Add drawing scale factor (5x)
-            draw_scale = 5.0
+            draw_scale = 4.5
             draw_x = int(scaled_x * draw_scale)
             draw_y = int(scaled_y * draw_scale)
 
