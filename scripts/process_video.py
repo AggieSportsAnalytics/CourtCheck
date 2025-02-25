@@ -1,54 +1,54 @@
-# import sys
-# import os
-# import warnings
-# import logging
-# import cv2
-# import time
-# import numpy as np
-# from tqdm import tqdm
-# from scipy.spatial import distance
-# import torch
-# from datetime import datetime
+import sys
+import os
+import warnings
+import logging
+import cv2
+import time
+import numpy as np
+from tqdm import tqdm
+from scipy.spatial import distance
+import torch
+from datetime import datetime
 
-# # Absolute path to the CourtCheck directory
-# root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-# courtcheck_path = os.path.join(root_dir, "CourtCheck")
-# sys.path.append(courtcheck_path)
+# Absolute path to the CourtCheck directory
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+courtcheck_path = os.path.join(root_dir, "CourtCheck")
+sys.path.append(courtcheck_path)
 
-# # Add the path to the tracknet directory to the Python path
-# tracknet_path = os.path.join(root_dir, "CourtCheck/models/tracknet")
-# sys.path.append(tracknet_path)
+# Add the path to the tracknet directory to the Python path
+tracknet_path = os.path.join(root_dir, "CourtCheck/models/tracknet")
+sys.path.append(tracknet_path)
 
-# # Add the path to the court_detection directory to the Python path
-# court_detection_path = os.path.join(root_dir, "CourtCheck/models/court_detection")
-# sys.path.append(court_detection_path)
+# Add the path to the court_detection directory to the Python path
+court_detection_path = os.path.join(root_dir, "CourtCheck/models/court_detection")
+sys.path.append(court_detection_path)
 
-# from court_detection import (
-#     load_court_model,
-#     lines,
-#     keypoint_names,
-#     stabilize_points,
-#     transform_points,
-#     visualize_2d,
-#     visualize_predictions,
-# )
+from court_detection import (
+    load_court_model,
+    lines,
+    keypoint_names,
+    stabilize_points,
+    transform_points,
+    visualize_2d,
+    visualize_predictions,
+)
 
-# from ball_detection import (
-#     detect_ball,
-#     load_tracknet_model,
-#     transform_ball_2d,
-#     read_video,
-#     remove_outliers,
-#     split_track,
-#     interpolation,
-# )
+from ball_detection import (
+    detect_ball,
+    load_tracknet_model,
+    transform_ball_2d,
+    read_video,
+    remove_outliers,
+    split_track,
+    interpolation,
+)
 
-# from models.court_detection.court_detection_net import CourtDetectorNet
-# from models.court_detection.court_reference import CourtReference
-# from models.tracknet.ball_detection import BallDetector
-# from models.bounce_detection.bounce_detection import BounceDetector
-# from models.person_detection.person_detection import PersonDetector
-# from models.utils.utils import scene_detect
+from models.court_detection.court_detection_net import CourtDetectorNet
+from models.court_detection.court_reference import CourtReference
+from models.tracknet.ball_detection import BallDetector
+from models.bounce_detection.bounce_detection import BounceDetector
+from models.person_detection.person_detection import PersonDetector
+from models.utils.utils import scene_detect
 
 
 # Suppress specific warnings and set logging levels for certain modules
@@ -633,8 +633,8 @@ def main():
     ball_model_path = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/models/ball_detection_weights/tracknet_weights.pt"
     bounce_model_path = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/models/bounce_detection_weights/bounce_detection_weights.cbm"
 
-    video_path = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/dataset/game1/2s_game1_clip.mp4"
-    output_path = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/post_processing/game1/2s_game1_output1.mp4"
+    video_path = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/assets/game1_UCDwten.mp4"
+    output_path = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/post_processing/UCDwten/game1_UCDwten.mp4"
 
     print(f"Input video: {video_path}")
     print(f"Output path: {output_path}")
