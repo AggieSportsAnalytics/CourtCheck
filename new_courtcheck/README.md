@@ -1,52 +1,93 @@
-# CourtCheck
+# 🏸 CourtCheck
 
-## Overview
+CourtCheck is an end-to-end tennis match analysis tool that uses computer vision and machine learning to automatically generate visual and statistical insights from raw match footage. Built in collaboration with the **UC Davis Men’s and Women’s Tennis Teams**, the goal of this project is to make post-match film review faster, smarter, and more objective — without requiring manual tagging or expensive equipment.
 
-CourtCheck is an innovative project leveraging advanced computer vision and machine learning technologies to automate and enhance tennis match analysis. Designed specifically for the UC Davis Men's and Women's Tennis Teams, CourtCheck significantly streamlines and enhances traditional film review processes by offering automated, precise analytics and engaging visualizations.
+---
 
-## Purpose
+## 🎯 Project Goals
 
-Traditional tennis match analysis is highly time-consuming, often requiring extensive manual review of hours-long footage. CourtCheck addresses this challenge by providing a cloud-based platform where coaches and players can conveniently upload match recordings. Leveraging powerful cloud computing resources, CourtCheck swiftly processes videos and automatically generates comprehensive player analytics and visual insights.
+- Automate the analysis of full-length tennis match videos
+- Provide coaches and players with **immediate visualizations** (e.g. heatmaps, bounce locations, player movement)
+- Reduce human error and subjective judgment in ball calls or movement assessment
+- Offer a **scalable, cloud-based workflow** that can handle long videos efficiently (Google Colab, A100 GPU)
 
-## How It Works
+---
 
-CourtCheck integrates five specialized machine learning models to deliver a thorough analysis of tennis matches:
+## ⚠️ Current Challenges & Optimization Needs
 
-- **Court Detection:** Utilizes neural network models (Detectron2) to accurately identify tennis court boundaries and critical court points.
-- **Ball Detection:** Employs advanced deep learning techniques (TrackNet) to precisely track the tennis ball's trajectory throughout matches.
-- **Bounce Detection:** Applies CatBoost machine learning models to detect exact ball bounce locations on the court, enhancing match accuracy.
-- **Person Detection:** Identifies and tracks player positions and movements, providing detailed heatmaps and insights into player dynamics.
-- **Stroke Detection (Upcoming):** Will classify and analyze tennis strokes (e.g., forehand, backhand, serve) to deliver deeper insights into player techniques and strategic play.
+CourtCheck currently performs well on short clips, but hits **scalability and memory limits** when processing longer videos (>5–10 minutes). Specific issues include:
 
-## Key Features
+- ❌ Loads all frames into memory before processing → causes **OOM crashes** on Colab
+- ❌ Draws overlays (court lines, labels, etc.) on every frame → slows down processing unnecessarily
+- ❌ Processes every frame at full FPS → redundant for analytics-focused use cases
 
-- **Cloud-Based Platform:** Users upload match footage directly through a website, which is then processed automatically using cloud computing resources.
-- **Comprehensive Analytics:** Generate actionable, detailed player insights and strategic statistics quickly and accurately.
-- **Advanced Visualizations:** Provide intuitive and engaging visual analytics, such as heatmaps and ball trajectory visualizations.
+We're actively working to:
 
-## Impacts
+- Stream frames one at a time (no full memory loading)
+- Add flags to disable visualization for faster analytics-only runs
+- Downsample FPS during processing
+- Improve GPU efficiency via better tensor handling and batching
 
-- Drastically reduces manual video analysis time, allowing coaches and players to focus more effectively on training and strategic development.
-- Minimizes human error and subjective biases by providing precise, data-driven analytics.
-- Significantly improves training effectiveness and strategic decision-making through clear, actionable insights.
+---
 
-## Technologies Used
+## 🧠 How CourtCheck Works
 
-- Python
-- PyTorch (TrackNet, Detectron2)
-- OpenCV for image processing and visualization
-- CatBoost for bounce detection
-- Google Colab for GPU-accelerated computing
-- Cloud computing platforms for scalable deployment
+CourtCheck integrates several specialized models to process and annotate match footage:
 
-## Getting Started
+| Component           | Model / Technique           | Function                                      |
+| ------------------- | --------------------------- | --------------------------------------------- |
+| 🎾 Court Detection  | Detectron2 (keypoint R-CNN) | Detects court boundaries and reference points |
+| 🟡 Ball Tracking    | Custom CNN (TrackNet-style) | Predicts ball coordinates across frames       |
+| ⛳ Bounce Detection | CatBoost ML model           | Identifies when and where the ball bounces    |
+| 🧍 Player Detection | Faster R-CNN (PyTorch)      | Locates and tracks players on both sides      |
+| 🔜 Stroke Detection | _(Planned)_                 | Will classify serve, forehand, backhand, etc. |
 
-To use CourtCheck:
+These outputs are then used to generate:
 
-1. Set up your video input and output paths clearly within the provided processing scripts.
-2. Install all necessary dependencies.
-3. Execute the scripts sequentially as outlined in the project's documentation.
+- Minimap overlays
+- Trajectory visualizations
+- Heatmaps (bounce, player movement)
+- Analytics outputs for coaching and feedback
 
-## Contact
+---
 
-For questions or collaboration opportunities, please reach out to [corypham1@gmail.com](mailto:corypham1@gmail.com).
+## 📦 Technologies Used
+
+- Python, PyTorch, OpenCV, NumPy, SciPy, CatBoost
+- Detectron2 (court keypoints), custom CNN (TrackNet), torchvision models (Faster R-CNN)
+- Google Colab (A100 GPU) for GPU-accelerated inference and post-processing
+- Scene detection via PySceneDetect
+
+---
+
+## 🚀 Getting Started
+
+1. Set paths to your input video (MP4) and model weights in the script
+2. Run `process_video.py` on **Google Colab with GPU enabled**
+3. Optionally adjust:
+   - `ENABLE_VISUALIZATION = False` to speed up runs
+   - Frame rate downsampling
+   - Input resolution (default: 640×360)
+
+---
+
+## 📊 Output Formats
+
+- `video.mp4` with overlays (if enabled)
+- `minimap.mp4` showing real-time positions
+- `bounce_heatmap.png`, `player_heatmap.png`
+- (Planned) `analytics.csv` with summary stats per match
+
+---
+
+## 📥 Collaboration & Feedback
+
+We welcome collaborators in the following areas:
+
+- Optimizing inference and video pipelines
+- Stroke classification modeling
+- Frontend dashboard or web portal development
+- Integration with other sports tech platforms
+
+If you're interested or have ideas, contact:  
+**📧 corypham1@gmail.com**
