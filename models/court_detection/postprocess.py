@@ -3,6 +3,9 @@ import numpy as np
 from sympy import Line
 from scipy.spatial import distance
 from sympy.geometry.point import Point2D
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def line_intersection(line1, line2):
@@ -21,47 +24,99 @@ def line_intersection(line1, line2):
 
 
 def refine_kps(img, x_ct, y_ct, crop_size=40):
+    """
+    Refine keypoints using line detection on cropped image regions
+
+    :param img: Input image
+    :param x_ct: x coordinate of keypoint
+    :param y_ct: y coordinate of keypoint
+    :param crop_size: Size of crop region around keypoint
+    :return: Refined y and x coordinates
+    """
+    # Input validation
+    if img is None or img.size == 0:
+        logger.error("Empty input image in refine_kps")
+        return y_ct, x_ct
+
     refined_x_ct, refined_y_ct = x_ct, y_ct
 
-    img_height, img_width = img.shape[:2]
-    x_min = max(x_ct - crop_size, 0)
-    x_max = min(img_height, x_ct + crop_size)
-    y_min = max(y_ct - crop_size, 0)
-    y_max = min(img_width, y_ct + crop_size)
+    try:
+        img_height, img_width = img.shape[:2]
 
-    img_crop = img[x_min:x_max, y_min:y_max]
-    lines = detect_lines(img_crop)
-    # print('lines = ', lines)
+        # Validate coordinates
+        if not (0 <= x_ct < img_height and 0 <= y_ct < img_width):
+            logger.error(
+                f"Invalid keypoint coordinates ({x_ct}, {y_ct}) for image of shape {img.shape}"
+            )
+            return y_ct, x_ct
 
-    if len(lines) > 1:
-        lines = merge_lines(lines)
-        if len(lines) == 2:
-            inters = line_intersection(lines[0], lines[1])
-            if inters:
-                new_x_ct = int(inters[1])
-                new_y_ct = int(inters[0])
-                if (
-                    new_x_ct > 0
-                    and new_x_ct < img_crop.shape[0]
-                    and new_y_ct > 0
-                    and new_y_ct < img_crop.shape[1]
-                ):
-                    refined_x_ct = x_min + new_x_ct
-                    refined_y_ct = y_min + new_y_ct
-    return refined_y_ct, refined_x_ct
+        x_min = max(x_ct - crop_size, 0)
+        x_max = min(img_height, x_ct + crop_size)
+        y_min = max(y_ct - crop_size, 0)
+        y_max = min(img_width, y_ct + crop_size)
+
+        # Validate crop region
+        if x_min >= x_max or y_min >= y_max:
+            logger.error(f"Invalid crop region: [{x_min}:{x_max}, {y_min}:{y_max}]")
+            return y_ct, x_ct
+
+        img_crop = img[x_min:x_max, y_min:y_max]
+
+        # Validate cropped image
+        if img_crop is None or img_crop.size == 0:
+            logger.error("Empty cropped image")
+            return y_ct, x_ct
+
+        lines = detect_lines(img_crop)
+
+        if len(lines) > 1:
+            lines = merge_lines(lines)
+            if len(lines) == 2:
+                inters = line_intersection(lines[0], lines[1])
+                if inters:
+                    new_x_ct = int(inters[1])
+                    new_y_ct = int(inters[0])
+                    if (
+                        new_x_ct > 0
+                        and new_x_ct < img_crop.shape[0]
+                        and new_y_ct > 0
+                        and new_y_ct < img_crop.shape[1]
+                    ):
+                        refined_x_ct = x_min + new_x_ct
+                        refined_y_ct = y_min + new_y_ct
+
+        return refined_y_ct, refined_x_ct
+
+    except Exception as e:
+        logger.error(f"Error in refine_kps: {str(e)}")
+        return y_ct, x_ct
 
 
 def detect_lines(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray = cv2.threshold(gray, 155, 255, cv2.THRESH_BINARY)[1]
-    lines = cv2.HoughLinesP(gray, 1, np.pi / 180, 30, minLineLength=10, maxLineGap=30)
-    lines = np.squeeze(lines)
-    if len(lines.shape) > 0:
-        if len(lines) == 4 and not isinstance(lines[0], np.ndarray):
-            lines = [lines]
-    else:
-        lines = []
-    return lines
+    # Add error checking
+    if image is None or image.size == 0:
+        logger.error("Empty image received in detect_lines")
+        return []
+
+    try:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.threshold(gray, 155, 255, cv2.THRESH_BINARY)[1]
+        lines = cv2.HoughLinesP(
+            gray, 1, np.pi / 180, 30, minLineLength=10, maxLineGap=30
+        )
+
+        lines = np.squeeze(lines) if lines is not None else np.array([])
+        if len(lines.shape) > 0:
+            if len(lines) == 4 and not isinstance(lines[0], np.ndarray):
+                lines = [lines]
+        else:
+            lines = []
+        return lines
+
+    except Exception as e:
+        logger.error(f"Error in detect_lines: {str(e)}")
+        logger.error(f"Image shape: {image.shape if image is not None else 'None'}")
+        return []
 
 
 def merge_lines(lines):
