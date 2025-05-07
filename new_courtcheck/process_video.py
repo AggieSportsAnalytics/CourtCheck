@@ -17,7 +17,7 @@ This notebook leverages Google Colab's online GPUs for CourtCheck's post process
 # drive.mount('/content/drive')
 
 # Configuration Flags
-ENABLE_DRAWING = False  # Generate output video with visualizations
+ENABLE_DRAWING = True  # Generate output video with visualizations
 FRAME_PROCESSING_INTERVAL = 5  # Process every Nth frame (1 = process all)
 DETECT_BOUNCES = True  # Run bounce detection post-processing
 GENERATE_HEATMAPS = True  # Generate bounce and player heatmaps post-processing
@@ -1598,12 +1598,12 @@ if __name__ == "__main__":
     path_court_model = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/models/court_detection_weights/model_tennis_court_det.pt"
     path_bounce_model = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/models/bounce_detection_weights/bounce_detection_weights.cbm"
 
-    path_input_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/10s_game2_1280x720.mp4"
-    path_intermediate_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/10s_game2_1280x720.mp4"  # Intermediate file if resizing needed
-    path_output_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/10s_game2_1280x720.mp4"
-    path_minimap_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/10s_game2_1280x720_minimap.mp4"  # Separate minimap path
-    path_output_bounce_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/10s_game2_1280x720_bounce.png"
-    path_output_player_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/10s_game2_1280x720_player.png"
+    path_input_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/game1_video.mp4"
+    path_intermediate_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/game1_video.mp4"  # Intermediate file if resizing needed
+    path_output_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/game1_1280x720.mp4"
+    path_minimap_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/game1_1280x720_minimap.mp4"  # Separate minimap path
+    path_output_bounce_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/game1_1280x720_bounce.png"
+    path_output_player_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/game1_1280x720_player.png"
 
     # Drawing specific config
     DRAW_TRACE = True
@@ -1627,10 +1627,12 @@ if __name__ == "__main__":
     # --- Initialization ---
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
-    start_time = time.time()
+    start_time = time.time()  # Overall script start time
 
     # 1) Scale to 720p if needed
+    time_scaling_start = time.time()
     final_input = ensure_720p(path_input_video, path_intermediate_video)
+    time_scaling_end = time.time()
 
     cap = cv2.VideoCapture(final_input)
     if not cap.isOpened():
@@ -1657,11 +1659,18 @@ if __name__ == "__main__":
 
     # --- Pass 1: Ball tracking ---
     print("Starting Pass 1: Ball tracking...")
+    time_pass1_start = time.time()  # Start of Pass 1 timing
     ball_track_all = []  # Initialize ball_track_all for Pass 1
 
     temp_frame_count_pass1 = 0
     try:
-        pbar_pass1 = tqdm(total=total_frames, desc="Pass 1: Ball Tracking")
+        pbar_pass1 = tqdm(
+            total=total_frames,
+            desc="Pass 1: Ball Tracking",
+            file=sys.stdout,
+            dynamic_ncols=True,
+            leave=False,
+        )
     except NameError:
         pbar_pass1 = None
         print("tqdm not found, proceeding without progress bar for Pass 1.")
@@ -1678,12 +1687,14 @@ if __name__ == "__main__":
 
     if pbar_pass1:
         pbar_pass1.close()
+    time_pass1_end = time.time()  # End of Pass 1
     print(
         f"Pass 1: Ball tracking complete. Processed {len(ball_track_all)} frames for ball_track_all."
     )
 
     # Calculate bounces_all immediately after Pass 1, using ball_track_all
     bounces_all = set()
+    time_bounce_detection_start = time.time()
     if DETECT_BOUNCES and bounce_detector.model is not None:
         print("Running bounce detection (after Pass 1)...")
         x_ball_for_bounce = [bp[0] if bp is not None else None for bp in ball_track_all]
@@ -1695,6 +1706,7 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Error during bounce detection: {e}")
             # bounces_all is already an empty set if an error occurs
+    time_bounce_detection_end = time.time()
 
     cap.release()  # Release video capture after Pass 1
     # --- End of Pass 1 ---
@@ -1734,16 +1746,6 @@ if __name__ == "__main__":
             "Note: Not running in Colab. Manually open the first video frame to get coordinates for user_initial_player_labels."
         )
     # --- End Display First Frame ---
-
-    # --- User-Assisted Player Initialization (Simulated) ---
-    # In a real system, this data would come from your website frontend based on user input on the first frame.
-    # Format: {"bbox": [x1,y1,x2,y2], "center": (cx,cy), "display_name": "UserDefinedName1"}
-    # Ensure coordinates are for the raw first frame of the video.
-    # !!! UPDATE THE 'None' VALUES BELOW BASED ON THE FIRST FRAME DISPLAYED ABOVE !!!
-    user_initial_player_labels = {
-        "player1": None,  # E.g.: {"bbox": [100, 200, 150, 300], "center": (125, 250), "display_name": "Player A"}
-        "player2": None,  # E.g.: {"bbox": [500, 210, 550, 310], "center": (525, 260), "display_name": "Player B"}
-    }
 
     # --- Pass 2: Main processing, drawing, and writing (Original Main Loop) ---
     print("Starting Pass 2: Main processing and drawing...")
@@ -1788,8 +1790,15 @@ if __name__ == "__main__":
 
     # Note: Original `print("Starting frame processing...")` is now covered by Pass 2 print
     frame_count = -1  # Reset frame_count for Pass 2
+    time_pass2_start = time.time()  # Start of Pass 2
     try:
-        pbar_main_loop = tqdm(total=total_frames, desc="Pass 2: Processing Frames")
+        pbar_main_loop = tqdm(
+            total=total_frames,
+            desc="Pass 2: Processing Frames",
+            file=sys.stdout,
+            dynamic_ncols=True,
+            leave=False,
+        )
     except NameError:
         pbar_main_loop = None
         print("tqdm not found, proceeding without progress bar for Pass 2.")
@@ -2318,6 +2327,7 @@ if __name__ == "__main__":
 
     if pbar_main_loop:
         pbar_main_loop.close()
+    time_pass2_end = time.time()  # End of Pass 2
     print("Finished frame processing.")  # This refers to Pass 2
 
     cap.release()  # Release after Pass 2
@@ -2330,6 +2340,7 @@ if __name__ == "__main__":
     # bounces_all is already computed from Pass 1.
     # The section for calling add_bounces_to_minimap_video is already commented out.
 
+    time_heatmap_start = time.time()
     if GENERATE_HEATMAPS:
         print("Generating heatmaps...")
         if not homography_matrices_all or not ball_track_all:
@@ -2351,9 +2362,51 @@ if __name__ == "__main__":
                 )
             except Exception as e:
                 print(f"Error generating heatmaps: {e}")
+    time_heatmap_end = time.time()
 
-    total_time = time.time() - start_time
+    total_script_time = time.time() - start_time
     print(f"--- Processing Complete ---")
+
+    # Performance Metrics Calculation
+    video_duration_seconds = total_frames / fps if fps > 0 else 0
+    time_taken_scaling = time_scaling_end - time_scaling_start
+    time_taken_pass1 = time_pass1_end - time_pass1_start  # Need time_pass1_start
+    time_taken_bounce_detection = (
+        time_bounce_detection_end - time_bounce_detection_start
+    )
+    time_taken_pass2 = time_pass2_end - time_pass2_start
+    time_taken_heatmaps = time_heatmap_end - time_heatmap_start
+
+    print("\n--- Performance Metrics ---")
+    print(
+        f"Input Video Duration: {video_duration_seconds:.2f} seconds ({total_frames} frames @ {fps:.2f} FPS)"
+    )
+    print(f"Time for Video Scaling (if any): {time_taken_scaling:.2f} seconds")
+    print(f"Time for Pass 1 (Ball Tracking): {time_taken_pass1:.2f} seconds")
+    if total_frames > 0 and time_taken_pass1 > 0:
+        print(f"  Pass 1 Processing Speed: {total_frames / time_taken_pass1:.2f} FPS")
+    if DETECT_BOUNCES:
+        print(f"Time for Bounce Detection: {time_taken_bounce_detection:.2f} seconds")
+    print(
+        f"Time for Pass 2 (Main Processing & Drawing): {time_taken_pass2:.2f} seconds"
+    )
+    if total_frames > 0 and time_taken_pass2 > 0:
+        print(f"  Pass 2 Processing Speed: {total_frames / time_taken_pass2:.2f} FPS")
+    if GENERATE_HEATMAPS:
+        print(f"Time for Heatmap Generation: {time_taken_heatmaps:.2f} seconds")
+
+    print(f"Total Script Execution Time: {total_script_time:.2f} seconds")
+    if video_duration_seconds > 0 and total_script_time > 0:
+        # Effective FPS considering the whole script time relative to video duration
+        # This includes file I/O, model loading, all passes, etc.
+        overall_processing_fps = total_frames / total_script_time
+        print(
+            f"Overall Effective Processing Speed: {overall_processing_fps:.2f} FPS (video frames processed per second of wall clock time)"
+        )
+        print(
+            f"Processing Time Ratio (Script Time / Video Duration): {total_script_time / video_duration_seconds:.2f}x"
+        )
+
     if ENABLE_DRAWING:
         print(f"Output video saved to: {path_output_video}")
         # Path_minimap_video now refers to the one potentially with bounces
@@ -2363,9 +2416,17 @@ if __name__ == "__main__":
     if GENERATE_HEATMAPS:
         print(f"Bounce heatmap saved to: {path_output_bounce_heatmap}")
         print(f"Player heatmap saved to: {path_output_player_heatmap}")
-    print(f"Total execution time: {total_time:.2f} seconds")
+    # print(f"Total execution time: {total_script_time:.2f} seconds") # Replaced by detailed metrics
 
     user_initial_player_labels = {
-        "player1": None,  # E.g.: {"bbox": [100, 200, 150, 300], "center": (125, 250), "display_name": "Player A"}
-        "player2": None,  # E.g.: {"bbox": [500, 210, 550, 310], "center": (525, 260), "display_name": "Player B"}
+        "Cory": {
+            "bbox": [1518, 192, 1626, 324],
+            "center": (1571, 260),
+            "display_name": "Cory",
+        },  # E.g.: {"bbox": [100, 200, 150, 300], "center": (125, 250), "display_name": "Player A"}
+        "Stefan": {
+            "bbox": [1020, 770, 1211, 1112],
+            "center": (1114, 925),
+            "display_name": "Stefan",
+        },  # E.g.: {"bbox": [500, 210, 550, 310], "center": (525, 260), "display_name": "Player B"}
     }
