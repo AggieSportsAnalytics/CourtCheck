@@ -1,83 +1,1143 @@
-Hit:1 http://archive.ubuntu.com/ubuntu jammy InRelease
-Hit:2 http://archive.ubuntu.com/ubuntu jammy-updates InRelease
-Hit:3 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64  InRelease
-Hit:4 http://archive.ubuntu.com/ubuntu jammy-backports InRelease
-Hit:5 https://cloud.r-project.org/bin/linux/ubuntu jammy-cran40/ InRelease
-Hit:6 https://r2u.stat.illinois.edu/ubuntu jammy InRelease
-Get:7 http://security.ubuntu.com/ubuntu jammy-security InRelease [129 kB]
-Hit:8 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy InRelease
-Hit:9 https://ppa.launchpadcontent.net/graphics-drivers/ppa/ubuntu jammy InRelease
-Hit:10 https://ppa.launchpadcontent.net/ubuntugis/ppa/ubuntu jammy InRelease
-Fetched 129 kB in 1s (141 kB/s)
-Reading package lists... Done
-W: Skipping acquire of configured file 'main/source/Sources' as repository 'https://r2u.stat.illinois.edu/ubuntu jammy InRelease' does not seem to provide it (sources.list entry misspelt?)
-Reading package lists... Done
-Building dependency tree... Done
-Reading state information... Done
-build-essential is already the newest version (12.9ubuntu3).
-cmake is already the newest version (3.22.1-1ubuntu1.22.04.2).
-python3-dev is already the newest version (3.10.6-1~22.04.1).
-0 upgraded, 0 newly installed, 0 to remove and 35 not upgraded.
-Requirement already satisfied: pip in /usr/local/lib/python3.11/dist-packages (25.1.1)
-Requirement already satisfied: setuptools in /usr/local/lib/python3.11/dist-packages (80.4.0)
-Requirement already satisfied: wheel in /usr/local/lib/python3.11/dist-packages (0.45.1)
-Requirement already satisfied: numpy==1.25.2 in /usr/local/lib/python3.11/dist-packages (1.25.2)
-Requirement already satisfied: Cython in /usr/local/lib/python3.11/dist-packages (3.0.12)
-Collecting lap==0.4.0
-  Using cached lap-0.4.0.tar.gz (1.5 MB)
-  Preparing metadata (setup.py) ... done
-Building wheels for collected packages: lap
-  DEPRECATION: Building 'lap' using the legacy setup.py bdist_wheel mechanism, which will be removed in a future version. pip 25.3 will enforce this behaviour change. A possible replacement is to use the standardized build interface by setting the `--use-pep517` option, (possibly combined with `--no-build-isolation`), or adding a `pyproject.toml` file to the source tree of 'lap'. Discussion can be found at https://github.com/pypa/pip/issues/6334
-  error: subprocess-exited-with-error
-  
-  × python setup.py bdist_wheel did not run successfully.
-  │ exit code: 1
-  ╰─> See above for output.
-  
-  note: This error originates from a subprocess, and is likely not a problem with pip.
-  Building wheel for lap (setup.py) ... error
-  ERROR: Failed building wheel for lap
-  Running setup.py clean for lap
-Failed to build lap
-ERROR: Failed to build installable wheels for some pyproject.toml based projects (lap)
-Collecting bytetracker
-  Using cached bytetracker-0.3.2-py3-none-any.whl
-Collecting lap==0.4.0 (from bytetracker)
-  Using cached lap-0.4.0.tar.gz (1.5 MB)
-  Preparing metadata (setup.py) ... done
-Collecting scipy==1.9.3 (from bytetracker)
-  Using cached scipy-1.9.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (58 kB)
-Collecting torch==1.13.0 (from bytetracker)
-  Using cached torch-1.13.0-cp311-cp311-manylinux1_x86_64.whl.metadata (24 kB)
-Requirement already satisfied: numpy<1.26.0,>=1.18.5 in /usr/local/lib/python3.11/dist-packages (from scipy==1.9.3->bytetracker) (1.25.2)
-Requirement already satisfied: typing-extensions in /usr/local/lib/python3.11/dist-packages (from torch==1.13.0->bytetracker) (4.13.2)
-Collecting nvidia-cuda-runtime-cu11==11.7.99 (from torch==1.13.0->bytetracker)
-  Using cached nvidia_cuda_runtime_cu11-11.7.99-py3-none-manylinux1_x86_64.whl.metadata (1.6 kB)
-Collecting nvidia-cudnn-cu11==8.5.0.96 (from torch==1.13.0->bytetracker)
-  Using cached nvidia_cudnn_cu11-8.5.0.96-2-py3-none-manylinux1_x86_64.whl.metadata (1.6 kB)
-Collecting nvidia-cublas-cu11==11.10.3.66 (from torch==1.13.0->bytetracker)
-  Using cached nvidia_cublas_cu11-11.10.3.66-py3-none-manylinux1_x86_64.whl.metadata (1.6 kB)
-Collecting nvidia-cuda-nvrtc-cu11==11.7.99 (from torch==1.13.0->bytetracker)
-  Using cached nvidia_cuda_nvrtc_cu11-11.7.99-2-py3-none-manylinux1_x86_64.whl.metadata (1.5 kB)
-Requirement already satisfied: setuptools in /usr/local/lib/python3.11/dist-packages (from nvidia-cublas-cu11==11.10.3.66->torch==1.13.0->bytetracker) (80.4.0)
-Requirement already satisfied: wheel in /usr/local/lib/python3.11/dist-packages (from nvidia-cublas-cu11==11.10.3.66->torch==1.13.0->bytetracker) (0.45.1)
-Using cached scipy-1.9.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (33.4 MB)
-Using cached torch-1.13.0-cp311-cp311-manylinux1_x86_64.whl (890.2 MB)
-Using cached nvidia_cublas_cu11-11.10.3.66-py3-none-manylinux1_x86_64.whl (317.1 MB)
-Using cached nvidia_cuda_nvrtc_cu11-11.7.99-2-py3-none-manylinux1_x86_64.whl (21.0 MB)
-Using cached nvidia_cuda_runtime_cu11-11.7.99-py3-none-manylinux1_x86_64.whl (849 kB)
-Using cached nvidia_cudnn_cu11-8.5.0.96-2-py3-none-manylinux1_x86_64.whl (557.1 MB)
-Building wheels for collected packages: lap
-  DEPRECATION: Building 'lap' using the legacy setup.py bdist_wheel mechanism, which will be removed in a future version. pip 25.3 will enforce this behaviour change. A possible replacement is to use the standardized build interface by setting the `--use-pep517` option, (possibly combined with `--no-build-isolation`), or adding a `pyproject.toml` file to the source tree of 'lap'. Discussion can be found at https://github.com/pypa/pip/issues/6334
-  error: subprocess-exited-with-error
-  
-  × python setup.py bdist_wheel did not run successfully.
-  │ exit code: 1
-  ╰─> See above for output.
-  
-  note: This error originates from a subprocess, and is likely not a problem with pip.
-  Building wheel for lap (setup.py) ... error
-  ERROR: Failed building wheel for lap
-  Running setup.py clean for lap
-Failed to build lap
-ERROR: Failed to build installable wheels for some pyproject.toml based projects (lap)
+Using device: cuda
+Original input: 1280x720, fps=30.00
+Video is already 1280x720; using input directly.
+Input video: 1280x720 @ 30.00 FPS, Total Frames: 1505
+YOLO model initialized with path yolov8n.pt on cuda for tracking.
+[ReIDModel] Attempting to build model: 'osnet_x1_0.pt' (intended dataset: 'market1501')
+[ReIDModel] Error loading model 'osnet_x1_0_market1501.pt' with torchreid: "Unknown model: osnet_x1_0.pt. Must be one of ['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'resnext50_32x4d', 'resnext101_32x8d', 'resnet50_fc512', 'se_resnet50', 'se_resnet50_fc512', 'se_resnet101', 'se_resnext50_32x4d', 'se_resnext101_32x4d', 'densenet121', 'densenet169', 'densenet201', 'densenet161', 'densenet121_fc512', 'inceptionresnetv2', 'inceptionv4', 'xception', 'resnet50_ibn_a', 'resnet50_ibn_b', 'nasnsetmobile', 'mobilenetv2_x1_0', 'mobilenetv2_x1_4', 'shufflenet', 'squeezenet1_0', 'squeezenet1_0_fc512', 'squeezenet1_1', 'shufflenet_v2_x0_5', 'shufflenet_v2_x1_0', 'shufflenet_v2_x1_5', 'shufflenet_v2_x2_0', 'mudeep', 'resnet50mid', 'hacnn', 'pcb_p6', 'pcb_p4', 'mlfn', 'osnet_x1_0', 'osnet_x0_75', 'osnet_x0_5', 'osnet_x0_25', 'osnet_ibn_x1_0', 'osnet_ain_x1_0', 'osnet_ain_x0_75', 'osnet_ain_x0_5', 'osnet_ain_x0_25']"
+[ReIDModel] Ensure 'torchreid' is installed and the model name is a standard one recognized by torchreid.
+[ReIDModel] Falling back to placeholder; dummy features will be used.
+Starting Pass 1: Ball tracking...
+
+Pass 1: Ball Tracking:   0%|          | 0/1505 [00:00<?, ?it/s]
+Pass 1: Ball Tracking:   0%|          | 6/1505 [00:00<00:27, 53.61it/s]
+Pass 1: Ball Tracking:   1%|          | 12/1505 [00:00<00:33, 44.54it/s]
+Pass 1: Ball Tracking:   1%|          | 17/1505 [00:00<00:34, 42.56it/s]
+Pass 1: Ball Tracking:   1%|▏         | 22/1505 [00:00<00:35, 42.16it/s]
+Pass 1: Ball Tracking:   2%|▏         | 27/1505 [00:00<00:35, 41.98it/s]
+Pass 1: Ball Tracking:   2%|▏         | 32/1505 [00:00<00:35, 41.83it/s]
+Pass 1: Ball Tracking:   2%|▏         | 37/1505 [00:00<00:35, 41.80it/s]
+Pass 1: Ball Tracking:   3%|▎         | 42/1505 [00:00<00:34, 41.94it/s]
+Pass 1: Ball Tracking:   3%|▎         | 47/1505 [00:01<00:34, 42.21it/s]
+Pass 1: Ball Tracking:   3%|▎         | 52/1505 [00:01<00:34, 42.35it/s]
+Pass 1: Ball Tracking:   4%|▍         | 57/1505 [00:01<00:34, 42.51it/s]
+Pass 1: Ball Tracking:   4%|▍         | 62/1505 [00:01<00:34, 42.23it/s]
+Pass 1: Ball Tracking:   4%|▍         | 67/1505 [00:01<00:34, 42.12it/s]
+Pass 1: Ball Tracking:   5%|▍         | 72/1505 [00:01<00:34, 42.09it/s]
+Pass 1: Ball Tracking:   5%|▌         | 77/1505 [00:01<00:33, 42.21it/s]
+Pass 1: Ball Tracking:   5%|▌         | 82/1505 [00:01<00:34, 41.47it/s]
+Pass 1: Ball Tracking:   6%|▌         | 87/1505 [00:02<00:34, 41.05it/s]
+Pass 1: Ball Tracking:   6%|▌         | 92/1505 [00:02<00:34, 40.41it/s]
+Pass 1: Ball Tracking:   6%|▋         | 97/1505 [00:02<00:34, 40.73it/s]
+Pass 1: Ball Tracking:   7%|▋         | 102/1505 [00:02<00:34, 41.11it/s]
+Pass 1: Ball Tracking:   7%|▋         | 107/1505 [00:02<00:34, 40.96it/s]
+Pass 1: Ball Tracking:   7%|▋         | 112/1505 [00:02<00:35, 39.53it/s]
+Pass 1: Ball Tracking:   8%|▊         | 116/1505 [00:02<00:35, 39.45it/s]
+Pass 1: Ball Tracking:   8%|▊         | 121/1505 [00:02<00:34, 39.73it/s]
+Pass 1: Ball Tracking:   8%|▊         | 126/1505 [00:03<00:34, 40.04it/s]
+Pass 1: Ball Tracking:   9%|▊         | 131/1505 [00:03<00:34, 39.60it/s]
+Pass 1: Ball Tracking:   9%|▉         | 135/1505 [00:03<00:34, 39.57it/s]
+Pass 1: Ball Tracking:   9%|▉         | 139/1505 [00:03<00:34, 39.65it/s]
+Pass 1: Ball Tracking:  10%|▉         | 144/1505 [00:03<00:33, 40.23it/s]
+Pass 1: Ball Tracking:  10%|▉         | 149/1505 [00:03<00:33, 40.57it/s]
+Pass 1: Ball Tracking:  10%|█         | 154/1505 [00:03<00:33, 40.83it/s]
+Pass 1: Ball Tracking:  11%|█         | 159/1505 [00:03<00:32, 41.21it/s]
+Pass 1: Ball Tracking:  11%|█         | 164/1505 [00:03<00:32, 40.82it/s]
+Pass 1: Ball Tracking:  11%|█         | 169/1505 [00:04<00:32, 41.21it/s]
+Pass 1: Ball Tracking:  12%|█▏        | 174/1505 [00:04<00:32, 41.15it/s]
+Pass 1: Ball Tracking:  12%|█▏        | 179/1505 [00:04<00:32, 41.14it/s]
+Pass 1: Ball Tracking:  12%|█▏        | 184/1505 [00:04<00:32, 41.22it/s]
+Pass 1: Ball Tracking:  13%|█▎        | 189/1505 [00:04<00:32, 40.27it/s]
+Pass 1: Ball Tracking:  13%|█▎        | 194/1505 [00:04<00:32, 40.67it/s]
+Pass 1: Ball Tracking:  13%|█▎        | 199/1505 [00:04<00:31, 40.89it/s]
+Pass 1: Ball Tracking:  14%|█▎        | 204/1505 [00:04<00:31, 41.00it/s]
+Pass 1: Ball Tracking:  14%|█▍        | 209/1505 [00:05<00:31, 41.18it/s]
+Pass 1: Ball Tracking:  14%|█▍        | 214/1505 [00:05<00:31, 41.37it/s]
+Pass 1: Ball Tracking:  15%|█▍        | 219/1505 [00:05<00:30, 41.67it/s]
+Pass 1: Ball Tracking:  15%|█▍        | 224/1505 [00:05<00:30, 42.05it/s]
+Pass 1: Ball Tracking:  15%|█▌        | 229/1505 [00:05<00:30, 42.43it/s]
+Pass 1: Ball Tracking:  16%|█▌        | 234/1505 [00:05<00:29, 42.51it/s]
+Pass 1: Ball Tracking:  16%|█▌        | 239/1505 [00:05<00:29, 42.50it/s]
+Pass 1: Ball Tracking:  16%|█▌        | 244/1505 [00:05<00:29, 42.10it/s]
+Pass 1: Ball Tracking:  17%|█▋        | 249/1505 [00:06<00:29, 42.12it/s]
+Pass 1: Ball Tracking:  17%|█▋        | 254/1505 [00:06<00:29, 42.29it/s]
+Pass 1: Ball Tracking:  17%|█▋        | 259/1505 [00:06<00:29, 42.36it/s]
+Pass 1: Ball Tracking:  18%|█▊        | 264/1505 [00:06<00:29, 42.41it/s]
+Pass 1: Ball Tracking:  18%|█▊        | 269/1505 [00:06<00:29, 42.17it/s]
+Pass 1: Ball Tracking:  18%|█▊        | 274/1505 [00:06<00:29, 42.19it/s]
+Pass 1: Ball Tracking:  19%|█▊        | 279/1505 [00:06<00:29, 42.20it/s]
+Pass 1: Ball Tracking:  19%|█▉        | 284/1505 [00:06<00:28, 42.25it/s]
+Pass 1: Ball Tracking:  19%|█▉        | 289/1505 [00:06<00:28, 42.17it/s]
+Pass 1: Ball Tracking:  20%|█▉        | 294/1505 [00:07<00:28, 42.05it/s]
+Pass 1: Ball Tracking:  20%|█▉        | 299/1505 [00:07<00:28, 42.23it/s]
+Pass 1: Ball Tracking:  20%|██        | 304/1505 [00:07<00:28, 42.24it/s]
+Pass 1: Ball Tracking:  21%|██        | 309/1505 [00:07<00:28, 42.05it/s]
+Pass 1: Ball Tracking:  21%|██        | 314/1505 [00:07<00:28, 42.26it/s]
+Pass 1: Ball Tracking:  21%|██        | 319/1505 [00:07<00:28, 42.13it/s]
+Pass 1: Ball Tracking:  22%|██▏       | 324/1505 [00:07<00:28, 42.11it/s]
+Pass 1: Ball Tracking:  22%|██▏       | 329/1505 [00:07<00:27, 42.19it/s]
+Pass 1: Ball Tracking:  22%|██▏       | 334/1505 [00:08<00:27, 42.38it/s]
+Pass 1: Ball Tracking:  23%|██▎       | 339/1505 [00:08<00:27, 42.55it/s]
+Pass 1: Ball Tracking:  23%|██▎       | 344/1505 [00:08<00:27, 42.60it/s]
+Pass 1: Ball Tracking:  23%|██▎       | 349/1505 [00:08<00:27, 42.70it/s]
+Pass 1: Ball Tracking:  24%|██▎       | 354/1505 [00:08<00:27, 42.53it/s]
+Pass 1: Ball Tracking:  24%|██▍       | 359/1505 [00:08<00:26, 42.55it/s]
+Pass 1: Ball Tracking:  24%|██▍       | 364/1505 [00:08<00:26, 42.73it/s]
+Pass 1: Ball Tracking:  25%|██▍       | 369/1505 [00:08<00:26, 42.95it/s]
+Pass 1: Ball Tracking:  25%|██▍       | 374/1505 [00:08<00:26, 42.95it/s]
+Pass 1: Ball Tracking:  25%|██▌       | 379/1505 [00:09<00:26, 42.81it/s]
+Pass 1: Ball Tracking:  26%|██▌       | 384/1505 [00:09<00:26, 42.64it/s]
+Pass 1: Ball Tracking:  26%|██▌       | 389/1505 [00:09<00:26, 42.33it/s]
+Pass 1: Ball Tracking:  26%|██▌       | 394/1505 [00:09<00:26, 42.16it/s]
+Pass 1: Ball Tracking:  27%|██▋       | 399/1505 [00:09<00:26, 41.95it/s]
+Pass 1: Ball Tracking:  27%|██▋       | 404/1505 [00:09<00:26, 41.97it/s]
+Pass 1: Ball Tracking:  27%|██▋       | 409/1505 [00:09<00:26, 41.85it/s]
+Pass 1: Ball Tracking:  28%|██▊       | 414/1505 [00:09<00:26, 41.80it/s]
+Pass 1: Ball Tracking:  28%|██▊       | 419/1505 [00:10<00:25, 41.87it/s]
+Pass 1: Ball Tracking:  28%|██▊       | 424/1505 [00:10<00:25, 41.68it/s]
+Pass 1: Ball Tracking:  29%|██▊       | 429/1505 [00:10<00:25, 41.82it/s]
+Pass 1: Ball Tracking:  29%|██▉       | 434/1505 [00:10<00:25, 42.05it/s]
+Pass 1: Ball Tracking:  29%|██▉       | 439/1505 [00:10<00:25, 42.15it/s]
+Pass 1: Ball Tracking:  30%|██▉       | 444/1505 [00:10<00:25, 42.30it/s]
+Pass 1: Ball Tracking:  30%|██▉       | 449/1505 [00:10<00:25, 42.20it/s]
+Pass 1: Ball Tracking:  30%|███       | 454/1505 [00:10<00:24, 42.09it/s]
+Pass 1: Ball Tracking:  30%|███       | 459/1505 [00:10<00:24, 42.05it/s]
+Pass 1: Ball Tracking:  31%|███       | 464/1505 [00:11<00:24, 41.81it/s]
+Pass 1: Ball Tracking:  31%|███       | 469/1505 [00:11<00:24, 41.79it/s]
+Pass 1: Ball Tracking:  31%|███▏      | 474/1505 [00:11<00:24, 41.63it/s]
+Pass 1: Ball Tracking:  32%|███▏      | 479/1505 [00:11<00:24, 41.75it/s]
+Pass 1: Ball Tracking:  32%|███▏      | 484/1505 [00:11<00:24, 41.75it/s]
+Pass 1: Ball Tracking:  32%|███▏      | 489/1505 [00:11<00:24, 41.92it/s]
+Pass 1: Ball Tracking:  33%|███▎      | 494/1505 [00:11<00:24, 41.90it/s]
+Pass 1: Ball Tracking:  33%|███▎      | 499/1505 [00:11<00:23, 42.13it/s]
+Pass 1: Ball Tracking:  33%|███▎      | 504/1505 [00:12<00:23, 42.17it/s]
+Pass 1: Ball Tracking:  34%|███▍      | 509/1505 [00:12<00:23, 42.22it/s]
+Pass 1: Ball Tracking:  34%|███▍      | 514/1505 [00:12<00:23, 42.23it/s]
+Pass 1: Ball Tracking:  34%|███▍      | 519/1505 [00:12<00:23, 41.87it/s]
+Pass 1: Ball Tracking:  35%|███▍      | 524/1505 [00:12<00:23, 41.69it/s]
+Pass 1: Ball Tracking:  35%|███▌      | 529/1505 [00:12<00:23, 41.56it/s]
+Pass 1: Ball Tracking:  35%|███▌      | 534/1505 [00:12<00:23, 41.40it/s]
+Pass 1: Ball Tracking:  36%|███▌      | 539/1505 [00:12<00:23, 41.58it/s]
+Pass 1: Ball Tracking:  36%|███▌      | 544/1505 [00:13<00:22, 41.87it/s]
+Pass 1: Ball Tracking:  36%|███▋      | 549/1505 [00:13<00:22, 41.95it/s]
+Pass 1: Ball Tracking:  37%|███▋      | 554/1505 [00:13<00:22, 42.31it/s]
+Pass 1: Ball Tracking:  37%|███▋      | 559/1505 [00:13<00:22, 42.60it/s]
+Pass 1: Ball Tracking:  37%|███▋      | 564/1505 [00:13<00:22, 42.50it/s]
+Pass 1: Ball Tracking:  38%|███▊      | 569/1505 [00:13<00:22, 42.40it/s]
+Pass 1: Ball Tracking:  38%|███▊      | 574/1505 [00:13<00:22, 42.30it/s]
+Pass 1: Ball Tracking:  38%|███▊      | 579/1505 [00:13<00:21, 42.46it/s]
+Pass 1: Ball Tracking:  39%|███▉      | 584/1505 [00:13<00:21, 42.65it/s]
+Pass 1: Ball Tracking:  39%|███▉      | 589/1505 [00:14<00:21, 42.57it/s]
+Pass 1: Ball Tracking:  39%|███▉      | 594/1505 [00:14<00:21, 42.49it/s]
+Pass 1: Ball Tracking:  40%|███▉      | 599/1505 [00:14<00:21, 42.40it/s]
+Pass 1: Ball Tracking:  40%|████      | 604/1505 [00:14<00:21, 42.29it/s]
+Pass 1: Ball Tracking:  40%|████      | 609/1505 [00:14<00:21, 42.18it/s]
+Pass 1: Ball Tracking:  41%|████      | 614/1505 [00:14<00:21, 42.16it/s]
+Pass 1: Ball Tracking:  41%|████      | 619/1505 [00:14<00:20, 42.32it/s]
+Pass 1: Ball Tracking:  41%|████▏     | 624/1505 [00:14<00:20, 42.60it/s]
+Pass 1: Ball Tracking:  42%|████▏     | 629/1505 [00:15<00:20, 42.58it/s]
+Pass 1: Ball Tracking:  42%|████▏     | 634/1505 [00:15<00:20, 42.74it/s]
+Pass 1: Ball Tracking:  42%|████▏     | 639/1505 [00:15<00:20, 42.92it/s]
+Pass 1: Ball Tracking:  43%|████▎     | 644/1505 [00:15<00:19, 43.15it/s]
+Pass 1: Ball Tracking:  43%|████▎     | 649/1505 [00:15<00:19, 43.03it/s]
+Pass 1: Ball Tracking:  43%|████▎     | 654/1505 [00:15<00:19, 42.82it/s]
+Pass 1: Ball Tracking:  44%|████▍     | 659/1505 [00:15<00:19, 42.66it/s]
+Pass 1: Ball Tracking:  44%|████▍     | 664/1505 [00:15<00:19, 42.63it/s]
+Pass 1: Ball Tracking:  44%|████▍     | 669/1505 [00:15<00:19, 42.52it/s]
+Pass 1: Ball Tracking:  45%|████▍     | 674/1505 [00:16<00:19, 42.56it/s]
+Pass 1: Ball Tracking:  45%|████▌     | 679/1505 [00:16<00:19, 42.60it/s]
+Pass 1: Ball Tracking:  45%|████▌     | 684/1505 [00:16<00:19, 42.68it/s]
+Pass 1: Ball Tracking:  46%|████▌     | 689/1505 [00:16<00:19, 42.86it/s]
+Pass 1: Ball Tracking:  46%|████▌     | 694/1505 [00:16<00:18, 42.74it/s]
+Pass 1: Ball Tracking:  46%|████▋     | 699/1505 [00:16<00:18, 42.68it/s]
+Pass 1: Ball Tracking:  47%|████▋     | 704/1505 [00:16<00:18, 42.60it/s]
+Pass 1: Ball Tracking:  47%|████▋     | 709/1505 [00:16<00:18, 42.85it/s]
+Pass 1: Ball Tracking:  47%|████▋     | 714/1505 [00:17<00:18, 42.79it/s]
+Pass 1: Ball Tracking:  48%|████▊     | 719/1505 [00:17<00:18, 42.64it/s]
+Pass 1: Ball Tracking:  48%|████▊     | 724/1505 [00:17<00:18, 42.79it/s]
+Pass 1: Ball Tracking:  48%|████▊     | 729/1505 [00:17<00:18, 42.72it/s]
+Pass 1: Ball Tracking:  49%|████▉     | 734/1505 [00:17<00:18, 42.72it/s]
+Pass 1: Ball Tracking:  49%|████▉     | 739/1505 [00:17<00:17, 42.70it/s]
+Pass 1: Ball Tracking:  49%|████▉     | 744/1505 [00:17<00:17, 42.42it/s]
+Pass 1: Ball Tracking:  50%|████▉     | 749/1505 [00:17<00:17, 42.39it/s]
+Pass 1: Ball Tracking:  50%|█████     | 754/1505 [00:17<00:17, 42.13it/s]
+Pass 1: Ball Tracking:  50%|█████     | 759/1505 [00:18<00:17, 42.12it/s]
+Pass 1: Ball Tracking:  51%|█████     | 764/1505 [00:18<00:17, 42.24it/s]
+Pass 1: Ball Tracking:  51%|█████     | 769/1505 [00:18<00:17, 42.16it/s]
+Pass 1: Ball Tracking:  51%|█████▏    | 774/1505 [00:18<00:17, 42.30it/s]
+Pass 1: Ball Tracking:  52%|█████▏    | 779/1505 [00:18<00:17, 42.36it/s]
+Pass 1: Ball Tracking:  52%|█████▏    | 784/1505 [00:18<00:17, 42.21it/s]
+Pass 1: Ball Tracking:  52%|█████▏    | 789/1505 [00:18<00:17, 42.10it/s]
+Pass 1: Ball Tracking:  53%|█████▎    | 794/1505 [00:18<00:16, 42.43it/s]
+Pass 1: Ball Tracking:  53%|█████▎    | 799/1505 [00:19<00:16, 42.55it/s]
+Pass 1: Ball Tracking:  53%|█████▎    | 804/1505 [00:19<00:16, 42.46it/s]
+Pass 1: Ball Tracking:  54%|█████▍    | 809/1505 [00:19<00:16, 42.41it/s]
+Pass 1: Ball Tracking:  54%|█████▍    | 814/1505 [00:19<00:16, 42.52it/s]
+Pass 1: Ball Tracking:  54%|█████▍    | 819/1505 [00:19<00:16, 42.59it/s]
+Pass 1: Ball Tracking:  55%|█████▍    | 824/1505 [00:19<00:16, 42.50it/s]
+Pass 1: Ball Tracking:  55%|█████▌    | 829/1505 [00:19<00:15, 42.43it/s]
+Pass 1: Ball Tracking:  55%|█████▌    | 834/1505 [00:19<00:15, 42.24it/s]
+Pass 1: Ball Tracking:  56%|█████▌    | 839/1505 [00:19<00:15, 42.06it/s]
+Pass 1: Ball Tracking:  56%|█████▌    | 844/1505 [00:20<00:15, 42.25it/s]
+Pass 1: Ball Tracking:  56%|█████▋    | 849/1505 [00:20<00:15, 42.51it/s]
+Pass 1: Ball Tracking:  57%|█████▋    | 854/1505 [00:20<00:15, 42.42it/s]
+Pass 1: Ball Tracking:  57%|█████▋    | 859/1505 [00:20<00:15, 42.51it/s]
+Pass 1: Ball Tracking:  57%|█████▋    | 864/1505 [00:20<00:15, 42.52it/s]
+Pass 1: Ball Tracking:  58%|█████▊    | 869/1505 [00:20<00:15, 41.76it/s]
+Pass 1: Ball Tracking:  58%|█████▊    | 874/1505 [00:20<00:15, 41.92it/s]
+Pass 1: Ball Tracking:  58%|█████▊    | 879/1505 [00:20<00:14, 42.10it/s]
+Pass 1: Ball Tracking:  59%|█████▊    | 884/1505 [00:21<00:14, 42.19it/s]
+Pass 1: Ball Tracking:  59%|█████▉    | 889/1505 [00:21<00:14, 42.35it/s]
+Pass 1: Ball Tracking:  59%|█████▉    | 894/1505 [00:21<00:14, 42.59it/s]
+Pass 1: Ball Tracking:  60%|█████▉    | 899/1505 [00:21<00:14, 42.55it/s]
+Pass 1: Ball Tracking:  60%|██████    | 904/1505 [00:21<00:14, 42.16it/s]
+Pass 1: Ball Tracking:  60%|██████    | 909/1505 [00:21<00:14, 41.17it/s]
+Pass 1: Ball Tracking:  61%|██████    | 914/1505 [00:21<00:14, 41.33it/s]
+Pass 1: Ball Tracking:  61%|██████    | 919/1505 [00:21<00:14, 41.59it/s]
+Pass 1: Ball Tracking:  61%|██████▏   | 924/1505 [00:21<00:13, 42.01it/s]
+Pass 1: Ball Tracking:  62%|██████▏   | 929/1505 [00:22<00:13, 42.17it/s]
+Pass 1: Ball Tracking:  62%|██████▏   | 934/1505 [00:22<00:13, 41.46it/s]
+Pass 1: Ball Tracking:  62%|██████▏   | 939/1505 [00:22<00:13, 41.77it/s]
+Pass 1: Ball Tracking:  63%|██████▎   | 944/1505 [00:22<00:13, 42.16it/s]
+Pass 1: Ball Tracking:  63%|██████▎   | 949/1505 [00:22<00:13, 42.30it/s]
+Pass 1: Ball Tracking:  63%|██████▎   | 954/1505 [00:22<00:13, 42.27it/s]
+Pass 1: Ball Tracking:  64%|██████▎   | 959/1505 [00:22<00:12, 42.23it/s]
+Pass 1: Ball Tracking:  64%|██████▍   | 964/1505 [00:22<00:12, 42.18it/s]
+Pass 1: Ball Tracking:  64%|██████▍   | 969/1505 [00:23<00:12, 42.35it/s]
+Pass 1: Ball Tracking:  65%|██████▍   | 974/1505 [00:23<00:12, 42.21it/s]
+Pass 1: Ball Tracking:  65%|██████▌   | 979/1505 [00:23<00:12, 42.19it/s]
+Pass 1: Ball Tracking:  65%|██████▌   | 984/1505 [00:23<00:12, 42.35it/s]
+Pass 1: Ball Tracking:  66%|██████▌   | 989/1505 [00:23<00:12, 42.30it/s]
+Pass 1: Ball Tracking:  66%|██████▌   | 994/1505 [00:23<00:12, 42.44it/s]
+Pass 1: Ball Tracking:  66%|██████▋   | 999/1505 [00:23<00:11, 42.26it/s]
+Pass 1: Ball Tracking:  67%|██████▋   | 1004/1505 [00:23<00:11, 42.25it/s]
+Pass 1: Ball Tracking:  67%|██████▋   | 1009/1505 [00:23<00:11, 42.35it/s]
+Pass 1: Ball Tracking:  67%|██████▋   | 1014/1505 [00:24<00:11, 42.52it/s]
+Pass 1: Ball Tracking:  68%|██████▊   | 1019/1505 [00:24<00:11, 42.49it/s]
+Pass 1: Ball Tracking:  68%|██████▊   | 1024/1505 [00:24<00:11, 42.60it/s]
+Pass 1: Ball Tracking:  68%|██████▊   | 1029/1505 [00:24<00:11, 42.73it/s]
+Pass 1: Ball Tracking:  69%|██████▊   | 1034/1505 [00:24<00:11, 42.64it/s]
+Pass 1: Ball Tracking:  69%|██████▉   | 1039/1505 [00:24<00:10, 42.50it/s]
+Pass 1: Ball Tracking:  69%|██████▉   | 1044/1505 [00:24<00:10, 42.36it/s]
+Pass 1: Ball Tracking:  70%|██████▉   | 1049/1505 [00:24<00:10, 42.29it/s]
+Pass 1: Ball Tracking:  70%|███████   | 1054/1505 [00:25<00:10, 42.19it/s]
+Pass 1: Ball Tracking:  70%|███████   | 1059/1505 [00:25<00:10, 42.12it/s]
+Pass 1: Ball Tracking:  71%|███████   | 1064/1505 [00:25<00:10, 42.02it/s]
+Pass 1: Ball Tracking:  71%|███████   | 1069/1505 [00:25<00:10, 42.14it/s]
+Pass 1: Ball Tracking:  71%|███████▏  | 1074/1505 [00:25<00:10, 41.90it/s]
+Pass 1: Ball Tracking:  72%|███████▏  | 1079/1505 [00:25<00:10, 41.90it/s]
+Pass 1: Ball Tracking:  72%|███████▏  | 1084/1505 [00:25<00:10, 41.91it/s]
+Pass 1: Ball Tracking:  72%|███████▏  | 1089/1505 [00:25<00:09, 41.89it/s]
+Pass 1: Ball Tracking:  73%|███████▎  | 1094/1505 [00:26<00:09, 42.01it/s]
+Pass 1: Ball Tracking:  73%|███████▎  | 1099/1505 [00:26<00:09, 42.18it/s]
+Pass 1: Ball Tracking:  73%|███████▎  | 1104/1505 [00:26<00:09, 42.38it/s]
+Pass 1: Ball Tracking:  74%|███████▎  | 1109/1505 [00:26<00:09, 42.50it/s]
+Pass 1: Ball Tracking:  74%|███████▍  | 1114/1505 [00:26<00:09, 42.39it/s]
+Pass 1: Ball Tracking:  74%|███████▍  | 1119/1505 [00:26<00:09, 42.28it/s]
+Pass 1: Ball Tracking:  75%|███████▍  | 1124/1505 [00:26<00:09, 42.27it/s]
+Pass 1: Ball Tracking:  75%|███████▌  | 1129/1505 [00:26<00:08, 42.23it/s]
+Pass 1: Ball Tracking:  75%|███████▌  | 1134/1505 [00:26<00:08, 42.20it/s]
+Pass 1: Ball Tracking:  76%|███████▌  | 1139/1505 [00:27<00:08, 42.19it/s]
+Pass 1: Ball Tracking:  76%|███████▌  | 1144/1505 [00:27<00:08, 42.32it/s]
+Pass 1: Ball Tracking:  76%|███████▋  | 1149/1505 [00:27<00:08, 42.44it/s]
+Pass 1: Ball Tracking:  77%|███████▋  | 1154/1505 [00:27<00:08, 42.48it/s]
+Pass 1: Ball Tracking:  77%|███████▋  | 1159/1505 [00:27<00:08, 42.67it/s]
+Pass 1: Ball Tracking:  77%|███████▋  | 1164/1505 [00:27<00:07, 42.66it/s]
+Pass 1: Ball Tracking:  78%|███████▊  | 1169/1505 [00:27<00:07, 42.83it/s]
+Pass 1: Ball Tracking:  78%|███████▊  | 1174/1505 [00:27<00:07, 42.74it/s]
+Pass 1: Ball Tracking:  78%|███████▊  | 1179/1505 [00:28<00:07, 42.63it/s]
+Pass 1: Ball Tracking:  79%|███████▊  | 1184/1505 [00:28<00:07, 42.66it/s]
+Pass 1: Ball Tracking:  79%|███████▉  | 1189/1505 [00:28<00:07, 42.44it/s]
+Pass 1: Ball Tracking:  79%|███████▉  | 1194/1505 [00:28<00:07, 42.23it/s]
+Pass 1: Ball Tracking:  80%|███████▉  | 1199/1505 [00:28<00:07, 42.35it/s]
+Pass 1: Ball Tracking:  80%|████████  | 1204/1505 [00:28<00:07, 42.53it/s]
+Pass 1: Ball Tracking:  80%|████████  | 1209/1505 [00:28<00:06, 42.45it/s]
+Pass 1: Ball Tracking:  81%|████████  | 1214/1505 [00:28<00:06, 42.53it/s]
+Pass 1: Ball Tracking:  81%|████████  | 1219/1505 [00:28<00:06, 42.64it/s]
+Pass 1: Ball Tracking:  81%|████████▏ | 1224/1505 [00:29<00:06, 42.37it/s]
+Pass 1: Ball Tracking:  82%|████████▏ | 1229/1505 [00:29<00:06, 42.19it/s]
+Pass 1: Ball Tracking:  82%|████████▏ | 1234/1505 [00:29<00:06, 42.23it/s]
+Pass 1: Ball Tracking:  82%|████████▏ | 1239/1505 [00:29<00:06, 42.42it/s]
+Pass 1: Ball Tracking:  83%|████████▎ | 1244/1505 [00:29<00:06, 42.65it/s]
+Pass 1: Ball Tracking:  83%|████████▎ | 1249/1505 [00:29<00:05, 42.74it/s]
+Pass 1: Ball Tracking:  83%|████████▎ | 1254/1505 [00:29<00:05, 42.75it/s]
+Pass 1: Ball Tracking:  84%|████████▎ | 1259/1505 [00:29<00:05, 42.63it/s]
+Pass 1: Ball Tracking:  84%|████████▍ | 1264/1505 [00:30<00:05, 42.14it/s]
+Pass 1: Ball Tracking:  84%|████████▍ | 1269/1505 [00:30<00:05, 42.12it/s]
+Pass 1: Ball Tracking:  85%|████████▍ | 1274/1505 [00:30<00:05, 41.97it/s]
+Pass 1: Ball Tracking:  85%|████████▍ | 1279/1505 [00:30<00:05, 42.20it/s]
+Pass 1: Ball Tracking:  85%|████████▌ | 1284/1505 [00:30<00:05, 42.28it/s]
+Pass 1: Ball Tracking:  86%|████████▌ | 1289/1505 [00:30<00:05, 42.17it/s]
+Pass 1: Ball Tracking:  86%|████████▌ | 1294/1505 [00:30<00:05, 42.01it/s]
+Pass 1: Ball Tracking:  86%|████████▋ | 1299/1505 [00:30<00:04, 41.90it/s]
+Pass 1: Ball Tracking:  87%|████████▋ | 1304/1505 [00:30<00:04, 41.76it/s]
+Pass 1: Ball Tracking:  87%|████████▋ | 1309/1505 [00:31<00:04, 41.80it/s]
+Pass 1: Ball Tracking:  87%|████████▋ | 1314/1505 [00:31<00:04, 41.88it/s]
+Pass 1: Ball Tracking:  88%|████████▊ | 1319/1505 [00:31<00:04, 42.12it/s]
+Pass 1: Ball Tracking:  88%|████████▊ | 1324/1505 [00:31<00:04, 41.24it/s]
+Pass 1: Ball Tracking:  88%|████████▊ | 1329/1505 [00:31<00:04, 41.70it/s]
+Pass 1: Ball Tracking:  89%|████████▊ | 1334/1505 [00:31<00:04, 41.93it/s]
+Pass 1: Ball Tracking:  89%|████████▉ | 1339/1505 [00:31<00:03, 41.99it/s]
+Pass 1: Ball Tracking:  89%|████████▉ | 1344/1505 [00:31<00:03, 42.05it/s]
+Pass 1: Ball Tracking:  90%|████████▉ | 1349/1505 [00:32<00:03, 42.15it/s]
+Pass 1: Ball Tracking:  90%|████████▉ | 1354/1505 [00:32<00:03, 42.25it/s]
+Pass 1: Ball Tracking:  90%|█████████ | 1359/1505 [00:32<00:03, 42.41it/s]
+Pass 1: Ball Tracking:  91%|█████████ | 1364/1505 [00:32<00:03, 42.44it/s]
+Pass 1: Ball Tracking:  91%|█████████ | 1369/1505 [00:32<00:03, 42.63it/s]
+Pass 1: Ball Tracking:  91%|█████████▏| 1374/1505 [00:32<00:03, 42.61it/s]
+Pass 1: Ball Tracking:  92%|█████████▏| 1379/1505 [00:32<00:02, 42.51it/s]
+Pass 1: Ball Tracking:  92%|█████████▏| 1384/1505 [00:32<00:02, 42.53it/s]
+Pass 1: Ball Tracking:  92%|█████████▏| 1389/1505 [00:32<00:02, 42.28it/s]
+Pass 1: Ball Tracking:  93%|█████████▎| 1394/1505 [00:33<00:02, 42.27it/s]
+Pass 1: Ball Tracking:  93%|█████████▎| 1399/1505 [00:33<00:02, 42.34it/s]
+Pass 1: Ball Tracking:  93%|█████████▎| 1404/1505 [00:33<00:02, 42.32it/s]
+Pass 1: Ball Tracking:  94%|█████████▎| 1409/1505 [00:33<00:02, 42.11it/s]
+Pass 1: Ball Tracking:  94%|█████████▍| 1414/1505 [00:33<00:02, 42.10it/s]
+Pass 1: Ball Tracking:  94%|█████████▍| 1419/1505 [00:33<00:02, 42.30it/s]
+Pass 1: Ball Tracking:  95%|█████████▍| 1424/1505 [00:33<00:01, 42.14it/s]
+Pass 1: Ball Tracking:  95%|█████████▍| 1429/1505 [00:33<00:01, 42.05it/s]
+Pass 1: Ball Tracking:  95%|█████████▌| 1434/1505 [00:34<00:01, 42.28it/s]
+Pass 1: Ball Tracking:  96%|█████████▌| 1439/1505 [00:34<00:01, 42.29it/s]
+Pass 1: Ball Tracking:  96%|█████████▌| 1444/1505 [00:34<00:01, 42.41it/s]
+Pass 1: Ball Tracking:  96%|█████████▋| 1449/1505 [00:34<00:01, 42.60it/s]
+Pass 1: Ball Tracking:  97%|█████████▋| 1454/1505 [00:34<00:01, 42.45it/s]
+Pass 1: Ball Tracking:  97%|█████████▋| 1459/1505 [00:34<00:01, 42.76it/s]
+Pass 1: Ball Tracking:  97%|█████████▋| 1464/1505 [00:34<00:00, 42.80it/s]
+Pass 1: Ball Tracking:  98%|█████████▊| 1469/1505 [00:34<00:00, 42.74it/s]
+Pass 1: Ball Tracking:  98%|█████████▊| 1474/1505 [00:34<00:00, 42.57it/s]
+Pass 1: Ball Tracking:  98%|█████████▊| 1479/1505 [00:35<00:00, 42.43it/s]
+Pass 1: Ball Tracking:  99%|█████████▊| 1484/1505 [00:35<00:00, 42.43it/s]
+Pass 1: Ball Tracking:  99%|█████████▉| 1489/1505 [00:35<00:00, 42.44it/s]
+Pass 1: Ball Tracking:  99%|█████████▉| 1494/1505 [00:35<00:00, 42.51it/s]
+Pass 1: Ball Tracking: 100%|█████████▉| 1499/1505 [00:35<00:00, 42.71it/s]
+Pass 1: Ball Tracking: 100%|█████████▉| 1504/1505 [00:35<00:00, 42.88it/s]
+                                                                          Pass 1: Ball tracking complete. Processed 1505 frames for ball_track_all.
+Running bounce detection (after Pass 1)...
+Starting Pass 2: Main processing and drawing...
+Output video enabled: /content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/game1_1280x720.mp4
+Minimap video (with accumulated bounces) will be: /content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/game1_1280x720_minimap.mp4
+
+[PlayerTracker] Assigned role 'Player 1' to track_id TrackID-1 and stored features.
+[PlayerTracker] Assigned role 'Player 2' to track_id TrackID-2 and stored features.
+[PlayerTracker] Initial roles assigned (with features): {'TrackID-1': {'role': 'Player 1', 'features': array([   -0.12325,     0.50771,     0.55419,     -1.3043,   -0.076448,      1.9286,     0.13134,      0.4007,     0.17678,     -1.0444,     0.24482,     0.79195,     0.51092,   -0.040641,    -0.11759,    -0.68022,       2.277,      1.2113,     0.60315,    -0.36501,     -1.6153,     -0.9312,     0.26061,     -1.7712,
+            1.6875,     0.20132,    -0.65426,     0.74558,     0.54062,    -0.55148,     0.83974,      1.2672,      1.7798,     0.31789,     0.17999,    -0.49705,     0.96664,     0.67189,    -0.91527,     0.53036,     0.32209,     0.53349,      1.6014,     -1.3181,    -0.28873,     0.39753,     0.82334,      1.5077,
+           -1.4356,     0.43966,      1.2245,     0.33691,    -0.35767,     0.37134,     -1.5046,     0.37452,     0.29454,     0.86957,    0.095161,    -0.17789,      1.0585,     -1.2931,     0.24174,    0.041441,   -0.015955,    -0.79552,    -0.73773,     -1.3312,    -0.15161,   -0.043914,      2.2267,    -0.46723,
+           -1.0924,      1.9366,     0.22759,      1.1192,    -0.46061,     -1.4936,    -0.24224,     0.50184,    0.026806,   -0.038831,     0.37389,    -0.97089,      1.3186,     0.78035,     0.12293,     -1.3701,    -0.96964,    -0.14512,    -0.37403,    -0.20813,    -0.05612,     0.97657,    -0.43145,    -0.05101,
+           0.52304,      1.3824,    -0.95817,     -1.1813,      1.1039,      -2.343,    0.076181,     -1.0527,     0.15391,    -0.14679,      0.5296,       1.046,      1.1246,     -1.1282,     0.41079,     0.79951,       0.464,    -0.55207,      1.1539,    0.042664,     0.91202,     -1.0123,      1.2644,    -0.35312,
+           0.94336,     -2.2796,    -0.53459,     0.24612,     0.13684,     -2.6406,    -0.39663,     -1.5707,     -2.2637,    -0.68707,    0.042937,     0.81604,     0.48807,     0.25992,     0.47516,    -0.41466,     -1.9311,      1.9543,   -0.071857,      1.0647,     0.39173,    -0.66058,    -0.92497,     0.31391,
+           0.60431,    -0.27332,    -0.91601,     0.59849,      -1.607,      0.7139,      0.7234,    -0.56792,    -0.48374,      1.2225,      2.1966,    -0.62572,     0.14723,      1.0896,     0.80881,      0.6716,    -0.22976,     0.13852,      1.5117,     0.43018,      0.7142,     -2.3589,     -1.5533,    -0.98266,
+           -0.4365,  -0.0029305,      -0.612,   -0.028128,    -0.40777,    -0.28078,     -1.3591,    -0.95388,    0.085331,    -0.94549,     0.17403,    -0.85938,      2.1908,      1.7919,      1.0064,    -0.50279,    0.085479,   -0.099281,      1.0247,     0.28327,       1.341,      1.0306,    -0.18661,     0.51108,
+          -0.60086,     0.69542,    -0.07192,     0.59196,     0.39697,      1.3294,     -3.4452,      -1.708,     0.76138,     0.23142,     -2.1879,    -0.53746,     0.63179,     0.89474,       1.348,     0.36411,     0.13107,     0.60971,      0.3806,      1.5935,    -0.15985,    -0.61946,    -0.98717,     0.74129,
+           0.34794,     -2.4606,     0.17152,      2.1144,      2.0042,    -0.78422,     -1.1259,    -0.79071,   -0.063216,      0.4816,    -0.69005,       1.791,     0.75117,     -1.7704,    -0.62997,     -1.1855,      1.8315,    -0.16357,     0.31325,   -0.086125,    -0.95802,      -1.428,      0.6758,    0.039568,
+           0.29694,    -0.39755,    -0.40974,    -0.65248,    -0.19486,    -0.23652,    0.021092,     -1.3239,     0.63015,     -1.5806,      1.6419,    0.080936,    -0.30438,    -0.47417,     0.74044,     -1.8943,      1.3723,     0.36325,    -0.16982,      1.3088,      1.0077,    0.050123,      1.1805,    -0.35124,
+         -0.069571,    -0.74929,      0.6554,      3.4955,    -0.78463,      1.3602,     -1.5314,    -0.88098,     -1.0912,      -3.123,    0.043894,     -2.3827,    -0.11564,    -0.61126,      -1.241,    -0.99176,    -0.28987,    0.047081,      1.4199,     -1.2276,      1.3353,     -1.7118,    -0.79638,     0.45105,
+          -0.29396,     0.80722,     0.52341,    -0.18705,     0.96205,     0.25251,     -1.3379,    -0.20142,    -0.62837,    -0.12788,      0.1804,    0.088406,    -0.72717,      -1.207,    -0.62149,       1.529,     -0.3997,     0.29126,    -0.72024,     0.75644,    -0.38311,     0.71519,    -0.33613,      2.0567,
+           0.40158,     0.57649,    -0.60414,       1.803,    -0.22211,     0.98153,    -0.22328,      2.0474,     0.88464,     -1.3505,   -0.044257,     0.50188,    -0.27863,     0.10311,     -1.6628,     -1.5267,    -0.77789,      1.3793,     -1.3597,    0.016621,    -0.19789,   -0.039244,      -0.647,      1.3295,
+           0.63992,    -0.21467,     0.68672,   -0.032252,     0.82334,    -0.28134,      1.0525,    -0.90742,    -0.47613,      0.7972,      1.4365,     0.93013,      1.0729,      1.8842,    -0.33983,    -0.83722,     -1.2779,     -0.4727,    -0.39563,    -0.66503,    -0.14376,     0.14577,     -1.7504,     -1.5087,
+           0.95736,    -0.11333,    -0.55381,    -0.58392,    -0.43835,     0.60339,     -0.2737,     0.81078,     0.73966,     0.67731,      1.3316,    -0.27137,    -0.81617,      2.2124,     0.95481,     0.96451,    -0.12516,    -0.35911,      1.2611,   -0.076397,    -0.25817,      -1.633,    -0.71633,     -1.1367,
+          0.014106,      1.3749,      0.5772,      -1.146,    -0.96556,    -0.47571,     0.63384,     -1.4822,    -0.11589,     -1.5433,     0.77764,     0.28396,    -0.44808,   -0.013069,     0.18488,    -0.71842,     0.94988,    0.030661,     -1.1191,     0.72723,    -0.13358,    -0.11904,      1.1549,     0.38128,
+           -1.8973,      0.6366,     0.37732,    -0.93805,     0.51097,    -0.60861,     -0.6623,     0.41978,    -0.22341,    -0.79791,    -0.85481,     0.15805,     0.58217,     0.71717,    -0.57813,     0.18161,   -0.073396,      1.4259,    -0.33753,      1.5048,      1.1733,    -0.98556,    -0.51667,     0.85593,
+           0.24802,    -0.94593,     -0.9754,       1.239,     -1.3758,    -0.61214,     -1.0242,   -0.041564,    -0.69597,     0.65906,    0.086054,     0.59621,    -0.49793,      1.6215,     -0.8314,    0.056747,    -0.28248,    -0.30348,      1.4156,   -0.013648,     -2.1831,   -0.032551,    -0.97944,    -0.37376,
+            1.2879,     0.44169,    -0.69488,      -2.421,    -0.24587,     -1.1762,     -1.0717,     0.74704,     -1.9532,     -1.9675,    -0.43356,     -1.3304,    -0.62586,     -1.1334,     -1.0414,     -0.5522,     0.59718,     -1.2393,    -0.34539,     0.93005,    -0.95919,   0.0050478,    -0.18536,     -1.0336,
+          -0.19121,     -1.6497,     -0.1135,    -0.91159,     0.11253,    -0.17135,      1.0921,      1.4138,     0.91879,     -1.9976,      1.1315,     0.48698,     -0.5496,    -0.75703,     0.18963,     0.42256,    -0.28991,    -0.57665,    -0.38026,     0.19955,     -0.9643,    -0.31682,    -0.58544,      0.6756,
+           0.19751,     0.34148,    -0.15391,     0.94612,      1.2137,     0.21597,     0.86606,      1.2407], dtype=float32)}, 'TrackID-2': {'role': 'Player 2', 'features': array([    0.47574,    -0.86757,     0.26448,      2.2597,    -0.75692,      1.3253,    -0.67518,     0.26502,    -0.75525,     0.34748,      1.3018,    -0.89898,    -0.37278,     0.15861,     0.67822,    -0.41628,     -0.9377,    -0.37449,   -0.051492,     -1.4106,    -0.92457,    -0.89235,     -1.9413,    -0.44226,
+            2.3383,    -0.73575,      1.0919,    -0.51697,    -0.48565,    -0.58069,    -0.33402,     0.55084,     -1.2036,    -0.15497,    -0.10226,    -0.68738,     -1.6932,    -0.16002,     -1.7171,    0.055943,     0.23927,     -1.2455,     0.68336,     0.42514,     0.99467,    -0.04104,     0.52998,     -1.3809,
+            2.3335,      1.7172,    -0.14412,     -1.6485,      1.8995,      0.3187,      1.0961,    -0.15024,      0.6007,     0.46193,     0.11567,      1.6902,     -1.3525,      1.1417,     0.10536,     0.97179,    -0.90777,      1.2306,   -0.067998,      0.3596,     0.46431,     -1.6056,    -0.25778,    -0.31846,
+           -1.2025,     0.43575,     0.55584,     0.39395,     -1.1522,     -1.3139,      0.8187,     -0.3193,    -0.64772,    0.053196,    -0.42969,     -1.3104,    -0.78778,     0.40259,     0.22489,     0.31775,   -0.069193,     0.94359,      -1.515,    -0.41196,      1.6428,     -2.1564,     -1.1381,     -1.9214,
+           -1.0726,     0.80363,      0.2874,      1.9938,    -0.87095,     -1.5292,    0.076331,     0.46352,     0.49543,     0.20878,     -1.4213,     -0.2686,      1.5462,    -0.67122,      1.1604,      1.0799,    -0.73325,     0.13827,     0.30489,     0.11327,     0.52705,     0.63489,   -0.053748,    -0.85008,
+           -1.7952,    -0.97906,     0.51416,    -0.98462,    -0.81739,     0.22733,    -0.36121,    -0.44367,    -0.57989,     0.17886,       1.692,     0.64356,     0.52232,      2.1981,      1.1833,     -1.1253,     -0.3439,    -0.92069,      1.7072,     0.30335,    -0.44929,     0.48465,    -0.30801,    -0.14879,
+          -0.23436,     0.66057,    -0.40146,     0.81084,    -0.05863,      1.3174,    -0.55466,     0.89641,     0.11951,     0.14692,    -0.40997,     0.38502,    -0.69237,     0.74867,      1.6902,      1.2636,     0.13831,      1.3961,      1.1451,     0.31393,      -2.472,    -0.49613,      1.6621,    -0.78169,
+            0.3481,    -0.56343,    -0.15666,     0.33893,     0.83425,      2.7095,     0.87959,     0.12376,      1.0303,      1.6419,    -0.48984,    -0.80877,    -0.78498,   -0.062052,      0.5841,    -0.72335,     0.37763,    -0.66538,     0.78814,    -0.33736,     -1.5625,      1.2084,      1.9497,     -1.0815,
+          -0.28674,    -0.54313,     0.89542,     0.15826,      1.0123,    -0.93341,   -0.044065,     0.24461,    -0.45698,     -0.2788,    -0.76252,     0.87125,     0.62321,    -0.36586,     -1.6289,     0.50248,     -2.0848,     -1.5543,   -0.044455,      0.9144,      1.7715,     0.33537,    0.047933,    -0.64529,
+           -1.3794,     0.65723,    -0.89121,    -0.73821,      1.5672,    -0.91365,     0.38516,     0.02222,     -1.2793,    -0.64992,     -0.8804,    -0.19973,     0.78081,    0.075865,    -0.03953,    -0.30133,      1.1083,     -0.8087,     -2.3197,     -1.0866,     -1.5662,    -0.58146,     -1.5789,     0.77176,
+         -0.092836,     0.67097,       1.013,      1.1753,      2.2366,    -0.11685,     0.68801,    -0.75991,      0.8866,    -0.89608,     0.30286,        -1.4,     -1.0751,    0.052967,    -0.11349,     -0.9008,     0.75001,      2.1224,     0.10119,    -0.98335,    -0.29924,     0.58622,     -1.1506,    -0.55801,
+            -1.295,     -1.0991,   -0.014679,    -0.80596,      0.4405,     -1.3707,     -1.1615,     0.58411,     0.66117,     -1.4753,      1.6146,    -0.22065,     0.44538,    -0.24901,     0.52942,    -0.15538,     0.91768,    -0.54904,     -1.0156,     0.14697,   -0.061278,     0.62281,    0.039285,      1.5769,
+          -0.49543,     -1.8169,     -2.0081,    -0.24744,    -0.38621,     0.45649,    -0.71985,    -0.38536,      1.3611,     0.77568,     0.25161,      1.0165,    0.054457,      1.7036,     0.24954,    -0.23091,      1.7023,    -0.38586,      1.5568,      1.2977,     -2.1062,     -1.0332,     -1.8499,     -1.0291,
+            1.6895,    -0.48989,    -0.53844,    -0.54823,    -0.23108,     0.53076,     -1.0612,      1.4287,      -1.406,     -1.1358,    -0.11529,    -0.96386,    0.074252,      1.4678,    -0.72241,     -0.2977,    -0.72003,     0.17291,    -0.31095,     0.41712,     0.54003,    -0.86042,    -0.71672,     -1.0928,
+          -0.42375,     -1.5584,     0.93382,    -0.18884,     0.43544,     -1.0891,    -0.23656,      1.0441,     -1.2804,     0.10576,      2.1626,    -0.12485,     -2.1626,    0.068934,      1.3943,     0.79827,    -0.38457,    -0.27117,     -1.4291,    -0.48966,     0.56758,    -0.35273,     -1.1634,     0.51713,
+           -0.7336,    -0.86413,   -0.067507,   -0.051441,    -0.24428,     -1.5455,      2.3567,    -0.28839,     0.22943,    0.056403,   0.0043119,   -0.017416,     0.36884,     0.65855,   -0.091016,     -1.6813,     0.36589,     -1.0987,     -0.9089,      1.1944,     0.35585,    -0.68916,     0.60634,    -0.27348,
+           0.72281,     0.57281,   -0.010516,    -0.79776,      1.1482,   -0.074804,     0.45803,     0.48749,      1.5399,     0.14966,     0.68193,    -0.99147,    -0.66304,      1.1082,    0.028454,     0.85711,    -0.39759,   -0.078682,     -1.5618,     0.42872,     0.96352,    -0.51921,      1.7625,     0.58723,
+          -0.99491,     0.70948,     0.41809,      1.1427,    -0.62654,     0.23217,     0.13164,     0.94752,    -0.45484,       1.593,     0.66637,     0.98719,     0.28363,      1.3663,     0.50802,     -0.1441,     0.10634,    -0.42818,    -0.53388,       1.245,     0.36226,    -0.60848,     0.69634,     0.30705,
+           0.09841,   -0.063163,     0.10336,    -0.81683,     0.85563,     0.40197,      1.5227,    -0.27039,    -0.93156,     -2.4619,    -0.69374,     -0.6063,    -0.87333,      2.7955,     0.95901,    -0.26062,      1.2168,    0.094552,     -1.1002,     -2.0342,    -0.41379,      2.1543,    -0.98515,    0.047597,
+            -1.035,    -0.75741,    -0.44606,    -0.54216,     0.88993,     0.17654,     0.51277,     0.50798,    -0.48276,       2.031,    -0.70807,    -0.65324,      1.1545,      1.4952,      0.4818,     0.86607,      1.1163,      2.4594,    -0.50294,     -1.8922,     -1.7734,     -1.9103,     -1.5171,     0.87907,
+          0.095041,     -1.3352,   -0.066805,     0.65144,     -2.1131,     0.44186,      1.2023,    -0.18992,      1.4915,     -1.2363,     0.21243,      1.6058,    -0.63489,      1.4416,     -1.3668,     -0.7375,    -0.29017,     0.89051,     0.47841,    -0.32421,     -0.8061,     0.14554,      1.3383,    -0.81049,
+           0.19184,     0.60851,    -0.20852,    -0.28618,    -0.79962,     -2.7926,      1.2655,      1.1038], dtype=float32)}}
+
+Pass 2: Processing Frames:   0%|          | 2/1505 [00:00<02:37,  9.56it/s][PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:   0%|          | 4/1505 [00:00<02:09, 11.63it/s]
+Pass 2: Processing Frames:   0%|          | 6/1505 [00:00<01:57, 12.71it/s]
+Pass 2: Processing Frames:   1%|          | 8/1505 [00:00<02:01, 12.33it/s]
+Pass 2: Processing Frames:   1%|          | 10/1505 [00:00<01:55, 12.98it/s]
+Pass 2: Processing Frames:   1%|          | 12/1505 [00:00<02:00, 12.39it/s]
+Pass 2: Processing Frames:   1%|          | 14/1505 [00:01<01:57, 12.71it/s]
+Pass 2: Processing Frames:   1%|          | 16/1505 [00:01<01:53, 13.13it/s]
+Pass 2: Processing Frames:   1%|          | 18/1505 [00:01<01:57, 12.65it/s]
+Pass 2: Processing Frames:   1%|▏         | 20/1505 [00:01<01:52, 13.17it/s]
+Pass 2: Processing Frames:   1%|▏         | 22/1505 [00:01<01:59, 12.42it/s]
+Pass 2: Processing Frames:   2%|▏         | 24/1505 [00:01<01:54, 12.90it/s]
+Pass 2: Processing Frames:   2%|▏         | 26/1505 [00:02<01:52, 13.18it/s]
+Pass 2: Processing Frames:   2%|▏         | 28/1505 [00:02<01:59, 12.39it/s]
+Pass 2: Processing Frames:   2%|▏         | 30/1505 [00:02<01:53, 12.99it/s]
+Pass 2: Processing Frames:   2%|▏         | 32/1505 [00:02<01:58, 12.39it/s]
+Pass 2: Processing Frames:   2%|▏         | 34/1505 [00:02<01:54, 12.82it/s]
+Pass 2: Processing Frames:   2%|▏         | 36/1505 [00:02<01:50, 13.24it/s]
+Pass 2: Processing Frames:   3%|▎         | 38/1505 [00:03<01:56, 12.56it/s]
+Pass 2: Processing Frames:   3%|▎         | 40/1505 [00:03<01:51, 13.09it/s]
+Pass 2: Processing Frames:   3%|▎         | 42/1505 [00:03<01:57, 12.45it/s]
+Pass 2: Processing Frames:   3%|▎         | 44/1505 [00:03<01:52, 12.93it/s]
+Pass 2: Processing Frames:   3%|▎         | 46/1505 [00:03<01:48, 13.40it/s]
+Pass 2: Processing Frames:   3%|▎         | 48/1505 [00:03<01:54, 12.73it/s]
+Pass 2: Processing Frames:   3%|▎         | 50/1505 [00:03<01:52, 12.92it/s]
+Pass 2: Processing Frames:   3%|▎         | 52/1505 [00:04<01:57, 12.37it/s]
+Pass 2: Processing Frames:   4%|▎         | 54/1505 [00:04<01:52, 12.91it/s]
+Pass 2: Processing Frames:   4%|▎         | 56/1505 [00:04<01:50, 13.13it/s]
+Pass 2: Processing Frames:   4%|▍         | 58/1505 [00:04<01:55, 12.57it/s]
+Pass 2: Processing Frames:   4%|▍         | 60/1505 [00:04<01:50, 13.06it/s]
+Pass 2: Processing Frames:   4%|▍         | 62/1505 [00:04<01:56, 12.42it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:   4%|▍         | 64/1505 [00:05<01:53, 12.71it/s]
+Pass 2: Processing Frames:   4%|▍         | 66/1505 [00:05<01:48, 13.23it/s]
+Pass 2: Processing Frames:   5%|▍         | 68/1505 [00:05<01:54, 12.53it/s]
+Pass 2: Processing Frames:   5%|▍         | 70/1505 [00:05<01:50, 12.98it/s]
+Pass 2: Processing Frames:   5%|▍         | 72/1505 [00:05<01:55, 12.38it/s]
+Pass 2: Processing Frames:   5%|▍         | 74/1505 [00:05<01:51, 12.82it/s]
+Pass 2: Processing Frames:   5%|▌         | 76/1505 [00:05<01:48, 13.15it/s]
+Pass 2: Processing Frames:   5%|▌         | 78/1505 [00:06<01:53, 12.54it/s]
+Pass 2: Processing Frames:   5%|▌         | 80/1505 [00:06<01:50, 12.85it/s]
+Pass 2: Processing Frames:   5%|▌         | 82/1505 [00:06<01:56, 12.23it/s]
+Pass 2: Processing Frames:   6%|▌         | 84/1505 [00:06<01:50, 12.82it/s]
+Pass 2: Processing Frames:   6%|▌         | 86/1505 [00:06<01:49, 13.00it/s]
+Pass 2: Processing Frames:   6%|▌         | 88/1505 [00:06<01:53, 12.43it/s]
+Pass 2: Processing Frames:   6%|▌         | 90/1505 [00:07<01:49, 12.90it/s]
+Pass 2: Processing Frames:   6%|▌         | 92/1505 [00:07<01:55, 12.21it/s]
+Pass 2: Processing Frames:   6%|▌         | 94/1505 [00:07<01:49, 12.85it/s]
+Pass 2: Processing Frames:   6%|▋         | 96/1505 [00:07<01:46, 13.20it/s]
+Pass 2: Processing Frames:   7%|▋         | 98/1505 [00:07<01:52, 12.51it/s]
+Pass 2: Processing Frames:   7%|▋         | 100/1505 [00:07<01:47, 13.02it/s]
+Pass 2: Processing Frames:   7%|▋         | 102/1505 [00:08<01:54, 12.24it/s]
+Pass 2: Processing Frames:   7%|▋         | 104/1505 [00:08<01:50, 12.68it/s]
+Pass 2: Processing Frames:   7%|▋         | 106/1505 [00:08<01:47, 12.99it/s]
+Pass 2: Processing Frames:   7%|▋         | 108/1505 [00:08<01:51, 12.48it/s]
+Pass 2: Processing Frames:   7%|▋         | 110/1505 [00:08<01:47, 12.95it/s]
+Pass 2: Processing Frames:   7%|▋         | 112/1505 [00:08<01:53, 12.29it/s]
+Pass 2: Processing Frames:   8%|▊         | 114/1505 [00:08<01:49, 12.75it/s]
+Pass 2: Processing Frames:   8%|▊         | 116/1505 [00:09<01:45, 13.14it/s]
+Pass 2: Processing Frames:   8%|▊         | 118/1505 [00:09<01:50, 12.60it/s]
+Pass 2: Processing Frames:   8%|▊         | 120/1505 [00:09<01:48, 12.81it/s]
+Pass 2: Processing Frames:   8%|▊         | 122/1505 [00:09<01:52, 12.34it/s]
+Pass 2: Processing Frames:   8%|▊         | 124/1505 [00:09<01:47, 12.87it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:   8%|▊         | 126/1505 [00:09<01:44, 13.23it/s]
+Pass 2: Processing Frames:   9%|▊         | 128/1505 [00:10<01:52, 12.23it/s]
+Pass 2: Processing Frames:   9%|▊         | 130/1505 [00:10<01:47, 12.74it/s]
+Pass 2: Processing Frames:   9%|▉         | 132/1505 [00:10<01:53, 12.13it/s]
+Pass 2: Processing Frames:   9%|▉         | 134/1505 [00:10<01:49, 12.51it/s]
+Pass 2: Processing Frames:   9%|▉         | 136/1505 [00:10<01:45, 12.95it/s]
+Pass 2: Processing Frames:   9%|▉         | 138/1505 [00:10<01:52, 12.20it/s]
+Pass 2: Processing Frames:   9%|▉         | 140/1505 [00:11<01:46, 12.76it/s]
+Pass 2: Processing Frames:   9%|▉         | 142/1505 [00:11<01:50, 12.30it/s]
+Pass 2: Processing Frames:  10%|▉         | 144/1505 [00:11<01:46, 12.75it/s]
+Pass 2: Processing Frames:  10%|▉         | 146/1505 [00:11<01:43, 13.12it/s]
+Pass 2: Processing Frames:  10%|▉         | 148/1505 [00:11<01:49, 12.40it/s]
+Pass 2: Processing Frames:  10%|▉         | 150/1505 [00:11<01:45, 12.85it/s]
+Pass 2: Processing Frames:  10%|█         | 152/1505 [00:11<01:51, 12.14it/s]
+Pass 2: Processing Frames:  10%|█         | 154/1505 [00:12<01:46, 12.64it/s]
+Pass 2: Processing Frames:  10%|█         | 156/1505 [00:12<01:43, 13.08it/s]
+Pass 2: Processing Frames:  10%|█         | 158/1505 [00:12<01:49, 12.27it/s]
+Pass 2: Processing Frames:  11%|█         | 160/1505 [00:12<01:45, 12.74it/s]
+Pass 2: Processing Frames:  11%|█         | 162/1505 [00:12<01:50, 12.10it/s]
+Pass 2: Processing Frames:  11%|█         | 164/1505 [00:12<01:46, 12.60it/s]
+Pass 2: Processing Frames:  11%|█         | 166/1505 [00:13<01:43, 12.90it/s]
+Pass 2: Processing Frames:  11%|█         | 168/1505 [00:13<01:49, 12.17it/s]
+Pass 2: Processing Frames:  11%|█▏        | 170/1505 [00:13<01:45, 12.68it/s]
+Pass 2: Processing Frames:  11%|█▏        | 172/1505 [00:13<01:49, 12.22it/s]
+Pass 2: Processing Frames:  12%|█▏        | 174/1505 [00:13<01:45, 12.62it/s]
+Pass 2: Processing Frames:  12%|█▏        | 176/1505 [00:13<01:42, 13.00it/s]
+Pass 2: Processing Frames:  12%|█▏        | 178/1505 [00:14<01:48, 12.28it/s]
+Pass 2: Processing Frames:  12%|█▏        | 180/1505 [00:14<01:43, 12.79it/s]
+Pass 2: Processing Frames:  12%|█▏        | 182/1505 [00:14<01:48, 12.20it/s]
+Pass 2: Processing Frames:  12%|█▏        | 184/1505 [00:14<01:43, 12.73it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  12%|█▏        | 186/1505 [00:14<01:40, 13.14it/s]
+Pass 2: Processing Frames:  12%|█▏        | 188/1505 [00:14<01:47, 12.28it/s]
+Pass 2: Processing Frames:  13%|█▎        | 190/1505 [00:15<01:44, 12.58it/s]
+Pass 2: Processing Frames:  13%|█▎        | 192/1505 [00:15<01:48, 12.13it/s]
+Pass 2: Processing Frames:  13%|█▎        | 194/1505 [00:15<01:44, 12.60it/s]
+Pass 2: Processing Frames:  13%|█▎        | 196/1505 [00:15<01:39, 13.12it/s]
+Pass 2: Processing Frames:  13%|█▎        | 198/1505 [00:15<01:46, 12.24it/s]
+Pass 2: Processing Frames:  13%|█▎        | 200/1505 [00:15<01:41, 12.86it/s]
+Pass 2: Processing Frames:  13%|█▎        | 202/1505 [00:15<01:45, 12.35it/s]
+Pass 2: Processing Frames:  14%|█▎        | 204/1505 [00:16<01:41, 12.84it/s]
+Pass 2: Processing Frames:  14%|█▎        | 206/1505 [00:16<01:39, 13.10it/s]
+Pass 2: Processing Frames:  14%|█▍        | 208/1505 [00:16<01:46, 12.17it/s]
+Pass 2: Processing Frames:  14%|█▍        | 210/1505 [00:16<01:44, 12.36it/s]
+Pass 2: Processing Frames:  14%|█▍        | 212/1505 [00:16<01:48, 11.94it/s]
+Pass 2: Processing Frames:  14%|█▍        | 214/1505 [00:16<01:43, 12.50it/s]
+Pass 2: Processing Frames:  14%|█▍        | 216/1505 [00:17<01:38, 13.07it/s]
+Pass 2: Processing Frames:  14%|█▍        | 218/1505 [00:17<01:43, 12.48it/s]
+Pass 2: Processing Frames:  15%|█▍        | 220/1505 [00:17<01:39, 12.86it/s]
+Pass 2: Processing Frames:  15%|█▍        | 222/1505 [00:17<01:44, 12.30it/s]
+Pass 2: Processing Frames:  15%|█▍        | 224/1505 [00:17<01:40, 12.79it/s]
+Pass 2: Processing Frames:  15%|█▌        | 226/1505 [00:17<01:40, 12.78it/s]
+Pass 2: Processing Frames:  15%|█▌        | 228/1505 [00:18<01:43, 12.37it/s]
+Pass 2: Processing Frames:  15%|█▌        | 230/1505 [00:18<01:39, 12.75it/s]
+Pass 2: Processing Frames:  15%|█▌        | 232/1505 [00:18<01:43, 12.25it/s]
+Pass 2: Processing Frames:  16%|█▌        | 234/1505 [00:18<01:39, 12.80it/s]
+Pass 2: Processing Frames:  16%|█▌        | 236/1505 [00:18<01:36, 13.19it/s]
+Pass 2: Processing Frames:  16%|█▌        | 238/1505 [00:18<01:40, 12.63it/s]
+Pass 2: Processing Frames:  16%|█▌        | 240/1505 [00:18<01:37, 12.95it/s]
+Pass 2: Processing Frames:  16%|█▌        | 242/1505 [00:19<01:43, 12.23it/s]
+Pass 2: Processing Frames:  16%|█▌        | 244/1505 [00:19<01:38, 12.78it/s]
+Pass 2: Processing Frames:  16%|█▋        | 246/1505 [00:19<01:36, 12.99it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  16%|█▋        | 248/1505 [00:19<01:40, 12.45it/s]
+Pass 2: Processing Frames:  17%|█▋        | 250/1505 [00:19<01:37, 12.81it/s]
+Pass 2: Processing Frames:  17%|█▋        | 252/1505 [00:19<01:41, 12.32it/s]
+Pass 2: Processing Frames:  17%|█▋        | 254/1505 [00:20<01:37, 12.77it/s]
+Pass 2: Processing Frames:  17%|█▋        | 256/1505 [00:20<01:35, 13.14it/s]
+Pass 2: Processing Frames:  17%|█▋        | 258/1505 [00:20<01:39, 12.52it/s]
+Pass 2: Processing Frames:  17%|█▋        | 260/1505 [00:20<01:35, 13.07it/s]
+Pass 2: Processing Frames:  17%|█▋        | 262/1505 [00:20<01:39, 12.43it/s]
+Pass 2: Processing Frames:  18%|█▊        | 264/1505 [00:20<01:36, 12.92it/s]
+Pass 2: Processing Frames:  18%|█▊        | 266/1505 [00:20<01:33, 13.19it/s]
+Pass 2: Processing Frames:  18%|█▊        | 268/1505 [00:21<01:38, 12.51it/s]
+Pass 2: Processing Frames:  18%|█▊        | 270/1505 [00:21<01:35, 12.88it/s]
+Pass 2: Processing Frames:  18%|█▊        | 272/1505 [00:21<01:39, 12.37it/s]
+Pass 2: Processing Frames:  18%|█▊        | 274/1505 [00:21<01:35, 12.86it/s]
+Pass 2: Processing Frames:  18%|█▊        | 276/1505 [00:21<01:32, 13.28it/s]
+Pass 2: Processing Frames:  18%|█▊        | 278/1505 [00:21<01:37, 12.58it/s]
+Pass 2: Processing Frames:  19%|█▊        | 280/1505 [00:22<01:33, 13.05it/s]
+Pass 2: Processing Frames:  19%|█▊        | 282/1505 [00:22<01:38, 12.47it/s]
+Pass 2: Processing Frames:  19%|█▉        | 284/1505 [00:22<01:34, 12.98it/s]
+Pass 2: Processing Frames:  19%|█▉        | 286/1505 [00:22<01:32, 13.14it/s]
+Pass 2: Processing Frames:  19%|█▉        | 288/1505 [00:22<01:37, 12.49it/s]
+Pass 2: Processing Frames:  19%|█▉        | 290/1505 [00:22<01:34, 12.85it/s]
+Pass 2: Processing Frames:  19%|█▉        | 292/1505 [00:23<01:37, 12.39it/s]
+Pass 2: Processing Frames:  20%|█▉        | 294/1505 [00:23<01:33, 12.93it/s]
+Pass 2: Processing Frames:  20%|█▉        | 296/1505 [00:23<01:30, 13.35it/s]
+Pass 2: Processing Frames:  20%|█▉        | 298/1505 [00:23<01:34, 12.75it/s]
+Pass 2: Processing Frames:  20%|█▉        | 300/1505 [00:23<01:31, 13.13it/s]
+Pass 2: Processing Frames:  20%|██        | 302/1505 [00:23<01:38, 12.22it/s]
+Pass 2: Processing Frames:  20%|██        | 304/1505 [00:23<01:34, 12.73it/s]
+Pass 2: Processing Frames:  20%|██        | 306/1505 [00:24<01:31, 13.09it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  20%|██        | 308/1505 [00:24<01:35, 12.55it/s]
+Pass 2: Processing Frames:  21%|██        | 310/1505 [00:24<01:34, 12.71it/s]
+Pass 2: Processing Frames:  21%|██        | 312/1505 [00:24<01:36, 12.34it/s]
+Pass 2: Processing Frames:  21%|██        | 314/1505 [00:24<01:33, 12.80it/s]
+Pass 2: Processing Frames:  21%|██        | 316/1505 [00:24<01:30, 13.08it/s]
+Pass 2: Processing Frames:  21%|██        | 318/1505 [00:25<01:38, 12.03it/s]
+Pass 2: Processing Frames:  21%|██▏       | 320/1505 [00:25<01:34, 12.48it/s]
+Pass 2: Processing Frames:  21%|██▏       | 322/1505 [00:25<01:37, 12.15it/s]
+Pass 2: Processing Frames:  22%|██▏       | 324/1505 [00:25<01:33, 12.69it/s]
+Pass 2: Processing Frames:  22%|██▏       | 326/1505 [00:25<01:30, 12.97it/s]
+Pass 2: Processing Frames:  22%|██▏       | 328/1505 [00:25<01:37, 12.12it/s]
+Pass 2: Processing Frames:  22%|██▏       | 330/1505 [00:26<01:32, 12.64it/s]
+Pass 2: Processing Frames:  22%|██▏       | 332/1505 [00:26<01:36, 12.17it/s]
+Pass 2: Processing Frames:  22%|██▏       | 334/1505 [00:26<01:31, 12.76it/s]
+Pass 2: Processing Frames:  22%|██▏       | 336/1505 [00:26<01:28, 13.22it/s]
+Pass 2: Processing Frames:  22%|██▏       | 338/1505 [00:26<01:34, 12.40it/s]
+Pass 2: Processing Frames:  23%|██▎       | 340/1505 [00:26<01:30, 12.92it/s]
+Pass 2: Processing Frames:  23%|██▎       | 342/1505 [00:27<01:35, 12.22it/s]
+Pass 2: Processing Frames:  23%|██▎       | 344/1505 [00:27<01:32, 12.58it/s]
+Pass 2: Processing Frames:  23%|██▎       | 346/1505 [00:27<01:29, 12.98it/s]
+Pass 2: Processing Frames:  23%|██▎       | 348/1505 [00:27<01:34, 12.27it/s]
+Pass 2: Processing Frames:  23%|██▎       | 350/1505 [00:27<01:30, 12.73it/s]
+Pass 2: Processing Frames:  23%|██▎       | 352/1505 [00:27<01:34, 12.17it/s]
+Pass 2: Processing Frames:  24%|██▎       | 354/1505 [00:27<01:30, 12.66it/s]
+Pass 2: Processing Frames:  24%|██▎       | 356/1505 [00:28<01:27, 13.16it/s]
+Pass 2: Processing Frames:  24%|██▍       | 358/1505 [00:28<01:33, 12.31it/s]
+Pass 2: Processing Frames:  24%|██▍       | 360/1505 [00:28<01:28, 12.89it/s]
+Pass 2: Processing Frames:  24%|██▍       | 362/1505 [00:28<01:32, 12.37it/s]
+Pass 2: Processing Frames:  24%|██▍       | 364/1505 [00:28<01:28, 12.87it/s]
+Pass 2: Processing Frames:  24%|██▍       | 366/1505 [00:28<01:26, 13.24it/s]
+Pass 2: Processing Frames:  24%|██▍       | 368/1505 [00:29<01:32, 12.33it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  25%|██▍       | 370/1505 [00:29<01:28, 12.78it/s]
+Pass 2: Processing Frames:  25%|██▍       | 372/1505 [00:29<01:31, 12.32it/s]
+Pass 2: Processing Frames:  25%|██▍       | 374/1505 [00:29<01:28, 12.80it/s]
+Pass 2: Processing Frames:  25%|██▍       | 376/1505 [00:29<01:27, 12.97it/s]
+Pass 2: Processing Frames:  25%|██▌       | 378/1505 [00:29<01:31, 12.38it/s]
+Pass 2: Processing Frames:  25%|██▌       | 380/1505 [00:30<01:28, 12.69it/s]
+Pass 2: Processing Frames:  25%|██▌       | 382/1505 [00:30<01:32, 12.19it/s]
+Pass 2: Processing Frames:  26%|██▌       | 384/1505 [00:30<01:28, 12.60it/s]
+Pass 2: Processing Frames:  26%|██▌       | 386/1505 [00:30<01:27, 12.78it/s]
+Pass 2: Processing Frames:  26%|██▌       | 388/1505 [00:30<01:30, 12.31it/s]
+Pass 2: Processing Frames:  26%|██▌       | 390/1505 [00:30<01:27, 12.78it/s]
+Pass 2: Processing Frames:  26%|██▌       | 392/1505 [00:30<01:30, 12.33it/s]
+Pass 2: Processing Frames:  26%|██▌       | 394/1505 [00:31<01:26, 12.79it/s]
+Pass 2: Processing Frames:  26%|██▋       | 396/1505 [00:31<01:25, 12.93it/s]
+Pass 2: Processing Frames:  26%|██▋       | 398/1505 [00:31<01:29, 12.32it/s]
+Pass 2: Processing Frames:  27%|██▋       | 400/1505 [00:31<01:26, 12.70it/s]
+Pass 2: Processing Frames:  27%|██▋       | 402/1505 [00:31<01:30, 12.19it/s]
+Pass 2: Processing Frames:  27%|██▋       | 404/1505 [00:31<01:26, 12.68it/s]
+Pass 2: Processing Frames:  27%|██▋       | 406/1505 [00:32<01:25, 12.80it/s]
+Pass 2: Processing Frames:  27%|██▋       | 408/1505 [00:32<01:29, 12.29it/s]
+Pass 2: Processing Frames:  27%|██▋       | 410/1505 [00:32<01:25, 12.75it/s]
+Pass 2: Processing Frames:  27%|██▋       | 412/1505 [00:32<01:29, 12.24it/s]
+Pass 2: Processing Frames:  28%|██▊       | 414/1505 [00:32<01:25, 12.76it/s]
+Pass 2: Processing Frames:  28%|██▊       | 416/1505 [00:32<01:24, 12.94it/s]
+Pass 2: Processing Frames:  28%|██▊       | 418/1505 [00:33<01:26, 12.53it/s]
+Pass 2: Processing Frames:  28%|██▊       | 420/1505 [00:33<01:24, 12.89it/s]
+Pass 2: Processing Frames:  28%|██▊       | 422/1505 [00:33<01:28, 12.28it/s]
+Pass 2: Processing Frames:  28%|██▊       | 424/1505 [00:33<01:23, 12.89it/s]
+Pass 2: Processing Frames:  28%|██▊       | 426/1505 [00:33<01:20, 13.35it/s]
+Pass 2: Processing Frames:  28%|██▊       | 428/1505 [00:33<01:25, 12.60it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  29%|██▊       | 430/1505 [00:33<01:22, 13.03it/s]
+Pass 2: Processing Frames:  29%|██▊       | 432/1505 [00:34<01:26, 12.41it/s]
+Pass 2: Processing Frames:  29%|██▉       | 434/1505 [00:34<01:22, 12.91it/s]
+Pass 2: Processing Frames:  29%|██▉       | 436/1505 [00:34<01:21, 13.15it/s]
+Pass 2: Processing Frames:  29%|██▉       | 438/1505 [00:34<01:24, 12.59it/s]
+Pass 2: Processing Frames:  29%|██▉       | 440/1505 [00:34<01:21, 13.12it/s]
+Pass 2: Processing Frames:  29%|██▉       | 442/1505 [00:34<01:26, 12.31it/s]
+Pass 2: Processing Frames:  30%|██▉       | 444/1505 [00:35<01:22, 12.86it/s]
+Pass 2: Processing Frames:  30%|██▉       | 446/1505 [00:35<01:21, 12.98it/s]
+Pass 2: Processing Frames:  30%|██▉       | 448/1505 [00:35<01:26, 12.19it/s]
+Pass 2: Processing Frames:  30%|██▉       | 450/1505 [00:35<01:22, 12.81it/s]
+Pass 2: Processing Frames:  30%|███       | 452/1505 [00:35<01:26, 12.17it/s]
+Pass 2: Processing Frames:  30%|███       | 454/1505 [00:35<01:22, 12.76it/s]
+Pass 2: Processing Frames:  30%|███       | 456/1505 [00:36<01:20, 12.98it/s]
+Pass 2: Processing Frames:  30%|███       | 458/1505 [00:36<01:24, 12.32it/s]
+Pass 2: Processing Frames:  31%|███       | 460/1505 [00:36<01:21, 12.90it/s]
+Pass 2: Processing Frames:  31%|███       | 462/1505 [00:36<01:25, 12.22it/s]
+Pass 2: Processing Frames:  31%|███       | 464/1505 [00:36<01:21, 12.71it/s]
+Pass 2: Processing Frames:  31%|███       | 466/1505 [00:36<01:20, 12.97it/s]
+Pass 2: Processing Frames:  31%|███       | 468/1505 [00:36<01:23, 12.35it/s]
+Pass 2: Processing Frames:  31%|███       | 470/1505 [00:37<01:21, 12.73it/s]
+Pass 2: Processing Frames:  31%|███▏      | 472/1505 [00:37<01:26, 11.99it/s]
+Pass 2: Processing Frames:  31%|███▏      | 474/1505 [00:37<01:22, 12.46it/s]
+Pass 2: Processing Frames:  32%|███▏      | 476/1505 [00:37<01:21, 12.69it/s]
+Pass 2: Processing Frames:  32%|███▏      | 478/1505 [00:37<01:24, 12.12it/s]
+Pass 2: Processing Frames:  32%|███▏      | 480/1505 [00:37<01:20, 12.69it/s]
+Pass 2: Processing Frames:  32%|███▏      | 482/1505 [00:38<01:25, 11.97it/s]
+Pass 2: Processing Frames:  32%|███▏      | 484/1505 [00:38<01:20, 12.61it/s]
+Pass 2: Processing Frames:  32%|███▏      | 486/1505 [00:38<01:18, 12.98it/s]
+Pass 2: Processing Frames:  32%|███▏      | 488/1505 [00:38<01:21, 12.44it/s]
+Pass 2: Processing Frames:  33%|███▎      | 490/1505 [00:38<01:18, 12.88it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  33%|███▎      | 492/1505 [00:38<01:24, 11.99it/s]
+Pass 2: Processing Frames:  33%|███▎      | 494/1505 [00:39<01:21, 12.37it/s]
+Pass 2: Processing Frames:  33%|███▎      | 496/1505 [00:39<01:20, 12.60it/s]
+Pass 2: Processing Frames:  33%|███▎      | 498/1505 [00:39<01:23, 12.10it/s]
+Pass 2: Processing Frames:  33%|███▎      | 500/1505 [00:39<01:19, 12.65it/s]
+Pass 2: Processing Frames:  33%|███▎      | 502/1505 [00:39<01:23, 11.98it/s]
+Pass 2: Processing Frames:  33%|███▎      | 504/1505 [00:39<01:19, 12.55it/s]
+Pass 2: Processing Frames:  34%|███▎      | 506/1505 [00:40<01:18, 12.75it/s]
+Pass 2: Processing Frames:  34%|███▍      | 508/1505 [00:40<01:22, 12.15it/s]
+Pass 2: Processing Frames:  34%|███▍      | 510/1505 [00:40<01:18, 12.67it/s]
+Pass 2: Processing Frames:  34%|███▍      | 512/1505 [00:40<01:22, 11.98it/s]
+Pass 2: Processing Frames:  34%|███▍      | 514/1505 [00:40<01:18, 12.58it/s]
+Pass 2: Processing Frames:  34%|███▍      | 516/1505 [00:40<01:16, 12.87it/s]
+Pass 2: Processing Frames:  34%|███▍      | 518/1505 [00:41<01:21, 12.13it/s]
+Pass 2: Processing Frames:  35%|███▍      | 520/1505 [00:41<01:17, 12.67it/s]
+Pass 2: Processing Frames:  35%|███▍      | 522/1505 [00:41<01:21, 12.01it/s]
+Pass 2: Processing Frames:  35%|███▍      | 524/1505 [00:41<01:18, 12.53it/s]
+Pass 2: Processing Frames:  35%|███▍      | 526/1505 [00:41<01:16, 12.83it/s]
+Pass 2: Processing Frames:  35%|███▌      | 528/1505 [00:41<01:19, 12.26it/s]
+Pass 2: Processing Frames:  35%|███▌      | 530/1505 [00:41<01:16, 12.71it/s]
+Pass 2: Processing Frames:  35%|███▌      | 532/1505 [00:42<01:21, 11.98it/s]
+Pass 2: Processing Frames:  35%|███▌      | 534/1505 [00:42<01:16, 12.61it/s]
+Pass 2: Processing Frames:  36%|███▌      | 536/1505 [00:42<01:14, 12.99it/s]
+Pass 2: Processing Frames:  36%|███▌      | 538/1505 [00:42<01:18, 12.30it/s]
+Pass 2: Processing Frames:  36%|███▌      | 540/1505 [00:42<01:15, 12.78it/s]
+Pass 2: Processing Frames:  36%|███▌      | 542/1505 [00:42<01:20, 12.01it/s]
+Pass 2: Processing Frames:  36%|███▌      | 544/1505 [00:43<01:17, 12.42it/s]
+Pass 2: Processing Frames:  36%|███▋      | 546/1505 [00:43<01:15, 12.71it/s]
+Pass 2: Processing Frames:  36%|███▋      | 548/1505 [00:43<01:18, 12.23it/s]
+Pass 2: Processing Frames:  37%|███▋      | 550/1505 [00:43<01:14, 12.81it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  37%|███▋      | 552/1505 [00:43<01:19, 12.06it/s]
+Pass 2: Processing Frames:  37%|███▋      | 554/1505 [00:43<01:15, 12.56it/s]
+Pass 2: Processing Frames:  37%|███▋      | 556/1505 [00:44<01:13, 12.88it/s]
+Pass 2: Processing Frames:  37%|███▋      | 558/1505 [00:44<01:16, 12.34it/s]
+Pass 2: Processing Frames:  37%|███▋      | 560/1505 [00:44<01:13, 12.87it/s]
+Pass 2: Processing Frames:  37%|███▋      | 562/1505 [00:44<01:20, 11.78it/s]
+Pass 2: Processing Frames:  37%|███▋      | 564/1505 [00:44<01:15, 12.39it/s]
+Pass 2: Processing Frames:  38%|███▊      | 566/1505 [00:44<01:14, 12.66it/s]
+Pass 2: Processing Frames:  38%|███▊      | 568/1505 [00:45<01:17, 12.09it/s]
+Pass 2: Processing Frames:  38%|███▊      | 570/1505 [00:45<01:13, 12.68it/s]
+Pass 2: Processing Frames:  38%|███▊      | 572/1505 [00:45<01:17, 11.99it/s]
+Pass 2: Processing Frames:  38%|███▊      | 574/1505 [00:45<01:16, 12.24it/s]
+Pass 2: Processing Frames:  38%|███▊      | 576/1505 [00:45<01:13, 12.63it/s]
+Pass 2: Processing Frames:  38%|███▊      | 578/1505 [00:45<01:16, 12.08it/s]
+Pass 2: Processing Frames:  39%|███▊      | 580/1505 [00:45<01:13, 12.64it/s]
+Pass 2: Processing Frames:  39%|███▊      | 582/1505 [00:46<01:16, 12.02it/s]
+Pass 2: Processing Frames:  39%|███▉      | 584/1505 [00:46<01:12, 12.62it/s]
+Pass 2: Processing Frames:  39%|███▉      | 586/1505 [00:46<01:10, 12.97it/s]
+Pass 2: Processing Frames:  39%|███▉      | 588/1505 [00:46<01:13, 12.42it/s]
+Pass 2: Processing Frames:  39%|███▉      | 590/1505 [00:46<01:11, 12.80it/s]
+Pass 2: Processing Frames:  39%|███▉      | 592/1505 [00:46<01:15, 12.08it/s]
+Pass 2: Processing Frames:  39%|███▉      | 594/1505 [00:47<01:12, 12.64it/s]
+Pass 2: Processing Frames:  40%|███▉      | 596/1505 [00:47<01:10, 12.98it/s]
+Pass 2: Processing Frames:  40%|███▉      | 598/1505 [00:47<01:13, 12.37it/s]
+Pass 2: Processing Frames:  40%|███▉      | 600/1505 [00:47<01:10, 12.90it/s]
+Pass 2: Processing Frames:  40%|████      | 602/1505 [00:47<01:14, 12.12it/s]
+Pass 2: Processing Frames:  40%|████      | 604/1505 [00:47<01:10, 12.70it/s]
+Pass 2: Processing Frames:  40%|████      | 606/1505 [00:48<01:09, 12.98it/s]
+Pass 2: Processing Frames:  40%|████      | 608/1505 [00:48<01:12, 12.34it/s]
+Pass 2: Processing Frames:  41%|████      | 610/1505 [00:48<01:09, 12.90it/s]
+Pass 2: Processing Frames:  41%|████      | 612/1505 [00:48<01:12, 12.25it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  41%|████      | 614/1505 [00:48<01:10, 12.71it/s]
+Pass 2: Processing Frames:  41%|████      | 616/1505 [00:48<01:08, 12.93it/s]
+Pass 2: Processing Frames:  41%|████      | 618/1505 [00:49<01:12, 12.31it/s]
+Pass 2: Processing Frames:  41%|████      | 620/1505 [00:49<01:09, 12.75it/s]
+Pass 2: Processing Frames:  41%|████▏     | 622/1505 [00:49<01:13, 11.95it/s]
+Pass 2: Processing Frames:  41%|████▏     | 624/1505 [00:49<01:10, 12.50it/s]
+Pass 2: Processing Frames:  42%|████▏     | 626/1505 [00:49<01:09, 12.70it/s]
+Pass 2: Processing Frames:  42%|████▏     | 628/1505 [00:49<01:12, 12.10it/s]
+Pass 2: Processing Frames:  42%|████▏     | 630/1505 [00:49<01:09, 12.60it/s]
+Pass 2: Processing Frames:  42%|████▏     | 632/1505 [00:50<01:13, 11.89it/s]
+Pass 2: Processing Frames:  42%|████▏     | 634/1505 [00:50<01:09, 12.48it/s]
+Pass 2: Processing Frames:  42%|████▏     | 636/1505 [00:50<01:07, 12.80it/s]
+Pass 2: Processing Frames:  42%|████▏     | 638/1505 [00:50<01:11, 12.16it/s]
+Pass 2: Processing Frames:  43%|████▎     | 640/1505 [00:50<01:08, 12.70it/s]
+Pass 2: Processing Frames:  43%|████▎     | 642/1505 [00:50<01:12, 11.98it/s]
+Pass 2: Processing Frames:  43%|████▎     | 644/1505 [00:51<01:08, 12.51it/s]
+Pass 2: Processing Frames:  43%|████▎     | 646/1505 [00:51<01:07, 12.82it/s]
+Pass 2: Processing Frames:  43%|████▎     | 648/1505 [00:51<01:09, 12.33it/s]
+Pass 2: Processing Frames:  43%|████▎     | 650/1505 [00:51<01:06, 12.79it/s]
+Pass 2: Processing Frames:  43%|████▎     | 652/1505 [00:51<01:10, 12.16it/s]
+Pass 2: Processing Frames:  43%|████▎     | 654/1505 [00:51<01:06, 12.76it/s]
+Pass 2: Processing Frames:  44%|████▎     | 656/1505 [00:52<01:05, 13.05it/s]
+Pass 2: Processing Frames:  44%|████▎     | 658/1505 [00:52<01:07, 12.47it/s]
+Pass 2: Processing Frames:  44%|████▍     | 660/1505 [00:52<01:04, 13.00it/s]
+Pass 2: Processing Frames:  44%|████▍     | 662/1505 [00:52<01:07, 12.44it/s]
+Pass 2: Processing Frames:  44%|████▍     | 664/1505 [00:52<01:05, 12.79it/s]
+Pass 2: Processing Frames:  44%|████▍     | 666/1505 [00:52<01:03, 13.12it/s]
+Pass 2: Processing Frames:  44%|████▍     | 668/1505 [00:52<01:06, 12.53it/s]
+Pass 2: Processing Frames:  45%|████▍     | 670/1505 [00:53<01:04, 13.03it/s]
+Pass 2: Processing Frames:  45%|████▍     | 672/1505 [00:53<01:07, 12.42it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  45%|████▍     | 674/1505 [00:53<01:06, 12.59it/s]
+Pass 2: Processing Frames:  45%|████▍     | 676/1505 [00:53<01:03, 13.03it/s]
+Pass 2: Processing Frames:  45%|████▌     | 678/1505 [00:53<01:06, 12.48it/s]
+Pass 2: Processing Frames:  45%|████▌     | 680/1505 [00:53<01:03, 12.95it/s]
+Pass 2: Processing Frames:  45%|████▌     | 682/1505 [00:54<01:07, 12.10it/s]
+Pass 2: Processing Frames:  45%|████▌     | 684/1505 [00:54<01:05, 12.60it/s]
+Pass 2: Processing Frames:  46%|████▌     | 686/1505 [00:54<01:03, 12.81it/s]
+Pass 2: Processing Frames:  46%|████▌     | 688/1505 [00:54<01:07, 12.09it/s]
+Pass 2: Processing Frames:  46%|████▌     | 690/1505 [00:54<01:04, 12.58it/s]
+Pass 2: Processing Frames:  46%|████▌     | 692/1505 [00:54<01:06, 12.14it/s]
+Pass 2: Processing Frames:  46%|████▌     | 694/1505 [00:55<01:03, 12.68it/s]
+Pass 2: Processing Frames:  46%|████▌     | 696/1505 [00:55<01:01, 13.09it/s]
+Pass 2: Processing Frames:  46%|████▋     | 698/1505 [00:55<01:06, 12.09it/s]
+Pass 2: Processing Frames:  47%|████▋     | 700/1505 [00:55<01:03, 12.58it/s]
+Pass 2: Processing Frames:  47%|████▋     | 702/1505 [00:55<01:05, 12.19it/s]
+Pass 2: Processing Frames:  47%|████▋     | 704/1505 [00:55<01:03, 12.52it/s]
+Pass 2: Processing Frames:  47%|████▋     | 706/1505 [00:56<01:02, 12.85it/s]
+Pass 2: Processing Frames:  47%|████▋     | 708/1505 [00:56<01:04, 12.33it/s]
+Pass 2: Processing Frames:  47%|████▋     | 710/1505 [00:56<01:02, 12.79it/s]
+Pass 2: Processing Frames:  47%|████▋     | 712/1505 [00:56<01:06, 11.99it/s]
+Pass 2: Processing Frames:  47%|████▋     | 714/1505 [00:56<01:03, 12.51it/s]
+Pass 2: Processing Frames:  48%|████▊     | 716/1505 [00:56<01:01, 12.79it/s]
+Pass 2: Processing Frames:  48%|████▊     | 718/1505 [00:56<01:03, 12.32it/s]
+Pass 2: Processing Frames:  48%|████▊     | 720/1505 [00:57<01:02, 12.57it/s]
+Pass 2: Processing Frames:  48%|████▊     | 722/1505 [00:57<01:04, 12.07it/s]
+Pass 2: Processing Frames:  48%|████▊     | 724/1505 [00:57<01:01, 12.66it/s]
+Pass 2: Processing Frames:  48%|████▊     | 726/1505 [00:57<00:59, 13.12it/s]
+Pass 2: Processing Frames:  48%|████▊     | 728/1505 [00:57<01:03, 12.19it/s]
+Pass 2: Processing Frames:  49%|████▊     | 730/1505 [00:57<01:00, 12.73it/s]
+Pass 2: Processing Frames:  49%|████▊     | 732/1505 [00:58<01:03, 12.08it/s]
+Pass 2: Processing Frames:  49%|████▉     | 734/1505 [00:58<01:01, 12.47it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  49%|████▉     | 736/1505 [00:58<00:59, 12.82it/s]
+Pass 2: Processing Frames:  49%|████▉     | 738/1505 [00:58<01:02, 12.23it/s]
+Pass 2: Processing Frames:  49%|████▉     | 740/1505 [00:58<00:59, 12.76it/s]
+Pass 2: Processing Frames:  49%|████▉     | 742/1505 [00:58<01:01, 12.40it/s]
+Pass 2: Processing Frames:  49%|████▉     | 744/1505 [00:59<00:59, 12.86it/s]
+Pass 2: Processing Frames:  50%|████▉     | 746/1505 [00:59<00:57, 13.14it/s]
+Pass 2: Processing Frames:  50%|████▉     | 748/1505 [00:59<01:00, 12.46it/s]
+Pass 2: Processing Frames:  50%|████▉     | 750/1505 [00:59<00:58, 12.97it/s]
+Pass 2: Processing Frames:  50%|████▉     | 752/1505 [00:59<01:00, 12.49it/s]
+Pass 2: Processing Frames:  50%|█████     | 754/1505 [00:59<00:57, 12.99it/s]
+Pass 2: Processing Frames:  50%|█████     | 756/1505 [00:59<00:56, 13.34it/s]
+Pass 2: Processing Frames:  50%|█████     | 758/1505 [01:00<00:59, 12.56it/s]
+Pass 2: Processing Frames:  50%|█████     | 760/1505 [01:00<00:58, 12.74it/s]
+Pass 2: Processing Frames:  51%|█████     | 762/1505 [01:00<01:01, 12.17it/s]
+Pass 2: Processing Frames:  51%|█████     | 764/1505 [01:00<00:58, 12.70it/s]
+Pass 2: Processing Frames:  51%|█████     | 766/1505 [01:00<00:56, 13.08it/s]
+Pass 2: Processing Frames:  51%|█████     | 768/1505 [01:00<01:00, 12.13it/s]
+Pass 2: Processing Frames:  51%|█████     | 770/1505 [01:01<00:58, 12.63it/s]
+Pass 2: Processing Frames:  51%|█████▏    | 772/1505 [01:01<00:59, 12.26it/s]
+Pass 2: Processing Frames:  51%|█████▏    | 774/1505 [01:01<00:57, 12.79it/s]
+Pass 2: Processing Frames:  52%|█████▏    | 776/1505 [01:01<00:56, 12.95it/s]
+Pass 2: Processing Frames:  52%|█████▏    | 778/1505 [01:01<00:58, 12.35it/s]
+Pass 2: Processing Frames:  52%|█████▏    | 780/1505 [01:01<00:57, 12.68it/s]
+Pass 2: Processing Frames:  52%|█████▏    | 782/1505 [01:02<00:59, 12.06it/s]
+Pass 2: Processing Frames:  52%|█████▏    | 784/1505 [01:02<00:57, 12.46it/s]
+Pass 2: Processing Frames:  52%|█████▏    | 786/1505 [01:02<00:56, 12.73it/s]
+Pass 2: Processing Frames:  52%|█████▏    | 788/1505 [01:02<00:58, 12.18it/s]
+Pass 2: Processing Frames:  52%|█████▏    | 790/1505 [01:02<00:56, 12.69it/s]
+Pass 2: Processing Frames:  53%|█████▎    | 792/1505 [01:02<00:59, 12.00it/s]
+Pass 2: Processing Frames:  53%|█████▎    | 794/1505 [01:03<00:57, 12.36it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  53%|█████▎    | 796/1505 [01:03<00:55, 12.80it/s]
+Pass 2: Processing Frames:  53%|█████▎    | 798/1505 [01:03<00:57, 12.30it/s]
+Pass 2: Processing Frames:  53%|█████▎    | 800/1505 [01:03<00:55, 12.72it/s]
+Pass 2: Processing Frames:  53%|█████▎    | 802/1505 [01:03<00:57, 12.17it/s]
+Pass 2: Processing Frames:  53%|█████▎    | 804/1505 [01:03<00:55, 12.67it/s]
+Pass 2: Processing Frames:  54%|█████▎    | 806/1505 [01:03<00:55, 12.68it/s]
+Pass 2: Processing Frames:  54%|█████▎    | 808/1505 [01:04<00:57, 12.15it/s]
+Pass 2: Processing Frames:  54%|█████▍    | 810/1505 [01:04<00:54, 12.68it/s]
+Pass 2: Processing Frames:  54%|█████▍    | 812/1505 [01:04<00:57, 12.09it/s]
+Pass 2: Processing Frames:  54%|█████▍    | 814/1505 [01:04<00:54, 12.57it/s]
+Pass 2: Processing Frames:  54%|█████▍    | 816/1505 [01:04<00:52, 13.06it/s]
+Pass 2: Processing Frames:  54%|█████▍    | 818/1505 [01:04<00:55, 12.37it/s]
+Pass 2: Processing Frames:  54%|█████▍    | 820/1505 [01:05<00:53, 12.71it/s]
+Pass 2: Processing Frames:  55%|█████▍    | 822/1505 [01:05<00:56, 12.08it/s]
+Pass 2: Processing Frames:  55%|█████▍    | 824/1505 [01:05<00:54, 12.50it/s]
+Pass 2: Processing Frames:  55%|█████▍    | 826/1505 [01:05<00:53, 12.69it/s]
+Pass 2: Processing Frames:  55%|█████▌    | 828/1505 [01:05<00:57, 11.84it/s]
+Pass 2: Processing Frames:  55%|█████▌    | 830/1505 [01:05<00:54, 12.39it/s]
+Pass 2: Processing Frames:  55%|█████▌    | 832/1505 [01:06<00:56, 11.88it/s]
+Pass 2: Processing Frames:  55%|█████▌    | 834/1505 [01:06<00:54, 12.38it/s]
+Pass 2: Processing Frames:  56%|█████▌    | 836/1505 [01:06<00:51, 12.88it/s]
+Pass 2: Processing Frames:  56%|█████▌    | 838/1505 [01:06<00:54, 12.33it/s]
+Pass 2: Processing Frames:  56%|█████▌    | 840/1505 [01:06<00:52, 12.71it/s]
+Pass 2: Processing Frames:  56%|█████▌    | 842/1505 [01:06<00:55, 11.88it/s]
+Pass 2: Processing Frames:  56%|█████▌    | 844/1505 [01:07<00:53, 12.36it/s]
+Pass 2: Processing Frames:  56%|█████▌    | 846/1505 [01:07<00:51, 12.75it/s]
+Pass 2: Processing Frames:  56%|█████▋    | 848/1505 [01:07<00:53, 12.20it/s]
+Pass 2: Processing Frames:  56%|█████▋    | 850/1505 [01:07<00:52, 12.58it/s]
+Pass 2: Processing Frames:  57%|█████▋    | 852/1505 [01:07<00:54, 11.88it/s]
+Pass 2: Processing Frames:  57%|█████▋    | 854/1505 [01:07<00:53, 12.20it/s]
+Pass 2: Processing Frames:  57%|█████▋    | 856/1505 [01:08<00:51, 12.54it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  57%|█████▋    | 858/1505 [01:08<00:55, 11.76it/s]
+Pass 2: Processing Frames:  57%|█████▋    | 860/1505 [01:08<00:53, 12.08it/s]
+Pass 2: Processing Frames:  57%|█████▋    | 862/1505 [01:08<00:55, 11.59it/s]
+Pass 2: Processing Frames:  57%|█████▋    | 864/1505 [01:08<00:53, 11.90it/s]
+Pass 2: Processing Frames:  58%|█████▊    | 866/1505 [01:08<00:52, 12.16it/s]
+Pass 2: Processing Frames:  58%|█████▊    | 868/1505 [01:09<00:54, 11.64it/s]
+Pass 2: Processing Frames:  58%|█████▊    | 870/1505 [01:09<00:52, 12.17it/s]
+Pass 2: Processing Frames:  58%|█████▊    | 872/1505 [01:09<00:54, 11.63it/s]
+Pass 2: Processing Frames:  58%|█████▊    | 874/1505 [01:09<00:51, 12.21it/s]
+Pass 2: Processing Frames:  58%|█████▊    | 876/1505 [01:09<00:50, 12.45it/s]
+Pass 2: Processing Frames:  58%|█████▊    | 878/1505 [01:09<00:52, 11.91it/s]
+Pass 2: Processing Frames:  58%|█████▊    | 880/1505 [01:10<00:50, 12.43it/s]
+Pass 2: Processing Frames:  59%|█████▊    | 882/1505 [01:10<00:52, 11.87it/s]
+Pass 2: Processing Frames:  59%|█████▊    | 884/1505 [01:10<00:49, 12.48it/s]
+Pass 2: Processing Frames:  59%|█████▉    | 886/1505 [01:10<00:48, 12.75it/s]
+Pass 2: Processing Frames:  59%|█████▉    | 888/1505 [01:10<00:50, 12.20it/s]
+Pass 2: Processing Frames:  59%|█████▉    | 890/1505 [01:10<00:49, 12.52it/s]
+Pass 2: Processing Frames:  59%|█████▉    | 892/1505 [01:11<00:51, 11.89it/s]
+Pass 2: Processing Frames:  59%|█████▉    | 894/1505 [01:11<00:49, 12.32it/s]
+Pass 2: Processing Frames:  60%|█████▉    | 896/1505 [01:11<00:47, 12.82it/s]
+Pass 2: Processing Frames:  60%|█████▉    | 898/1505 [01:11<00:50, 12.08it/s]
+Pass 2: Processing Frames:  60%|█████▉    | 900/1505 [01:11<00:48, 12.57it/s]
+Pass 2: Processing Frames:  60%|█████▉    | 902/1505 [01:11<00:50, 12.03it/s]
+Pass 2: Processing Frames:  60%|██████    | 904/1505 [01:11<00:47, 12.61it/s]
+Pass 2: Processing Frames:  60%|██████    | 906/1505 [01:12<00:45, 13.07it/s]
+Pass 2: Processing Frames:  60%|██████    | 908/1505 [01:12<00:47, 12.50it/s]
+Pass 2: Processing Frames:  60%|██████    | 910/1505 [01:12<00:46, 12.90it/s]
+Pass 2: Processing Frames:  61%|██████    | 912/1505 [01:12<00:47, 12.39it/s]
+Pass 2: Processing Frames:  61%|██████    | 914/1505 [01:12<00:46, 12.70it/s]
+Pass 2: Processing Frames:  61%|██████    | 916/1505 [01:12<00:44, 13.10it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  61%|██████    | 918/1505 [01:13<00:46, 12.52it/s]
+Pass 2: Processing Frames:  61%|██████    | 920/1505 [01:13<00:45, 12.87it/s]
+Pass 2: Processing Frames:  61%|██████▏   | 922/1505 [01:13<00:48, 12.10it/s]
+Pass 2: Processing Frames:  61%|██████▏   | 924/1505 [01:13<00:46, 12.59it/s]
+Pass 2: Processing Frames:  62%|██████▏   | 926/1505 [01:13<00:45, 12.76it/s]
+Pass 2: Processing Frames:  62%|██████▏   | 928/1505 [01:13<00:47, 12.12it/s]
+Pass 2: Processing Frames:  62%|██████▏   | 930/1505 [01:14<00:45, 12.57it/s]
+Pass 2: Processing Frames:  62%|██████▏   | 932/1505 [01:14<00:48, 11.88it/s]
+Pass 2: Processing Frames:  62%|██████▏   | 934/1505 [01:14<00:46, 12.41it/s]
+Pass 2: Processing Frames:  62%|██████▏   | 936/1505 [01:14<00:44, 12.75it/s]
+Pass 2: Processing Frames:  62%|██████▏   | 938/1505 [01:14<00:46, 12.11it/s]
+Pass 2: Processing Frames:  62%|██████▏   | 940/1505 [01:14<00:44, 12.63it/s]
+Pass 2: Processing Frames:  63%|██████▎   | 942/1505 [01:15<00:47, 11.78it/s]
+Pass 2: Processing Frames:  63%|██████▎   | 944/1505 [01:15<00:45, 12.41it/s]
+Pass 2: Processing Frames:  63%|██████▎   | 946/1505 [01:15<00:43, 12.79it/s]
+Pass 2: Processing Frames:  63%|██████▎   | 948/1505 [01:15<00:45, 12.30it/s]
+Pass 2: Processing Frames:  63%|██████▎   | 950/1505 [01:15<00:43, 12.77it/s]
+Pass 2: Processing Frames:  63%|██████▎   | 952/1505 [01:15<00:46, 12.00it/s]
+Pass 2: Processing Frames:  63%|██████▎   | 954/1505 [01:15<00:43, 12.57it/s]
+Pass 2: Processing Frames:  64%|██████▎   | 956/1505 [01:16<00:42, 12.83it/s]
+Pass 2: Processing Frames:  64%|██████▎   | 958/1505 [01:16<00:45, 12.14it/s]
+Pass 2: Processing Frames:  64%|██████▍   | 960/1505 [01:16<00:42, 12.69it/s]
+Pass 2: Processing Frames:  64%|██████▍   | 962/1505 [01:16<00:45, 11.93it/s]
+Pass 2: Processing Frames:  64%|██████▍   | 964/1505 [01:16<00:43, 12.46it/s]
+Pass 2: Processing Frames:  64%|██████▍   | 966/1505 [01:16<00:42, 12.62it/s]
+Pass 2: Processing Frames:  64%|██████▍   | 968/1505 [01:17<00:44, 12.11it/s]
+Pass 2: Processing Frames:  64%|██████▍   | 970/1505 [01:17<00:42, 12.62it/s]
+Pass 2: Processing Frames:  65%|██████▍   | 972/1505 [01:17<00:43, 12.12it/s]
+Pass 2: Processing Frames:  65%|██████▍   | 974/1505 [01:17<00:43, 12.28it/s]
+Pass 2: Processing Frames:  65%|██████▍   | 976/1505 [01:17<00:41, 12.72it/s]
+Pass 2: Processing Frames:  65%|██████▍   | 978/1505 [01:17<00:43, 12.16it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  65%|██████▌   | 980/1505 [01:18<00:41, 12.65it/s]
+Pass 2: Processing Frames:  65%|██████▌   | 982/1505 [01:18<00:42, 12.20it/s]
+Pass 2: Processing Frames:  65%|██████▌   | 984/1505 [01:18<00:41, 12.67it/s]
+Pass 2: Processing Frames:  66%|██████▌   | 986/1505 [01:18<00:40, 12.91it/s]
+Pass 2: Processing Frames:  66%|██████▌   | 988/1505 [01:18<00:41, 12.32it/s]
+Pass 2: Processing Frames:  66%|██████▌   | 990/1505 [01:18<00:40, 12.80it/s]
+Pass 2: Processing Frames:  66%|██████▌   | 992/1505 [01:19<00:41, 12.23it/s]
+Pass 2: Processing Frames:  66%|██████▌   | 994/1505 [01:19<00:40, 12.60it/s]
+Pass 2: Processing Frames:  66%|██████▌   | 996/1505 [01:19<00:39, 13.02it/s]
+Pass 2: Processing Frames:  66%|██████▋   | 998/1505 [01:19<00:41, 12.21it/s]
+Pass 2: Processing Frames:  66%|██████▋   | 1000/1505 [01:19<00:39, 12.68it/s]
+Pass 2: Processing Frames:  67%|██████▋   | 1002/1505 [01:19<00:41, 12.14it/s]
+Pass 2: Processing Frames:  67%|██████▋   | 1004/1505 [01:19<00:39, 12.63it/s]
+Pass 2: Processing Frames:  67%|██████▋   | 1006/1505 [01:20<00:38, 13.03it/s]
+Pass 2: Processing Frames:  67%|██████▋   | 1008/1505 [01:20<00:39, 12.47it/s]
+Pass 2: Processing Frames:  67%|██████▋   | 1010/1505 [01:20<00:38, 12.82it/s]
+Pass 2: Processing Frames:  67%|██████▋   | 1012/1505 [01:20<00:39, 12.34it/s]
+Pass 2: Processing Frames:  67%|██████▋   | 1014/1505 [01:20<00:38, 12.82it/s]
+Pass 2: Processing Frames:  68%|██████▊   | 1016/1505 [01:20<00:37, 13.15it/s]
+Pass 2: Processing Frames:  68%|██████▊   | 1018/1505 [01:21<00:38, 12.53it/s]
+Pass 2: Processing Frames:  68%|██████▊   | 1020/1505 [01:21<00:38, 12.72it/s]
+Pass 2: Processing Frames:  68%|██████▊   | 1022/1505 [01:21<00:40, 11.79it/s]
+Pass 2: Processing Frames:  68%|██████▊   | 1024/1505 [01:21<00:38, 12.36it/s]
+Pass 2: Processing Frames:  68%|██████▊   | 1026/1505 [01:21<00:37, 12.61it/s]
+Pass 2: Processing Frames:  68%|██████▊   | 1028/1505 [01:21<00:39, 12.10it/s]
+Pass 2: Processing Frames:  68%|██████▊   | 1030/1505 [01:22<00:37, 12.59it/s]
+Pass 2: Processing Frames:  69%|██████▊   | 1032/1505 [01:22<00:39, 11.93it/s]
+Pass 2: Processing Frames:  69%|██████▊   | 1034/1505 [01:22<00:37, 12.40it/s]
+Pass 2: Processing Frames:  69%|██████▉   | 1036/1505 [01:22<00:37, 12.66it/s]
+Pass 2: Processing Frames:  69%|██████▉   | 1038/1505 [01:22<00:38, 12.16it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  69%|██████▉   | 1040/1505 [01:22<00:36, 12.66it/s]
+Pass 2: Processing Frames:  69%|██████▉   | 1042/1505 [01:23<00:39, 11.85it/s]
+Pass 2: Processing Frames:  69%|██████▉   | 1044/1505 [01:23<00:37, 12.34it/s]
+Pass 2: Processing Frames:  70%|██████▉   | 1046/1505 [01:23<00:36, 12.66it/s]
+Pass 2: Processing Frames:  70%|██████▉   | 1048/1505 [01:23<00:38, 12.02it/s]
+Pass 2: Processing Frames:  70%|██████▉   | 1050/1505 [01:23<00:36, 12.51it/s]
+Pass 2: Processing Frames:  70%|██████▉   | 1052/1505 [01:23<00:37, 12.03it/s]
+Pass 2: Processing Frames:  70%|███████   | 1054/1505 [01:24<00:35, 12.60it/s]
+Pass 2: Processing Frames:  70%|███████   | 1056/1505 [01:24<00:34, 12.95it/s]
+Pass 2: Processing Frames:  70%|███████   | 1058/1505 [01:24<00:36, 12.24it/s]
+Pass 2: Processing Frames:  70%|███████   | 1060/1505 [01:24<00:35, 12.69it/s]
+Pass 2: Processing Frames:  71%|███████   | 1062/1505 [01:24<00:36, 12.13it/s]
+Pass 2: Processing Frames:  71%|███████   | 1064/1505 [01:24<00:34, 12.61it/s]
+Pass 2: Processing Frames:  71%|███████   | 1066/1505 [01:24<00:33, 12.98it/s]
+Pass 2: Processing Frames:  71%|███████   | 1068/1505 [01:25<00:35, 12.42it/s]
+Pass 2: Processing Frames:  71%|███████   | 1070/1505 [01:25<00:34, 12.74it/s]
+Pass 2: Processing Frames:  71%|███████   | 1072/1505 [01:25<00:35, 12.20it/s]
+Pass 2: Processing Frames:  71%|███████▏  | 1074/1505 [01:25<00:34, 12.63it/s]
+Pass 2: Processing Frames:  71%|███████▏  | 1076/1505 [01:25<00:33, 12.86it/s]
+Pass 2: Processing Frames:  72%|███████▏  | 1078/1505 [01:25<00:35, 12.14it/s]
+Pass 2: Processing Frames:  72%|███████▏  | 1080/1505 [01:26<00:33, 12.51it/s]
+Pass 2: Processing Frames:  72%|███████▏  | 1082/1505 [01:26<00:35, 11.92it/s]
+Pass 2: Processing Frames:  72%|███████▏  | 1084/1505 [01:26<00:34, 12.23it/s]
+Pass 2: Processing Frames:  72%|███████▏  | 1086/1505 [01:26<00:32, 12.71it/s]
+Pass 2: Processing Frames:  72%|███████▏  | 1088/1505 [01:26<00:34, 12.01it/s]
+Pass 2: Processing Frames:  72%|███████▏  | 1090/1505 [01:26<00:33, 12.43it/s]
+Pass 2: Processing Frames:  73%|███████▎  | 1092/1505 [01:27<00:34, 12.03it/s]
+Pass 2: Processing Frames:  73%|███████▎  | 1094/1505 [01:27<00:33, 12.41it/s]
+Pass 2: Processing Frames:  73%|███████▎  | 1096/1505 [01:27<00:32, 12.58it/s]
+Pass 2: Processing Frames:  73%|███████▎  | 1098/1505 [01:27<00:33, 12.12it/s]
+Pass 2: Processing Frames:  73%|███████▎  | 1100/1505 [01:27<00:32, 12.61it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  73%|███████▎  | 1102/1505 [01:27<00:33, 12.18it/s]
+Pass 2: Processing Frames:  73%|███████▎  | 1104/1505 [01:28<00:31, 12.63it/s]
+Pass 2: Processing Frames:  73%|███████▎  | 1106/1505 [01:28<00:31, 12.73it/s]
+Pass 2: Processing Frames:  74%|███████▎  | 1108/1505 [01:28<00:32, 12.21it/s]
+Pass 2: Processing Frames:  74%|███████▍  | 1110/1505 [01:28<00:31, 12.58it/s]
+Pass 2: Processing Frames:  74%|███████▍  | 1112/1505 [01:28<00:32, 12.07it/s]
+Pass 2: Processing Frames:  74%|███████▍  | 1114/1505 [01:28<00:31, 12.56it/s]
+Pass 2: Processing Frames:  74%|███████▍  | 1116/1505 [01:28<00:30, 12.89it/s]
+Pass 2: Processing Frames:  74%|███████▍  | 1118/1505 [01:29<00:32, 12.07it/s]
+Pass 2: Processing Frames:  74%|███████▍  | 1120/1505 [01:29<00:30, 12.59it/s]
+Pass 2: Processing Frames:  75%|███████▍  | 1122/1505 [01:29<00:31, 12.19it/s]
+Pass 2: Processing Frames:  75%|███████▍  | 1124/1505 [01:29<00:29, 12.71it/s]
+Pass 2: Processing Frames:  75%|███████▍  | 1126/1505 [01:29<00:29, 12.83it/s]
+Pass 2: Processing Frames:  75%|███████▍  | 1128/1505 [01:29<00:31, 11.98it/s]
+Pass 2: Processing Frames:  75%|███████▌  | 1130/1505 [01:30<00:30, 12.43it/s]
+Pass 2: Processing Frames:  75%|███████▌  | 1132/1505 [01:30<00:31, 11.88it/s]
+Pass 2: Processing Frames:  75%|███████▌  | 1134/1505 [01:30<00:29, 12.44it/s]
+Pass 2: Processing Frames:  75%|███████▌  | 1136/1505 [01:30<00:28, 12.91it/s]
+Pass 2: Processing Frames:  76%|███████▌  | 1138/1505 [01:30<00:29, 12.37it/s]
+Pass 2: Processing Frames:  76%|███████▌  | 1140/1505 [01:30<00:29, 12.39it/s]
+Pass 2: Processing Frames:  76%|███████▌  | 1142/1505 [01:31<00:30, 11.72it/s]
+Pass 2: Processing Frames:  76%|███████▌  | 1144/1505 [01:31<00:29, 12.15it/s]
+Pass 2: Processing Frames:  76%|███████▌  | 1146/1505 [01:31<00:29, 12.36it/s]
+Pass 2: Processing Frames:  76%|███████▋  | 1148/1505 [01:31<00:29, 11.94it/s]
+Pass 2: Processing Frames:  76%|███████▋  | 1150/1505 [01:31<00:28, 12.25it/s]
+Pass 2: Processing Frames:  77%|███████▋  | 1152/1505 [01:31<00:30, 11.68it/s]
+Pass 2: Processing Frames:  77%|███████▋  | 1154/1505 [01:32<00:28, 12.23it/s]
+Pass 2: Processing Frames:  77%|███████▋  | 1156/1505 [01:32<00:27, 12.62it/s]
+Pass 2: Processing Frames:  77%|███████▋  | 1158/1505 [01:32<00:29, 11.83it/s]
+Pass 2: Processing Frames:  77%|███████▋  | 1160/1505 [01:32<00:28, 12.30it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  77%|███████▋  | 1162/1505 [01:32<00:29, 11.46it/s]
+Pass 2: Processing Frames:  77%|███████▋  | 1164/1505 [01:32<00:28, 11.95it/s]
+Pass 2: Processing Frames:  77%|███████▋  | 1166/1505 [01:33<00:27, 12.28it/s]
+Pass 2: Processing Frames:  78%|███████▊  | 1168/1505 [01:33<00:28, 11.63it/s]
+Pass 2: Processing Frames:  78%|███████▊  | 1170/1505 [01:33<00:27, 12.24it/s]
+Pass 2: Processing Frames:  78%|███████▊  | 1172/1505 [01:33<00:27, 11.96it/s]
+Pass 2: Processing Frames:  78%|███████▊  | 1174/1505 [01:33<00:26, 12.32it/s]
+Pass 2: Processing Frames:  78%|███████▊  | 1176/1505 [01:33<00:25, 12.73it/s]
+Pass 2: Processing Frames:  78%|███████▊  | 1178/1505 [01:34<00:26, 12.13it/s]
+Pass 2: Processing Frames:  78%|███████▊  | 1180/1505 [01:34<00:25, 12.57it/s]
+Pass 2: Processing Frames:  79%|███████▊  | 1182/1505 [01:34<00:26, 12.06it/s]
+Pass 2: Processing Frames:  79%|███████▊  | 1184/1505 [01:34<00:25, 12.40it/s]
+Pass 2: Processing Frames:  79%|███████▉  | 1186/1505 [01:34<00:25, 12.74it/s]
+Pass 2: Processing Frames:  79%|███████▉  | 1188/1505 [01:34<00:25, 12.24it/s]
+Pass 2: Processing Frames:  79%|███████▉  | 1190/1505 [01:35<00:24, 12.61it/s]
+Pass 2: Processing Frames:  79%|███████▉  | 1192/1505 [01:35<00:25, 12.15it/s]
+Pass 2: Processing Frames:  79%|███████▉  | 1194/1505 [01:35<00:24, 12.62it/s]
+Pass 2: Processing Frames:  79%|███████▉  | 1196/1505 [01:35<00:23, 12.98it/s]
+Pass 2: Processing Frames:  80%|███████▉  | 1198/1505 [01:35<00:24, 12.43it/s]
+Pass 2: Processing Frames:  80%|███████▉  | 1200/1505 [01:35<00:24, 12.64it/s]
+Pass 2: Processing Frames:  80%|███████▉  | 1202/1505 [01:36<00:25, 12.08it/s]
+Pass 2: Processing Frames:  80%|████████  | 1204/1505 [01:36<00:23, 12.60it/s]
+Pass 2: Processing Frames:  80%|████████  | 1206/1505 [01:36<00:23, 13.00it/s]
+Pass 2: Processing Frames:  80%|████████  | 1208/1505 [01:36<00:23, 12.44it/s]
+Pass 2: Processing Frames:  80%|████████  | 1210/1505 [01:36<00:23, 12.66it/s]
+Pass 2: Processing Frames:  81%|████████  | 1212/1505 [01:36<00:24, 12.19it/s]
+Pass 2: Processing Frames:  81%|████████  | 1214/1505 [01:36<00:23, 12.62it/s]
+Pass 2: Processing Frames:  81%|████████  | 1216/1505 [01:37<00:22, 13.04it/s]
+Pass 2: Processing Frames:  81%|████████  | 1218/1505 [01:37<00:23, 12.12it/s]
+Pass 2: Processing Frames:  81%|████████  | 1220/1505 [01:37<00:22, 12.60it/s]
+Pass 2: Processing Frames:  81%|████████  | 1222/1505 [01:37<00:23, 12.10it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  81%|████████▏ | 1224/1505 [01:37<00:22, 12.53it/s]
+Pass 2: Processing Frames:  81%|████████▏ | 1226/1505 [01:37<00:21, 12.78it/s]
+Pass 2: Processing Frames:  82%|████████▏ | 1228/1505 [01:38<00:22, 12.17it/s]
+Pass 2: Processing Frames:  82%|████████▏ | 1230/1505 [01:38<00:22, 12.43it/s]
+Pass 2: Processing Frames:  82%|████████▏ | 1232/1505 [01:38<00:22, 12.06it/s]
+Pass 2: Processing Frames:  82%|████████▏ | 1234/1505 [01:38<00:21, 12.63it/s]
+Pass 2: Processing Frames:  82%|████████▏ | 1236/1505 [01:38<00:20, 13.07it/s]
+Pass 2: Processing Frames:  82%|████████▏ | 1238/1505 [01:38<00:21, 12.18it/s]
+Pass 2: Processing Frames:  82%|████████▏ | 1240/1505 [01:39<00:20, 12.70it/s]
+Pass 2: Processing Frames:  83%|████████▎ | 1242/1505 [01:39<00:21, 12.20it/s]
+Pass 2: Processing Frames:  83%|████████▎ | 1244/1505 [01:39<00:20, 12.71it/s]
+Pass 2: Processing Frames:  83%|████████▎ | 1246/1505 [01:39<00:19, 12.97it/s]
+Pass 2: Processing Frames:  83%|████████▎ | 1248/1505 [01:39<00:21, 12.15it/s]
+Pass 2: Processing Frames:  83%|████████▎ | 1250/1505 [01:39<00:20, 12.56it/s]
+Pass 2: Processing Frames:  83%|████████▎ | 1252/1505 [01:40<00:20, 12.13it/s]
+Pass 2: Processing Frames:  83%|████████▎ | 1254/1505 [01:40<00:19, 12.63it/s]
+Pass 2: Processing Frames:  83%|████████▎ | 1256/1505 [01:40<00:19, 12.99it/s]
+Pass 2: Processing Frames:  84%|████████▎ | 1258/1505 [01:40<00:20, 12.20it/s]
+Pass 2: Processing Frames:  84%|████████▎ | 1260/1505 [01:40<00:19, 12.78it/s]
+Pass 2: Processing Frames:  84%|████████▍ | 1262/1505 [01:40<00:19, 12.20it/s]
+Pass 2: Processing Frames:  84%|████████▍ | 1264/1505 [01:40<00:19, 12.61it/s]
+Pass 2: Processing Frames:  84%|████████▍ | 1266/1505 [01:41<00:18, 13.04it/s]
+Pass 2: Processing Frames:  84%|████████▍ | 1268/1505 [01:41<00:19, 12.23it/s]
+Pass 2: Processing Frames:  84%|████████▍ | 1270/1505 [01:41<00:18, 12.75it/s]
+Pass 2: Processing Frames:  85%|████████▍ | 1272/1505 [01:41<00:19, 11.95it/s]
+Pass 2: Processing Frames:  85%|████████▍ | 1274/1505 [01:41<00:18, 12.37it/s]
+Pass 2: Processing Frames:  85%|████████▍ | 1276/1505 [01:41<00:17, 12.74it/s]
+Pass 2: Processing Frames:  85%|████████▍ | 1278/1505 [01:42<00:18, 12.16it/s]
+Pass 2: Processing Frames:  85%|████████▌ | 1280/1505 [01:42<00:18, 12.35it/s]
+Pass 2: Processing Frames:  85%|████████▌ | 1282/1505 [01:42<00:18, 11.98it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  85%|████████▌ | 1284/1505 [01:42<00:17, 12.48it/s]
+Pass 2: Processing Frames:  85%|████████▌ | 1286/1505 [01:42<00:17, 12.80it/s]
+Pass 2: Processing Frames:  86%|████████▌ | 1288/1505 [01:42<00:18, 12.03it/s]
+Pass 2: Processing Frames:  86%|████████▌ | 1290/1505 [01:43<00:17, 12.13it/s]
+Pass 2: Processing Frames:  86%|████████▌ | 1292/1505 [01:43<00:18, 11.78it/s]
+Pass 2: Processing Frames:  86%|████████▌ | 1294/1505 [01:43<00:17, 12.35it/s]
+Pass 2: Processing Frames:  86%|████████▌ | 1296/1505 [01:43<00:16, 12.58it/s]
+Pass 2: Processing Frames:  86%|████████▌ | 1298/1505 [01:43<00:17, 11.96it/s]
+Pass 2: Processing Frames:  86%|████████▋ | 1300/1505 [01:43<00:16, 12.54it/s]
+Pass 2: Processing Frames:  87%|████████▋ | 1302/1505 [01:44<00:16, 12.01it/s]
+Pass 2: Processing Frames:  87%|████████▋ | 1304/1505 [01:44<00:16, 12.54it/s]
+Pass 2: Processing Frames:  87%|████████▋ | 1306/1505 [01:44<00:15, 12.71it/s]
+Pass 2: Processing Frames:  87%|████████▋ | 1308/1505 [01:44<00:16, 12.22it/s]
+Pass 2: Processing Frames:  87%|████████▋ | 1310/1505 [01:44<00:15, 12.61it/s]
+Pass 2: Processing Frames:  87%|████████▋ | 1312/1505 [01:44<00:16, 12.02it/s]
+Pass 2: Processing Frames:  87%|████████▋ | 1314/1505 [01:45<00:15, 12.49it/s]
+Pass 2: Processing Frames:  87%|████████▋ | 1316/1505 [01:45<00:14, 12.66it/s]
+Pass 2: Processing Frames:  88%|████████▊ | 1318/1505 [01:45<00:15, 12.08it/s]
+Pass 2: Processing Frames:  88%|████████▊ | 1320/1505 [01:45<00:14, 12.64it/s]
+Pass 2: Processing Frames:  88%|████████▊ | 1322/1505 [01:45<00:15, 11.91it/s]
+Pass 2: Processing Frames:  88%|████████▊ | 1324/1505 [01:45<00:14, 12.41it/s]
+Pass 2: Processing Frames:  88%|████████▊ | 1326/1505 [01:45<00:14, 12.71it/s]
+Pass 2: Processing Frames:  88%|████████▊ | 1328/1505 [01:46<00:14, 12.18it/s]
+Pass 2: Processing Frames:  88%|████████▊ | 1330/1505 [01:46<00:13, 12.67it/s]
+Pass 2: Processing Frames:  89%|████████▊ | 1332/1505 [01:46<00:14, 12.00it/s]
+Pass 2: Processing Frames:  89%|████████▊ | 1334/1505 [01:46<00:13, 12.49it/s]
+Pass 2: Processing Frames:  89%|████████▉ | 1336/1505 [01:46<00:13, 12.75it/s]
+Pass 2: Processing Frames:  89%|████████▉ | 1338/1505 [01:46<00:13, 12.13it/s]
+Pass 2: Processing Frames:  89%|████████▉ | 1340/1505 [01:47<00:13, 12.56it/s]
+Pass 2: Processing Frames:  89%|████████▉ | 1342/1505 [01:47<00:13, 11.93it/s]
+Pass 2: Processing Frames:  89%|████████▉ | 1344/1505 [01:47<00:12, 12.53it/s][PlayerTracker] Role Player 1 (last_track_id: TrackID-1) truly lost after 60 frames.
+[PlayerTracker] Role Player 2 (last_track_id: TrackID-2) truly lost after 60 frames.
+[PlayerTracker] Role Player 1 (track_id: TrackID-1) lost. Storing features for Re-ID.
+[PlayerTracker] Role Player 2 (track_id: TrackID-2) lost. Storing features for Re-ID.
+
+Pass 2: Processing Frames:  89%|████████▉ | 1346/1505 [01:47<00:12, 12.74it/s]
+Pass 2: Processing Frames:  90%|████████▉ | 1348/1505 [01:47<00:12, 12.19it/s]
+Pass 2: Processing Frames:  90%|████████▉ | 1350/1505 [01:47<00:12, 12.66it/s]
+Pass 2: Processing Frames:  90%|████████▉ | 1352/1505 [01:48<00:12, 11.92it/s]
+Pass 2: Processing Frames:  90%|████████▉ | 1354/1505 [01:48<00:12, 12.48it/s]
+Pass 2: Processing Frames:  90%|█████████ | 1356/1505 [01:48<00:11, 12.77it/s]
+Pass 2: Processing Frames:  90%|█████████ | 1358/1505 [01:48<00:12, 12.14it/s]
+Pass 2: Processing Frames:  90%|█████████ | 1360/1505 [01:48<00:11, 12.57it/s]
+Pass 2: Processing Frames:  90%|█████████ | 1362/1505 [01:48<00:12, 11.83it/s]
+Pass 2: Processing Frames:  91%|█████████ | 1364/1505 [01:49<00:11, 12.34it/s]
+Pass 2: Processing Frames:  91%|█████████ | 1366/1505 [01:49<00:11, 12.44it/s]
+Pass 2: Processing Frames:  91%|█████████ | 1368/1505 [01:49<00:11, 11.92it/s]
+Pass 2: Processing Frames:  91%|█████████ | 1370/1505 [01:49<00:10, 12.28it/s]
+Pass 2: Processing Frames:  91%|█████████ | 1372/1505 [01:49<00:11, 11.82it/s]
+Pass 2: Processing Frames:  91%|█████████▏| 1374/1505 [01:49<00:10, 12.22it/s]
+Pass 2: Processing Frames:  91%|█████████▏| 1376/1505 [01:50<00:10, 12.64it/s]
