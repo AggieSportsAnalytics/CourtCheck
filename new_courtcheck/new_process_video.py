@@ -18,7 +18,7 @@ This notebook leverages Google Colab's online GPUs for CourtCheck's post process
 
 # Configuration Flags
 ENABLE_DRAWING = True  # Generate output video with visualizations
-FRAME_PROCESSING_INTERVAL = 1  # Process every Nth frame (1 = process all)
+FRAME_PROCESSING_INTERVAL = 5  # Process every Nth frame (1 = process all)
 DETECT_BOUNCES = True  # Run bounce detection post-processing
 GENERATE_HEATMAPS = True  # Generate bounce and player heatmaps post-processing
 
@@ -79,6 +79,9 @@ from sympy import Line
 from scipy import signal
 import matplotlib.pyplot as plt
 from sympy.geometry.point import Point2D
+
+# Placeholder for YOLO and Tracker imports - replace with actual libraries
+from ultralytics import YOLO
 
 ## Tracknet script
 
@@ -175,33 +178,6 @@ class BallTrackerNet(nn.Module):
             elif isinstance(module, nn.BatchNorm2d):
                 nn.init.constant_(module.weight, 1)
                 nn.init.constant_(module.bias, 0)
-
-
-# Utility Script
-
-
-# def scene_detect(path_video):
-#     """
-#     Split video to disjoint fragments based on color histograms
-#     using PySceneDetect.
-#     """
-#     video_manager = VideoManager([path_video])
-#     stats_manager = StatsManager()
-#     scene_manager = SceneManager(stats_manager)
-#     scene_manager.add_detector(ContentDetector())
-#     base_timecode = video_manager.get_base_timecode()
-#
-#     video_manager.set_downscale_factor()
-#     video_manager.start()
-#     scene_manager.detect_scenes(frame_source=video_manager)
-#     scene_list = scene_manager.get_scene_list(base_timecode)
-#
-#     if not scene_list:
-#         scene_list = [
-#             (video_manager.get_base_timecode(), video_manager.get_current_timecode())
-#         ]
-#     scenes = [[x[0].frame_num, x[1].frame_num] for x in scene_list]
-#     return scenes
 
 
 def build_heatmap_court_background_black():
@@ -593,9 +569,9 @@ class CourtReference:
                 self.right_inner_line[1],
             ],
             7: [
-                self.left_inner_line[0],
-                self.right_inner_line[0],
                 *self.bottom_inner_line,
+                self.left_inner_line[1],
+                self.right_inner_line[1],
             ],
             8: [
                 self.right_inner_line[0],
@@ -1093,118 +1069,129 @@ def merge_lines(lines):
     return new_lines
 
 
-## Person Detection
+## Person Detection - To be replaced by PlayerTracker
 
 
-class PersonDetector:
-    def __init__(self, dtype=torch.FloatTensor):
-        self.detection_model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
-            pretrained=True
-        )
-        self.detection_model = self.detection_model.to(dtype)
-        self.detection_model.eval()
-        self.dtype = dtype
-        self.court_ref = CourtReference()
-        self.ref_top_court = self.court_ref.get_court_mask(2)
-        self.ref_bottom_court = self.court_ref.get_court_mask(1)
-        self.point_person_top = None
-        self.point_person_bottom = None
-        self.counter_top = 0
-        self.counter_bottom = 0
-
-    def detect(self, image, person_min_score=0.85):
-        PERSON_LABEL = 1
-        frame_tensor = image.transpose((2, 0, 1)) / 255
-        frame_tensor = (
-            torch.from_numpy(frame_tensor).unsqueeze(0).float().to(self.dtype)
+class PlayerTracker:
+    def __init__(
+        self,
+        yolo_model_path="yolov8n.pt",
+        device="cuda",
+    ):
+        self.device = device
+        self.yolo_model = YOLO(yolo_model_path)
+        self.yolo_model.to(self.device)
+        print(
+            f"YOLO model initialized with path {yolo_model_path} on {device} for tracking."
         )
 
-        with torch.no_grad():
-            preds = self.detection_model(frame_tensor)
+        self.court_ref = CourtReference()  # For court masks
+        self.assigned_player_roles = {}  # Stores {track_id: "Player 1"}
+        self.generic_player_labels = {}  # Stores {track_id: "TrackID-X"} for others
+        self.player_role_counter = 1  # For assigning "Player 1", "Player 2"
+        self.next_generic_id_counter = 1  # For "TrackID-X"
 
-        persons_boxes = []
-        probs = []
-        for box, label, score in zip(
-            preds[0]["boxes"][:], preds[0]["labels"], preds[0]["scores"]
-        ):
-            if label == PERSON_LABEL and score > person_min_score:
-                persons_boxes.append(box.detach().cpu().numpy())
-                probs.append(score.detach().cpu().numpy())
-        return persons_boxes, probs
-
-    def detect_top_and_bottom_players(self, image, inv_matrix, filter_players=False):
-        matrix = cv2.invert(inv_matrix)[1]
-        mask_top_court = cv2.warpPerspective(
-            self.ref_top_court, matrix, image.shape[1::-1]
-        )
-        mask_bottom_court = cv2.warpPerspective(
-            self.ref_bottom_court, matrix, image.shape[1::-1]
-        )
-        person_bboxes_top, person_bboxes_bottom = [], []
-
-        bboxes, probs = self.detect(image, person_min_score=0.85)
-        if len(bboxes) > 0:
-            person_points = [
-                [int((bbox[2] + bbox[0]) / 2), int(bbox[3])] for bbox in bboxes
-            ]
-            person_bboxes = list(zip(bboxes, person_points))
-
-            person_bboxes_top = [
-                pt
-                for pt in person_bboxes
-                if mask_top_court[pt[1][1] - 1, pt[1][0]] == 1
-            ]
-            person_bboxes_bottom = [
-                pt
-                for pt in person_bboxes
-                if mask_bottom_court[pt[1][1] - 1, pt[1][0]] == 1
-            ]
-
-            if filter_players:
-                person_bboxes_top, person_bboxes_bottom = self.filter_players(
-                    person_bboxes_top, person_bboxes_bottom, matrix
-                )
-        return person_bboxes_top, person_bboxes_bottom
-
-    def filter_players(self, person_bboxes_top, person_bboxes_bottom, matrix):
+    def update(self, frame, person_min_score=0.5):
         """
-        Leave one person at the top and bottom of the tennis court
+        Detects and tracks players in a single frame using YOLO's built-in tracker.
+        Returns a list of tuples: (bbox, bottom_center_point, track_id)
+        bbox: [x1, y1, x2, y2]
+        bottom_center_point: (cx, cy)
+        track_id: unique integer ID for the player
         """
-        refer_kps = np.array(self.court_ref.key_points[12:], dtype=np.float32).reshape(
-            (-1, 1, 2)
-        )
-        trans_kps = cv2.perspectiveTransform(refer_kps, matrix)
-        center_top_court = trans_kps[0][0]
-        center_bottom_court = trans_kps[1][0]
-        if len(person_bboxes_top) > 1:
-            dists = [
-                distance.euclidean(x[1], center_top_court) for x in person_bboxes_top
-            ]
-            ind = dists.index(min(dists))
-            person_bboxes_top = [person_bboxes_top[ind]]
-        if len(person_bboxes_bottom) > 1:
-            dists = [
-                distance.euclidean(x[1], center_bottom_court)
-                for x in person_bboxes_bottom
-            ]
-            ind = dists.index(min(dists))
-            person_bboxes_bottom = [person_bboxes_bottom[ind]]
-        return person_bboxes_top, person_bboxes_bottom
+        tracked_players_output = []
 
-    # def track_players(self, frames, matrix_all, filter_players=False):
-    #     persons_top = []
-    #     persons_bottom = []
-    #     min_len = min(len(frames), len(matrix_all))
-    #     for num_frame in tqdm(range(min_len)):
-    #         img = frames[num_frame]
-    #         if matrix_all[num_frame] is not None:
-    #             inv_matrix = matrix_all[num_frame]
-    #             person_top, person_bottom = self.detect_top_and_bottom_players(img, inv_matrix, filter_players)
-    #         else:
-    #             person_top, person_bottom = [], []
-    #         persons_top.append(person_top)
-    #         persons_bottom.append(person_bottom)
-    #     return persons_top, persons_bottom
+        # YOLO detection and tracking using BoT-SORT
+        # persist=True tells the tracker that the current image or frame is the next in a sequence.
+        # tracker='botsort.yaml' specifies the tracker configuration file.
+        # classes=[0] ensures we only track persons.
+        results = self.yolo_model.track(
+            frame,
+            persist=True,
+            tracker="botsort.yaml",
+            verbose=False,
+            classes=[0],
+            conf=person_min_score,  # Apply confidence threshold here
+        )
+
+        if results and results[0].boxes is not None and results[0].boxes.id is not None:
+            boxes_xyxy = results[0].boxes.xyxy.cpu().numpy()
+            track_ids = results[0].boxes.id.int().cpu().tolist()
+            # confs = results[0].boxes.conf.cpu().numpy() # Confidence already applied by conf=person_min_score
+
+            for i, tid in enumerate(track_ids):
+                bbox_xyxy = boxes_xyxy[i]
+                x1, y1, x2, y2 = map(int, bbox_xyxy)
+
+                # Ensure valid bounding box
+                if x2 > x1 and y2 > y1:
+                    bbox_for_output = [x1, y1, x2, y2]
+                    bottom_center_x = int(x1 + (x2 - x1) / 2)
+                    bottom_center_y = int(y2)  # Bottom-center
+                    tracked_players_output.append(
+                        (bbox_for_output, (bottom_center_x, bottom_center_y), tid)
+                    )
+        # else:
+        # print("[PlayerTracker.update] No tracks found or track IDs are None.")
+
+        return tracked_players_output
+
+    def assign_initial_player_roles(self, tracked_players_on_first_frame):
+        """
+        Assigns "Player 1" and "Player 2" roles to the first two distinct tracked players
+        encountered on the first processed frame.
+        This is called only once.
+        """
+        if not tracked_players_on_first_frame:
+            print("[PlayerTracker] No tracked players on first frame to assign roles.")
+            return
+
+        print(
+            f"[PlayerTracker] Attempting to assign initial roles from {len(tracked_players_on_first_frame)} first-frame tracks."
+        )
+
+        unique_track_ids_first_frame = []
+        seen_ids = set()
+        for _, _, track_id in tracked_players_on_first_frame:
+            if track_id not in seen_ids:
+                unique_track_ids_first_frame.append(track_id)
+                seen_ids.add(track_id)
+
+        for track_id in unique_track_ids_first_frame:
+            if self.player_role_counter <= 2:  # Assign up to Player 2
+                if (
+                    track_id not in self.assigned_player_roles
+                ):  # Ensure a track_id doesn't get multiple roles
+                    role = f"Player {self.player_role_counter}"
+                    self.assigned_player_roles[track_id] = role
+                    print(
+                        f"[PlayerTracker] Assigned role '{role}' to track_id {track_id}"
+                    )
+                    self.player_role_counter += 1
+            else:
+                break  # Stop after assigning Player 1 and Player 2
+
+        print(f"[PlayerTracker] Initial roles assigned: {self.assigned_player_roles}")
+
+    def get_player_display_name(self, track_id):
+        """
+        Gets the display name for a player.
+        Returns "Player 1", "Player 2" if role assigned, otherwise "TrackID-X".
+        """
+        if track_id in self.assigned_player_roles:
+            return self.assigned_player_roles[track_id]
+
+        if track_id not in self.generic_player_labels:
+            # This track ID was not one of the first two, or appeared later.
+            label = f"TrackID-{self.next_generic_id_counter}"
+            self.generic_player_labels[track_id] = label
+            self.next_generic_id_counter += 1
+            # print(f"[PlayerTracker] Assigned generic label '{label}' to new track_id {track_id}") # Optional
+
+        return self.generic_player_labels[track_id]
+
+    # assign_initial_labels_from_user_input is removed and replaced by assign_initial_player_roles
+    # assign_player_label method is removed as its logic is now in get_player_display_name
 
 
 ## Bounce Detection
@@ -1729,7 +1716,7 @@ if __name__ == "__main__":
 
     ball_detector = BallDetector(path_ball_track_model, device)
     court_detector = CourtDetectorNet(path_court_model, device)
-    person_detector = PersonDetector(device)
+    player_tracker_instance = PlayerTracker(device=device)  # New PlayerTracker
     bounce_detector = BounceDetector(path_bounce_model if DETECT_BOUNCES else None)
 
     # --- Pass 1: Ball tracking ---
@@ -1786,167 +1773,12 @@ if __name__ == "__main__":
     cap.release()  # Release video capture after Pass 1
     # --- End of Pass 1 ---
 
-    # --- Define User Initial Player Labels (Moved BEFORE player_tracker initialization) ---
-    # In a real system, this data would come from your website frontend based on user input on the first frame.
-    # Format: {"player1": {"bbox": [x1,y1,x2,y2], "center": (cx,cy), "display_name": "UserDefinedName1"}, ...}
-    # Ensure coordinates are for the raw first frame of the video.
-    user_initial_player_labels = {
-        "player1": {  # Key is "player1"
-            "bbox": [1518, 192, 1626, 324],
-            "center": (1571, 260),
-            "display_name": "Cory",
-        },
-        "player2": {  # Key is "player2"
-            "bbox": [1020, 770, 1211, 1112],
-            "center": (1114, 925),
-            "display_name": "Stefan",
-        },
-    }
-
-    # --- Display First Frame to Help with Manual Labeling (Colab) ---
-    # This block attempts to show the first frame if running in Colab.
-    # You would then manually note down coordinates and update user_initial_player_labels below.
-    if "google.colab" in sys.modules:
-        try:
-            from google.colab.patches import cv2_imshow
-
-            print(
-                "Attempting to display the first frame for manual coordinate estimation..."
-            )
-            # Temporarily re-open the video to get the first frame for display
-            display_cap = cv2.VideoCapture(final_input)
-            ret_display, frame_to_display = display_cap.read()
-            if ret_display:
-                print(
-                    "FIRST FRAME DISPLAYED BELOW. Please estimate player coordinates from this image."
-                )
-                print(
-                    "Then, update the 'user_initial_player_labels' dictionary in the script with BBOX and CENTER."
-                )
-                cv2_imshow(frame_to_display)
-            else:
-                print("Error: Could not read the first frame for display.")
-            display_cap.release()
-        except ImportError:
-            print(
-                "Note: cv2_imshow not available (not in Colab or not installed). Manually open the first video frame to get coordinates."
-            )
-        except Exception as e:
-            print(f"Error displaying first frame: {e}")
-    else:
-        print(
-            "Note: Not running in Colab. Manually open the first video frame to get coordinates for user_initial_player_labels."
-        )
-    # --- End Display First Frame ---
-
-    # --- Player Re-identification State (Initialize BEFORE Pass 2 loop) ---
-    # Initialize with default names, can be overwritten by user_initial_player_labels
-    player_tracker = {
-        "player1": {
-            "last_seen_center": None,
-            "last_frame_count": -1,
-            "current_bbox": None,
-            "current_center": None,
-            "display_name": "Player 1",
-            "active_this_frame": False,
-        },
-        "player2": {
-            "last_seen_center": None,
-            "last_frame_count": -1,
-            "current_bbox": None,
-            "current_center": None,
-            "display_name": "Player 2",
-            "active_this_frame": False,
-        },
-    }
-    PLAYER_ID_ASSIGNMENT_THRESHOLD = (
-        200  # Max distance (pixels on frame) to associate a detection
-    )
-    PLAYER_MEMORY_FRAMES = (
-        int(fps * 2) if fps > 0 else 60
-    )  # Remember player for approx 2 seconds
-    initial_assignment_complete = (
-        False  # Flag to indicate if both player slots have been initially filled
-    )
-
-    # Apply user-defined initial labels if provided
-    # This uses the user_initial_player_labels dictionary defined at the end of the script
-    # (Make sure it's defined before this point if you were to move its definition earlier).
-    if (
-        "player1" in user_initial_player_labels
-        and user_initial_player_labels["player1"]
-    ):
-        p1_label_info = user_initial_player_labels["player1"]
-        print(
-            f"[DEBUG User Labels] Applying initial labels for player1 from: {p1_label_info}"
-        )
-        if "display_name" in p1_label_info and p1_label_info["display_name"]:
-            player_tracker["player1"]["display_name"] = p1_label_info["display_name"]
-            print(
-                f"  [DEBUG User Labels] player1 display_name AFTER set: {player_tracker['player1']['display_name']}"
-            )
-        if "center" in p1_label_info and p1_label_info["center"]:
-            player_tracker["player1"]["last_seen_center"] = p1_label_info["center"]
-            player_tracker["player1"]["current_center"] = p1_label_info["center"]
-            player_tracker["player1"]["last_frame_count"] = 0
-            print(
-                f"  [DEBUG User Labels] player1 center AFTER set: {player_tracker['player1']['current_center']}"
-            )
-            # player_tracker["player1"]["active_this_frame"] = True # Initial activity set by detection in loop
-        if "bbox" in p1_label_info and p1_label_info["bbox"]:
-            player_tracker["player1"]["current_bbox"] = p1_label_info["bbox"]
-            print(
-                f"  [DEBUG User Labels] player1 bbox AFTER set: {player_tracker['player1']['current_bbox']}"
-            )
-    else:
-        print(
-            "[DEBUG User Labels] Conditions not met for player1 initial labeling or user_initial_player_labels['player1'] is empty/None."
-        )
-
-    if (
-        "player2" in user_initial_player_labels
-        and user_initial_player_labels["player2"]
-    ):
-        p2_label_info = user_initial_player_labels["player2"]
-        print(
-            f"[DEBUG User Labels] Applying initial labels for player2 from: {p2_label_info}"
-        )
-        if "display_name" in p2_label_info and p2_label_info["display_name"]:
-            player_tracker["player2"]["display_name"] = p2_label_info["display_name"]
-            print(
-                f"  [DEBUG User Labels] player2 display_name AFTER set: {player_tracker['player2']['display_name']}"
-            )
-        if "center" in p2_label_info and p2_label_info["center"]:
-            player_tracker["player2"]["last_seen_center"] = p2_label_info["center"]
-            player_tracker["player2"]["current_center"] = p2_label_info["center"]
-            player_tracker["player2"]["last_frame_count"] = 0
-            print(
-                f"  [DEBUG User Labels] player2 center AFTER set: {player_tracker['player2']['current_center']}"
-            )
-            # player_tracker["player2"]["active_this_frame"] = True # Initial activity set by detection in loop
-        if "bbox" in p2_label_info and p2_label_info["bbox"]:
-            player_tracker["player2"]["current_bbox"] = p2_label_info["bbox"]
-            print(
-                f"  [DEBUG User Labels] player2 bbox AFTER set: {player_tracker['player2']['current_bbox']}"
-            )
-    else:
-        print(
-            "[DEBUG User Labels] Conditions not met for player2 initial labeling or user_initial_player_labels['player2'] is empty/None."
-        )
-
-    # # We determine initial_assignment_complete based on if both have been assigned an actual detection,
-    # # not just from user labels. This will be handled by the loop logic.
-    # if player_tracker["player1"]["last_seen_center"] and player_tracker["player2"]["last_seen_center"]:
-    #     initial_assignment_complete = True
-
     # --- Pass 2: Main processing, drawing, and writing (Original Main Loop) ---
     print("Starting Pass 2: Main processing and drawing...")
     cap = cv2.VideoCapture(final_input)  # Re-open video for second pass
     if not cap.isOpened():
         print(f"Error: Could not re-open video for Pass 2: {final_input}")
         sys.exit()
-    # court_detector, person_detector are already initialized above.
-    # bounce_detector is not used in Pass 2 directly, bounces_all (from Pass 1) is used.
 
     out_main = None
     out_minimap = None
@@ -1976,11 +1808,9 @@ if __name__ == "__main__":
 
     last_processed_homography = None
     last_processed_kps = None
-    # last_processed_ball_pos is not needed here as ball_track_all[frame_count] will be used for current ball
     last_processed_persons_top = []  # This will store (bbox, center, display_name)
     last_processed_persons_bottom = []  # This will store (bbox, center, display_name)
 
-    # Note: Original `print("Starting frame processing...")` is now covered by Pass 2 print
     frame_count = -1  # Reset frame_count for Pass 2
     time_pass2_start = time.time()  # Start of Pass 2
     try:
@@ -2006,18 +1836,16 @@ if __name__ == "__main__":
 
         current_homography = None
         current_kps = None
-        current_persons_top = []
-        current_persons_bottom = []
+        # current_persons_top = [] # Not needed, derived from tracker
+        # current_persons_bottom = [] # Not needed, derived from tracker
 
-        # Get ball position for this frame from Pass 1 results
         current_ball_pos_from_pass1 = (
             ball_track_all[frame_count]
             if frame_count < len(ball_track_all)
             else (None, None)
         )
 
-        raw_persons_top_this_frame = []
-        raw_persons_bottom_this_frame = []
+        tracked_players_current_frame = []  # List of (bbox, center, track_id)
 
         process_this_frame = frame_count % FRAME_PROCESSING_INTERVAL == 0
 
@@ -2026,181 +1854,67 @@ if __name__ == "__main__":
                 frame, frame_count
             )
             if current_homography is not None:
-                # Get raw detections from PersonDetector
-                raw_persons_top_this_frame, raw_persons_bottom_this_frame = (
-                    person_detector.detect_top_and_bottom_players(
-                        frame,
-                        current_homography,
-                        filter_players=False,  # Keep filter_players=False to get all candidates
+                tracked_players_current_frame = player_tracker_instance.update(frame)
+
+                if frame_count == 0:
+                    player_tracker_instance.assign_initial_player_roles(
+                        tracked_players_current_frame
                     )
-                )
-            else:
-                raw_persons_top_this_frame, raw_persons_bottom_this_frame = [], []
 
             last_processed_homography = current_homography
             last_processed_kps = current_kps
-            # last_processed_persons_top/bottom will be updated after re-ID
         else:
             current_homography = last_processed_homography
             current_kps = last_processed_kps
-            # For non-processed frames, we'd ideally use the re-identified players from last_processed_persons_top/bottom
-            # but the re-id logic runs every frame based on raw detections if available, or carries over tracker state.
-            # If not processing, raw detections for re-id will be empty.
+            tracked_players_current_frame = player_tracker_instance.update(frame)
 
-        # Player Re-identification Logic
-        # The player_tracker is now initialized outside this loop and persists across frames.
-
-        # Reset active_this_frame status for all players at the start of each frame.
-        # They will be set to True if re-identified or newly assigned in this frame.
-        for p_key in player_tracker:
-            player_tracker[p_key]["active_this_frame"] = False
-            # Do NOT reset current_bbox or current_center here, they should persist if not updated.
-
-        all_raw_detections_with_info = []
-        for p_bbox, p_center in raw_persons_top_this_frame:
-            all_raw_detections_with_info.append(
-                {"bbox": p_bbox, "center": p_center, "assigned_to_key": None}
-            )
-        for p_bbox, p_center in raw_persons_bottom_this_frame:
-            all_raw_detections_with_info.append(
-                {"bbox": p_bbox, "center": p_center, "assigned_to_key": None}
-            )
-
-        # Match existing tracked players
-        sorted_player_keys = sorted(
-            player_tracker.keys()
-        )  # Ensures "player1" then "player2" order
-
-        for p_key in sorted_player_keys:
-            player_data = player_tracker[p_key]
-            best_match_idx = -1
-            min_dist = float("inf")
-
-            if player_data["last_seen_center"] is not None and (
-                frame_count - player_data["last_frame_count"] < PLAYER_MEMORY_FRAMES
-            ):
-                for i, det_info in enumerate(all_raw_detections_with_info):
-                    if (
-                        det_info["assigned_to_key"] is None
-                    ):  # Only consider unassigned raw detections
-                        dist = distance.euclidean(
-                            det_info["center"], player_data["last_seen_center"]
-                        )
-                        if dist < PLAYER_ID_ASSIGNMENT_THRESHOLD and dist < min_dist:
-                            min_dist = dist
-                            best_match_idx = i
-
-            if best_match_idx != -1:
-                matched_detection = all_raw_detections_with_info[best_match_idx]
-                matched_detection["assigned_to_key"] = (
-                    p_key  # Mark raw detection as assigned
-                )
-
-                player_data["last_seen_center"] = matched_detection["center"]
-                player_data["current_bbox"] = matched_detection["bbox"]
-                player_data["current_center"] = matched_detection["center"]
-                player_data["last_frame_count"] = frame_count
-                player_data["active_this_frame"] = True
-
-        # Initial or new assignment for unassigned detections if player slots are available
-        available_raw_detections = [
-            d for d in all_raw_detections_with_info if d["assigned_to_key"] is None
-        ]
-
-        for p_key in sorted_player_keys:
-            player_data = player_tracker[p_key]
-            if (
-                not player_data["active_this_frame"] and available_raw_detections
-            ):  # If this player slot is not active and there are spare detections
-                # If this player has never been seen OR has been lost for too long, assign a new detection
-                if player_data["last_seen_center"] is None or (
-                    frame_count - player_data["last_frame_count"]
-                    >= PLAYER_MEMORY_FRAMES
-                ):
-
-                    new_detection_to_assign = available_raw_detections.pop(
-                        0
-                    )  # Take the first available
-                    new_detection_to_assign["assigned_to_key"] = p_key
-
-                    player_data["last_seen_center"] = new_detection_to_assign["center"]
-                    player_data["current_bbox"] = new_detection_to_assign["bbox"]
-                    player_data["current_center"] = new_detection_to_assign["center"]
-                    player_data["last_frame_count"] = frame_count
-                    player_data["active_this_frame"] = True
-
-        if (
-            not initial_assignment_complete
-            and player_tracker["player1"]["active_this_frame"]
-            and player_tracker["player2"]["active_this_frame"]
-        ):
-            initial_assignment_complete = True
-
-        # Prepare final lists for persons_top_all / persons_bottom_all
-        # These will store (bbox, center_on_frame, display_name)
         final_persons_top_this_frame = []
         final_persons_bottom_this_frame = []
 
-        court_ref_instance_for_midline = (
-            CourtReference()
-        )  # Used to get net's y-coordinate
+        court_ref_instance_for_midline = CourtReference()
         net_y_on_ref_court = court_ref_instance_for_midline.net[0][1]
 
-        for p_key in sorted_player_keys:
-            player_data = player_tracker[p_key]
-            if player_data["active_this_frame"]:
-                bbox = player_data["current_bbox"]
-                center_on_frame = player_data["current_center"]
-                display_name = player_data["display_name"]
+        if current_homography is not None and tracked_players_current_frame:
+            for bbox, center_on_frame, track_id in tracked_players_current_frame:
+                display_name = player_tracker_instance.get_player_display_name(track_id)
 
-                is_top_half_player = False  # Default
-                if (
-                    current_homography is not None
-                ):  # current_homography is inverse (frame -> ref)
-                    pt_on_frame_to_transform = np.array(
-                        [[[float(center_on_frame[0]), float(center_on_frame[1])]]],
-                        dtype=np.float32,
+                is_top_half_player = False
+                pt_on_frame_to_transform = np.array(
+                    [[[float(center_on_frame[0]), float(center_on_frame[1])]]],
+                    dtype=np.float32,
+                )
+                try:
+                    mapped_center_on_ref_court = cv2.perspectiveTransform(
+                        pt_on_frame_to_transform,
+                        current_homography,
                     )
-                    try:
-                        mapped_center_on_ref_court = cv2.perspectiveTransform(
-                            pt_on_frame_to_transform, current_homography
-                        )
-                        if mapped_center_on_ref_court is not None:
-                            y_coord_on_ref = mapped_center_on_ref_court[0, 0, 1]
-                            # Top half of reference court has smaller y-coordinates
-                            if y_coord_on_ref < net_y_on_ref_court:
-                                is_top_half_player = True
-                    except cv2.error:
-                        pass  # Keep default is_top_half_player = False if transform fails
+                    if mapped_center_on_ref_court is not None:
+                        y_coord_on_ref = mapped_center_on_ref_court[0, 0, 1]
+                        if y_coord_on_ref < net_y_on_ref_court:
+                            is_top_half_player = True
+                except cv2.error:
+                    pass
 
+                player_data_tuple = (
+                    bbox,
+                    center_on_frame,
+                    display_name,
+                )
                 if is_top_half_player:
-                    final_persons_top_this_frame.append(
-                        (bbox, center_on_frame, display_name)
-                    )
+                    final_persons_top_this_frame.append(player_data_tuple)
                 else:
-                    final_persons_bottom_this_frame.append(
-                        (bbox, center_on_frame, display_name)
-                    )
+                    final_persons_bottom_this_frame.append(player_data_tuple)
 
-        # Append to global lists
         homography_matrices_all.append(current_homography)
         kps_court_all.append(current_kps)
-        persons_top_all.append(
-            final_persons_top_this_frame
-        )  # Now stores (bbox, center, display_name)
-        persons_bottom_all.append(
-            final_persons_bottom_this_frame
-        )  # Now stores (bbox, center, display_name)
+        persons_top_all.append(final_persons_top_this_frame)
+        persons_bottom_all.append(final_persons_bottom_this_frame)
 
-        if (
-            process_this_frame
-        ):  # Update last_processed_persons only on frames where detection actually ran
+        if process_this_frame:
             last_processed_persons_top = final_persons_top_this_frame
             last_processed_persons_bottom = final_persons_bottom_this_frame
-        # For frames where process_this_frame is False, persons_top_all/bottom_all will get filled
-        # with carry-over homography, kps, and the re-ID logic will attempt to place tracked players.
-        # If raw detections are empty (because not a process_this_frame), re-ID relies on memory.
-        # If drawing, and not a process_this_frame, use last_processed_persons_top/bottom for drawing.
+        else:
+            pass
 
         if ENABLE_DRAWING and out_main is not None and out_minimap is not None:
             output_frame = frame.copy()

@@ -1,6 +1,6 @@
 # 🏸 CourtCheck
 
-CourtCheck is an end-to-end tennis match analysis tool that uses computer vision and machine learning to automatically generate visual and statistical insights from raw match footage. Built in collaboration with the **UC Davis Men’s and Women’s Tennis Teams**, the goal of this project is to make post-match film review faster, smarter, and more objective — without requiring manual tagging or expensive equipment.
+CourtCheck is an end-to-end tennis match analysis tool that uses computer vision and machine learning to automatically generate visual and statistical insights from raw match footage. Built in collaboration with the **UC Davis Men's and Women's Tennis Teams**, the goal of this project is to make post-match film review faster, smarter, and more objective — without requiring manual tagging or expensive equipment.
 
 ---
 
@@ -13,20 +13,25 @@ CourtCheck is an end-to-end tennis match analysis tool that uses computer vision
 
 ---
 
-## ⚠️ Current Challenges & Optimization Needs
+## ⚡️ Recent Optimizations
 
-CourtCheck currently performs well on short clips, but hits **scalability and memory limits** when processing longer videos (>5–10 minutes). Specific issues include:
+CourtCheck has recently undergone major optimizations to improve scalability and efficiency for long tennis match videos:
 
-- ❌ Loads all frames into memory before processing → causes **OOM crashes** on Colab
-- ❌ Draws overlays (court lines, labels, etc.) on every frame → slows down processing unnecessarily
-- ❌ Processes every frame at full FPS → redundant for analytics-focused use cases
+**Optimizations Already Made:**
 
-We're actively working to:
+- **Frame Streaming:** The script now reads frames one-by-one using `cv2.VideoCapture` instead of loading all frames into memory.
+- **Frame Subsampling:** Detectors are only run every N frames (`FRAME_PROCESSING_INTERVAL`), reducing compute.
+- **Conditional Drawing:** Drawing and video writing are only performed if `ENABLE_DRAWING` is True.
+- **Detector Refactoring:** Ball, court, and person detectors are adapted to work on single frames or small buffers.
+- **Efficient Main Loop:** The main loop collects results for each frame, using the last processed result for skipped frames, and post-processing (bounce detection, heatmaps) is performed at the end.
+- **Memory Efficiency:** The script is now much more memory- and compute-efficient, suitable for long videos.
 
-- Stream frames one at a time (no full memory loading)
-- Add flags to disable visualization for faster analytics-only runs
-- Downsample FPS during processing
-- Improve GPU efficiency via better tensor handling and batching
+## 🚧 What's Left To Do
+
+- **Robust Player Tracking:** The current person detection logic only detects persons per frame and splits by court half, but does not robustly track or re-identify individual players across frames.
+- **Unique Player IDs:** Need to implement a fast, accurate person detector (e.g., YOLO) combined with a multi-object tracker (e.g., SORT, DeepSORT, ByteTrack) to assign persistent, unique IDs to each player throughout the match.
+- **Integrate New Detector/Tracker:** Replace the current `PersonDetector` with a YOLO+tracker solution, and update the main loop to use the new output for minimap drawing and analytics.
+- **Player Labeling:** Assign "Player 1" and "Player 2" labels to the tracked IDs, and maintain this mapping even if players switch sides.
 
 ---
 
