@@ -280,7 +280,7 @@ def generate_minimap_heatmaps(
             continue
 
         # top
-        for bbox, center_pt in persons_top[i]:
+        for bbox, center_pt, *_ in persons_top[i]:
             if bbox is not None and len(bbox) == 4:
                 cx, cy = center_pt
                 pt = np.array([[[cx, cy]]], dtype=np.float32)
@@ -290,7 +290,7 @@ def generate_minimap_heatmaps(
                     cv2.circle(player_acc, (xx, yy), 10, 1.0, -1)
 
         # bottom
-        for bbox, center_pt in persons_bottom[i]:
+        for bbox, center_pt, *_ in persons_bottom[i]:
             if bbox is not None and len(bbox) == 4:
                 cx, cy = center_pt
                 pt = np.array([[[cx, cy]]], dtype=np.float32)
@@ -1028,6 +1028,40 @@ def refine_kps(img, x_ct, y_ct, crop_size=40):
                     refined_y_ct = y_min + new_y_ct
     return refined_y_ct, refined_x_ct
 
+def is_scene_cut(prev_frame, curr_frame, frame_idx=None, threshold=0.03, pixel_diff_thresh=12):
+    """
+    Hybrid scene cut detector using HSV histograms + pixel difference fallback.
+    
+    Args:
+        prev_frame: Previous BGR frame.
+        curr_frame: Current BGR frame.
+        frame_idx: Frame index for logging (optional).
+        threshold: Threshold for histogram Bhattacharyya distance.
+        pixel_diff_thresh: Optional pixel diff fallback threshold.
+
+    Returns:
+        True if scene cut is detected.
+    """
+    if prev_frame is None or curr_frame is None:
+        return False
+
+    # HSV Histogram comparison
+    prev_hsv = cv2.cvtColor(prev_frame, cv2.COLOR_BGR2HSV)
+    curr_hsv = cv2.cvtColor(curr_frame, cv2.COLOR_BGR2HSV)
+
+    hist_prev = cv2.calcHist([prev_hsv], [0, 1], None, [50, 60], [0, 180, 0, 256])
+    hist_curr = cv2.calcHist([curr_hsv], [0, 1], None, [50, 60], [0, 180, 0, 256])
+
+    cv2.normalize(hist_prev, hist_prev)
+    cv2.normalize(hist_curr, hist_curr)
+
+    hist_diff = cv2.compareHist(hist_prev, hist_curr, cv2.HISTCMP_BHATTACHARYYA)
+
+    # Pixel-wise mean abs diff fallback
+    pixel_diff = np.mean(cv2.absdiff(prev_frame, curr_frame))
+
+    return hist_diff > threshold or pixel_diff > pixel_diff_thresh
+
 
 def detect_lines(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -1086,112 +1120,182 @@ class PlayerTracker:
         )
 
         self.court_ref = CourtReference()  # For court masks
-        self.assigned_player_roles = {}  # Stores {track_id: "Player 1"}
         self.generic_player_labels = {}  # Stores {track_id: "TrackID-X"} for others
         self.player_role_counter = 1  # For assigning "Player 1", "Player 2"
         self.next_generic_id_counter = 1  # For "TrackID-X"
 
-    def update(self, frame, person_min_score=0.5):
+        self.track_history = {}  # {track_id: deque of (frame_num, center_point)}
+        self.history_length = 60  # Adjust based on changeover duration
+        self.role_to_track_id = {}  # {"Player 1": tid1, "Player 2": tid2}
+        self.player_appearance = {}  # {"Player 1": hist, "Player 2": hist}
+
+
+
+
+    def update(self, frame, frame_num=None, current_homography=None, person_min_score=0.5):
         """
         Detects and tracks players in a single frame using YOLO's built-in tracker.
-        Returns a list of tuples: (bbox, bottom_center_point, track_id)
-        bbox: [x1, y1, x2, y2]
-        bottom_center_point: (cx, cy)
-        track_id: unique integer ID for the player
+        Updates internal tracking history.
+        
+        Args:
+            frame: Current video frame.
+            frame_num: Current frame index (required for tracking history).
+            current_homography: Inverse homography matrix for current frame (needed for side determination).
+            person_min_score: Minimum confidence for YOLO person detection.
+        
+        Returns:
+            List of tuples: (bbox, bottom_center_point, track_id)
         """
         tracked_players_output = []
 
-        # YOLO detection and tracking using BoT-SORT
-        # persist=True tells the tracker that the current image or frame is the next in a sequence.
-        # tracker='botsort.yaml' specifies the tracker configuration file.
-        # classes=[0] ensures we only track persons.
+        # Run YOLO detection with tracking
         results = self.yolo_model.track(
             frame,
             persist=True,
             tracker="botsort.yaml",
             verbose=False,
             classes=[0],
-            conf=person_min_score,  # Apply confidence threshold here
+            conf=person_min_score,
         )
 
         if results and results[0].boxes is not None and results[0].boxes.id is not None:
             boxes_xyxy = results[0].boxes.xyxy.cpu().numpy()
             track_ids = results[0].boxes.id.int().cpu().tolist()
-            # confs = results[0].boxes.conf.cpu().numpy() # Confidence already applied by conf=person_min_score
 
             for i, tid in enumerate(track_ids):
                 bbox_xyxy = boxes_xyxy[i]
                 x1, y1, x2, y2 = map(int, bbox_xyxy)
 
-                # Ensure valid bounding box
                 if x2 > x1 and y2 > y1:
-                    bbox_for_output = [x1, y1, x2, y2]
-                    bottom_center_x = int(x1 + (x2 - x1) / 2)
-                    bottom_center_y = int(y2)  # Bottom-center
-                    tracked_players_output.append(
-                        (bbox_for_output, (bottom_center_x, bottom_center_y), tid)
-                    )
-        # else:
-        # print("[PlayerTracker.update] No tracks found or track IDs are None.")
+                    bbox = [x1, y1, x2, y2]
+                    cx = int((x1 + x2) / 2)
+                    cy = int(y2)
+                    center = (cx, cy)
+                    tracked_players_output.append((bbox, center, tid))
+
+                    # === Store position history ===
+                    if frame_num is not None:
+                        if tid not in self.track_history:
+                            self.track_history[tid] = deque(maxlen=self.history_length)
+                        self.track_history[tid].append((frame_num, center))
+
+                    # === Optionally store homography for side checks ===
+                    self.last_homography = current_homography  # To use later in role-switch logic
 
         return tracked_players_output
 
-    def assign_initial_player_roles(self, tracked_players_on_first_frame):
-        """
-        Assigns "Player 1" and "Player 2" roles to the first two distinct tracked players
-        encountered on the first processed frame.
-        This is called only once.
-        """
-        if not tracked_players_on_first_frame:
-            print("[PlayerTracker] No tracked players on first frame to assign roles.")
-            return
+    def extract_player_hsv_histogram(self, frame, bbox):
+        x1, y1, x2, y2 = bbox
+        roi = frame[y1:y2, x1:x2]
+        if roi.size == 0:
+            return None
+        hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+        hist = cv2.calcHist([hsv], [0, 1], None, [30, 32], [0, 180, 0, 256])
+        cv2.normalize(hist, hist)
+        return hist.flatten()
+    
 
-        print(
-            f"[PlayerTracker] Attempting to assign initial roles from {len(tracked_players_on_first_frame)} first-frame tracks."
-        )
-
-        unique_track_ids_first_frame = []
+    def assign_initial_player_roles(self, tracked_players, frame):
         seen_ids = set()
-        for _, _, track_id in tracked_players_on_first_frame:
+        assigned = 0
+        for bbox, center, track_id in tracked_players:
             if track_id not in seen_ids:
-                unique_track_ids_first_frame.append(track_id)
                 seen_ids.add(track_id)
+                role = f"Player {assigned + 1}"
+                self.role_to_track_id[role] = track_id
+                hist = self.extract_player_hsv_histogram(frame, bbox)
+                if hist is not None:
+                    self.player_appearance[role] = hist
+                assigned += 1
+            if assigned == 2:
+                break
 
-        for track_id in unique_track_ids_first_frame:
-            if self.player_role_counter <= 2:  # Assign up to Player 2
-                if (
-                    track_id not in self.assigned_player_roles
-                ):  # Ensure a track_id doesn't get multiple roles
-                    role = f"Player {self.player_role_counter}"
-                    self.assigned_player_roles[track_id] = role
-                    print(
-                        f"[PlayerTracker] Assigned role '{role}' to track_id {track_id}"
-                    )
-                    self.player_role_counter += 1
-            else:
-                break  # Stop after assigning Player 1 and Player 2
+        print(f"[PlayerTracker] Assigned initial roles: {self.role_to_track_id}")
 
-        print(f"[PlayerTracker] Initial roles assigned: {self.assigned_player_roles}")
+    def reassign_roles_after_cut(self, new_tracks, frame):
+        """
+        Reassigns player roles by matching new tracks to stored player appearances.
+        """
+        candidates = {}
+        for bbox, center, tid in new_tracks:
+            hist = self.extract_player_hsv_histogram(frame, bbox)
+            if hist is not None:
+                candidates[tid] = hist
+
+        reassigned = {}
+        used_tids = set()
+        for role, prev_hist in self.player_appearance.items():
+            best_tid = None
+            best_score = float('inf')
+            for tid, cand_hist in candidates.items():
+                if tid in used_tids:
+                    continue
+                score = cv2.compareHist(prev_hist, cand_hist, cv2.HISTCMP_BHATTACHARYYA)
+                if score < best_score:
+                    best_score = score
+                    best_tid = tid
+            if best_tid is not None:
+                reassigned[role] = best_tid
+                used_tids.add(best_tid)
+
+        if len(reassigned) == 2:
+            self.role_to_track_id = reassigned
+            print(f"[PlayerTracker] Reassigned roles after cut: {self.role_to_track_id}")
+        else:
+            print("[PlayerTracker] Failed to reassign both roles after cut.")
 
     def get_player_display_name(self, track_id):
+        for role, tid in self.role_to_track_id.items():
+            if tid == track_id:
+                return role
+        return None  # Unknown player; don’t render
+
+    def get_player_side(self, center_point, homography, net_y_on_ref):
+        pt = np.array([[[float(center_point[0]), float(center_point[1])]]], dtype=np.float32)
+        try:
+            transformed = cv2.perspectiveTransform(pt, homography)
+            return "top" if transformed[0,0,1] < net_y_on_ref else "bottom"
+        except:
+            return None
+    def detect_role_switch(self):
         """
-        Gets the display name for a player.
-        Returns "Player 1", "Player 2" if role assigned, otherwise "TrackID-X".
+        If both tracked player roles have switched sides consistently for a few frames, swap their labels.
         """
-        if track_id in self.assigned_player_roles:
-            return self.assigned_player_roles[track_id]
+        recent_sides = {role: [] for role in ["Player 1", "Player 2"]}
+        for role, tid in self.role_to_track_id.items():
+            if tid in self.track_history:
+                for _, center in list(self.track_history[tid])[-10:]:  # Last 10 frames
+                    side = self.get_player_side(center, self.last_homography, self.center_line_y)
+                    if side:
+                        recent_sides[role].append(side)
 
-        if track_id not in self.generic_player_labels:
-            # This track ID was not one of the first two, or appeared later.
-            label = f"TrackID-{self.next_generic_id_counter}"
-            self.generic_player_labels[track_id] = label
-            self.next_generic_id_counter += 1
-            # print(f"[PlayerTracker] Assigned generic label '{label}' to new track_id {track_id}") # Optional
+        if all(sides for sides in recent_sides.values()):
+            roles_flipped = (
+                recent_sides["Player 1"].count("bottom") > 7 and
+                recent_sides["Player 2"].count("top") > 7
+            )
+            if roles_flipped:
+                print("[PlayerTracker] Detected side switch. Swapping roles.")
+                self.role_to_track_id["Player 1"], self.role_to_track_id["Player 2"] = (
+                    self.role_to_track_id["Player 2"],
+                    self.role_to_track_id["Player 1"],
+                )
 
-        return self.generic_player_labels[track_id]
-
-    # assign_initial_labels_from_user_input is removed and replaced by assign_initial_player_roles
-    # assign_player_label method is removed as its logic is now in get_player_display_name
+    def get_player_display_name(self, track_id):
+        for role, tid in self.role_to_track_id.items():
+            if tid == track_id:
+                return role
+            
+    def force_reassign_roles(self, current_ids):
+        """
+        In case tracking fails or IDs change dramatically mid-match.
+        """
+        if len(current_ids) >= 2:
+            self.role_to_track_id["Player 1"] = current_ids[0]
+            self.role_to_track_id["Player 2"] = current_ids[1]
+            print(f"[PlayerTracker] Forced reassignment: {self.role_to_track_id}")
+    
+                
 
 
 ## Bounce Detection
@@ -1825,6 +1929,9 @@ if __name__ == "__main__":
         pbar_main_loop = None
         print("tqdm not found, proceeding without progress bar for Pass 2.")
 
+
+    prev_frame_for_cut = None
+
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -1833,6 +1940,8 @@ if __name__ == "__main__":
         frame_count += 1
         if pbar_main_loop:
             pbar_main_loop.update(1)
+
+
 
         current_homography = None
         current_kps = None
@@ -1854,11 +1963,13 @@ if __name__ == "__main__":
                 frame, frame_count
             )
             if current_homography is not None:
-                tracked_players_current_frame = player_tracker_instance.update(frame)
+                tracked_players_current_frame = player_tracker_instance.update(
+                    frame, frame_num=frame_count, current_homography=current_homography
+                )
 
                 if frame_count == 0:
                     player_tracker_instance.assign_initial_player_roles(
-                        tracked_players_current_frame
+                        tracked_players_current_frame, frame
                     )
 
             last_processed_homography = current_homography
@@ -1866,7 +1977,18 @@ if __name__ == "__main__":
         else:
             current_homography = last_processed_homography
             current_kps = last_processed_kps
-            tracked_players_current_frame = player_tracker_instance.update(frame)
+            tracked_players_current_frame = player_tracker_instance.update(
+                frame, frame_num=frame_count, current_homography=current_homography
+            )
+
+
+        cut_detected = is_scene_cut(prev_frame_for_cut, frame, frame_idx=frame_count)
+
+        prev_frame_for_cut = frame.copy()
+        if cut_detected:
+            player_tracker_instance.reassign_roles_after_cut(tracked_players_current_frame, frame)
+
+
 
         final_persons_top_this_frame = []
         final_persons_bottom_this_frame = []
