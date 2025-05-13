@@ -1,0 +1,9 @@
+# BoT-SORT tracking parameters optimized for tennis player tracking
+track_high_thresh: 0.5     # Confidence threshold to initialize a new track
+track_low_thresh: 0.1      # Minimum confidence to keep a track alive
+new_track_thresh: 0.7      # Minimum confidence to consider a new track
+match_thresh: 0.9          # IoU threshold for associating detections to tracks
+iou_thresh: 0.25           # IoU threshold for final match filter
+track_buffer: 30           # How many frames to retain a track without update
+with_reid: False           # Disable built-in reid since we use custom appearance matching
+gmc: False                 # Disable camera motion compensation for static tennis court 
