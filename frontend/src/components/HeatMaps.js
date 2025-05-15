@@ -11,7 +11,7 @@ const HeatMaps = () => {
   return (
     <div className="bg-secondary rounded-xl overflow-hidden">
       <div className="p-4">
-        <h3 className="text-xl font-bold mb-4">Heat Maps</h3>
+        <h3 className="text-xl font-bold mb-4">Emma's Heat Maps!</h3>
         
         {/* Tabs */}
         <div className="flex gap-2 mb-4">
