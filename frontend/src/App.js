@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 // Component imports
 import Sidebar from './components/Sidebar';
+import Game01Stats from './components/Game01Stats';
 import GameStatistics from './components/GameStatistics';
 import HeatMaps from './components/HeatMaps';
 import ShotPercentages from './components/ShotPercentages';
@@ -9,17 +10,57 @@ import GamePlay from './components/GamePlay';
 import PlayerStats from './components/PlayerStats';
 
 const App = () => {
-  const [currentGame, setCurrentGame] = useState('Game_02');
+  const [currentGame, setCurrentGame] = useState('Game_01');
+  const [currentNav, setCurrentNav] = useState('Match Stats');
   const [user, setUser] = useState({
     name: 'Cory_Pham_22',
     id: '64838263',
     image: 'https://i.pravatar.cc/150?img=3'
   });
 
+  const renderContent = () => {
+    switch (currentNav) {
+      case 'Dashboard':
+        return (
+          <div className="px-4 grid gap-4 pb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <HeatMaps />
+              <div className="grid gap-4">
+                <PlayerStats />
+                <ShotPercentages />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <GamePlay />
+              <div className="col-span-2">
+                <GameStatistics />
+              </div>
+            </div>
+          </div>
+        );
+      case 'Match Stats':
+        if (currentGame === 'Game_01') {
+          return <Game01Stats />;
+        }
+        return null;
+      default:
+        return (
+          <div className="px-4 py-8">
+            <h2 className="text-2xl font-bold text-white">Coming Soon</h2>
+            <p className="text-gray-400 mt-2">This section is under development.</p>
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="flex h-screen bg-primary text-white overflow-hidden">
       {/* Sidebar */}
-      <Sidebar username={user.name} />
+      <Sidebar 
+        username={user.name} 
+        onGameSelect={setCurrentGame} 
+        onNavSelect={setCurrentNav}
+      />
       
       {/* Main content */}
       <div className="flex-1 overflow-y-auto">
@@ -71,7 +112,7 @@ const App = () => {
         
         {/* Page title */}
         <div className="px-4 mb-6 flex justify-between items-center">
-          <h2 className="text-2xl font-bold">{currentGame} Statistics</h2>
+          <h2 className="text-2xl font-bold">{currentNav === 'Match Stats' ? `${currentGame} Statistics` : currentNav}</h2>
           <button className="bg-secondary p-2 rounded">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -79,22 +120,8 @@ const App = () => {
           </button>
         </div>
         
-        {/* Dashboard grid */}
-        <div className="px-4 grid gap-4 pb-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <HeatMaps />
-            <div className="grid gap-4">
-              <PlayerStats />
-              <ShotPercentages />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <GamePlay />
-            <div className="col-span-2">
-              <GameStatistics />
-            </div>
-          </div>
-        </div>
+        {/* Dynamic content area */}
+        {renderContent()}
       </div>
     </div>
   );
