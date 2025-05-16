@@ -21,6 +21,8 @@ ENABLE_DRAWING = True  # Generate output video with visualizations
 FRAME_PROCESSING_INTERVAL = 5  # Process every Nth frame (1 = process all)
 DETECT_BOUNCES = True  # Run bounce detection post-processing
 GENERATE_HEATMAPS = True  # Generate bounce and player heatmaps post-processing
+ENABLE_STROKE_RECOGNITION = True  # Enable stroke recognition
+ENABLE_POSE_DETECTION = True  # Enable pose detection
 
 # Drawing specific config (Moved from __main__ block)
 DRAW_TRACE = True  # Draw ball trace on video outputs
@@ -53,6 +55,12 @@ import warnings
 import logging
 import cv2
 import numpy as np
+import imutils
+import torchvision
+from torchvision import transforms
+import torch.nn as nn
+from torchvision.transforms import ToTensor
+import pandas as pd
 
 # import torch # Already imported
 import torch.nn as nn
@@ -82,6 +90,195 @@ from sympy.geometry.point import Point2D
 
 # Placeholder for YOLO and Tracker imports - replace with actual libraries
 from ultralytics import YOLO
+
+
+# Stroke Recognition Classes
+class Identity(nn.Module):
+    def __init__(self):
+        super(Identity, self).__init__()
+
+    def forward(self, x):
+        return x
+
+
+class FeatureExtractor(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.feature_extractor = torchvision.models.inception_v3(pretrained=True)
+        self.feature_extractor.fc = Identity()
+
+    def forward(self, x):
+        output = self.feature_extractor(x)
+        return output
+
+
+class LSTM_model(nn.Module):
+    """
+    Time sequence model for stroke classifying
+    """
+
+    def __init__(
+        self,
+        num_classes,
+        input_size=2048,
+        num_layers=3,
+        hidden_size=90,
+        dtype=torch.cuda.FloatTensor,
+    ):
+        super().__init__()
+        self.dtype = dtype
+        self.input_size = input_size
+        self.num_layers = num_layers
+        self.hidden_size = hidden_size
+        self.LSTM = nn.LSTM(
+            input_size, hidden_size, num_layers, bias=True, batch_first=True
+        )
+        self.fc = nn.Linear(hidden_size, num_classes)
+
+    def forward(self, x):
+        # x shape is (batch_size, seq_len, input_size)
+        h0, c0 = self.init_state(x.size(0))
+        output, (hn, cn) = self.LSTM(x, (h0, c0))
+        # size = 1
+        size = x.size(1) // 4
+
+        output = output[:, -size:, :]
+        scores = self.fc(output.squeeze(0))
+        # scores shape is (batch_size, num_classes)
+        return scores
+
+    def init_state(self, batch_size):
+        return (
+            torch.zeros(self.num_layers, batch_size, self.hidden_size).type(self.dtype),
+            torch.zeros(self.num_layers, batch_size, self.hidden_size).type(self.dtype),
+        )
+
+
+class ActionRecognition:
+    """
+    Stroke recognition model
+    """
+
+    def __init__(self, model_saved_state, max_seq_len=55):
+        self.dtype = (
+            torch.cuda.FloatTensor if torch.cuda.is_available() else torch.FloatTensor
+        )
+        self.feature_extractor = FeatureExtractor()
+        self.feature_extractor.eval()
+        self.feature_extractor.type(self.dtype)
+        self.normalize = transforms.Normalize(
+            mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+        )
+        self.max_seq_len = max_seq_len
+        self.LSTM = LSTM_model(3, dtype=self.dtype)
+        # Load model`s weights
+        saved_state = torch.load(
+            "saved states/" + model_saved_state, map_location="cpu"
+        )
+        self.LSTM.load_state_dict(saved_state["model_state"])
+        self.LSTM.eval()
+        self.LSTM.type(self.dtype)
+        self.frames_features_seq = None
+        self.box_margin = 150
+        self.softmax = nn.Softmax(dim=1)
+        self.strokes_label = ["Forehand", "Backhand", "Service/Smash"]
+
+    def add_frame(self, frame, player_box):
+        """
+        Extract frame features using feature extractor model and add the results to the frames until now
+        """
+        # ROI is a small box around the player
+        box_center = (
+            int((player_box[0] + player_box[2]) / 2),
+            int((player_box[1] + player_box[3]) / 2),
+        )
+        patch = frame[
+            int(box_center[1] - self.box_margin) : int(box_center[1] + self.box_margin),
+            int(box_center[0] - self.box_margin) : int(box_center[0] + self.box_margin),
+        ].copy()
+        patch = imutils.resize(patch, 299)
+        frame_t = patch.transpose((2, 0, 1)) / 255
+        frame_tensor = torch.from_numpy(frame_t).type(self.dtype)
+        frame_tensor = self.normalize(frame_tensor).unsqueeze(0)
+        with torch.no_grad():
+            # forward pass
+            features = self.feature_extractor(frame_tensor)
+        features = features.unsqueeze(1)
+        # Concatenate the features to previous features
+        if self.frames_features_seq is None:
+            self.frames_features_seq = features
+        else:
+            self.frames_features_seq = torch.cat(
+                [self.frames_features_seq, features], dim=1
+            )
+
+    def predict_saved_seq(self, clear=True):
+        """
+        Use saved sequence and predict the stroke
+        """
+        with torch.no_grad():
+            scores = self.LSTM(self.frames_features_seq)[-1].unsqueeze(0)
+            probs = self.softmax(scores).squeeze().cpu().numpy()
+
+        if clear:
+            self.frames_features_seq = None
+        return probs, self.strokes_label[np.argmax(probs)]
+
+    def predict_stroke(self, frame, player_box):
+        """
+        Predict the stroke for each frame
+        """
+        try:
+            box_center = (
+                int((player_box[0] + player_box[2]) / 2),
+                int((player_box[1] + player_box[3]) / 2),
+            )
+
+            # Calculate patch boundaries
+            y1 = max(0, int(box_center[1] - self.box_margin))
+            y2 = min(frame.shape[0], int(box_center[1] + self.box_margin))
+            x1 = max(0, int(box_center[0] - self.box_margin))
+            x2 = min(frame.shape[1], int(box_center[0] + self.box_margin))
+
+            # Check if patch is valid
+            if y2 <= y1 or x2 <= x1:
+                return None, "Unknown"
+
+            patch = frame[y1:y2, x1:x2].copy()
+            if patch.size == 0:
+                return None, "Unknown"
+
+            patch = imutils.resize(patch, 299)
+            frame_t = patch.transpose((2, 0, 1)) / 255
+            frame_tensor = torch.from_numpy(frame_t).type(self.dtype)
+            frame_tensor = self.normalize(frame_tensor).unsqueeze(0)
+
+            with torch.no_grad():
+                features = self.feature_extractor(frame_tensor)
+            features = features.unsqueeze(1)
+
+            if self.frames_features_seq is None:
+                self.frames_features_seq = features
+            else:
+                self.frames_features_seq = torch.cat(
+                    [self.frames_features_seq, features], dim=1
+                )
+
+            if self.frames_features_seq.size(1) > self.max_seq_len:
+                remove = self.frames_features_seq[:, 0, :]
+                remove.detach().cpu()
+                self.frames_features_seq = self.frames_features_seq[:, 1:, :]
+
+            with torch.no_grad():
+                scores = self.LSTM(self.frames_features_seq)[-1].unsqueeze(0)
+                probs = self.softmax(scores).squeeze().cpu().numpy()
+
+            return probs, self.strokes_label[np.argmax(probs)]
+
+        except Exception as e:
+            print(f"Error in predict_stroke: {e}")
+            return None, "Unknown"
+
 
 ## Tracknet script
 
@@ -1028,10 +1225,13 @@ def refine_kps(img, x_ct, y_ct, crop_size=40):
                     refined_y_ct = y_min + new_y_ct
     return refined_y_ct, refined_x_ct
 
-def is_scene_cut(prev_frame, curr_frame, frame_idx=None, threshold=0.03, pixel_diff_thresh=12):
+
+def is_scene_cut(
+    prev_frame, curr_frame, frame_idx=None, threshold=0.03, pixel_diff_thresh=12
+):
     """
     Hybrid scene cut detector using HSV histograms + pixel difference fallback.
-    
+
     Args:
         prev_frame: Previous BGR frame.
         curr_frame: Current BGR frame.
@@ -1129,20 +1329,19 @@ class PlayerTracker:
         self.role_to_track_id = {}  # {"Player 1": tid1, "Player 2": tid2}
         self.player_appearance = {}  # {"Player 1": hist, "Player 2": hist}
 
-
-
-
-    def update(self, frame, frame_num=None, current_homography=None, person_min_score=0.5):
+    def update(
+        self, frame, frame_num=None, current_homography=None, person_min_score=0.5
+    ):
         """
         Detects and tracks players in a single frame using YOLO's built-in tracker.
         Updates internal tracking history.
-        
+
         Args:
             frame: Current video frame.
             frame_num: Current frame index (required for tracking history).
             current_homography: Inverse homography matrix for current frame (needed for side determination).
             person_min_score: Minimum confidence for YOLO person detection.
-        
+
         Returns:
             List of tuples: (bbox, bottom_center_point, track_id)
         """
@@ -1180,7 +1379,9 @@ class PlayerTracker:
                         self.track_history[tid].append((frame_num, center))
 
                     # === Optionally store homography for side checks ===
-                    self.last_homography = current_homography  # To use later in role-switch logic
+                    self.last_homography = (
+                        current_homography  # To use later in role-switch logic
+                    )
 
         return tracked_players_output
 
@@ -1193,7 +1394,6 @@ class PlayerTracker:
         hist = cv2.calcHist([hsv], [0, 1], None, [30, 32], [0, 180, 0, 256])
         cv2.normalize(hist, hist)
         return hist.flatten()
-    
 
     def assign_initial_player_roles(self, tracked_players, frame):
         seen_ids = set()
@@ -1226,7 +1426,7 @@ class PlayerTracker:
         used_tids = set()
         for role, prev_hist in self.player_appearance.items():
             best_tid = None
-            best_score = float('inf')
+            best_score = float("inf")
             for tid, cand_hist in candidates.items():
                 if tid in used_tids:
                     continue
@@ -1240,23 +1440,23 @@ class PlayerTracker:
 
         if len(reassigned) == 2:
             self.role_to_track_id = reassigned
-            print(f"[PlayerTracker] Reassigned roles after cut: {self.role_to_track_id}")
-        else:
-            print("[PlayerTracker] Failed to reassign both roles after cut.")
 
     def get_player_display_name(self, track_id):
         for role, tid in self.role_to_track_id.items():
             if tid == track_id:
                 return role
-        return None  # Unknown player; don’t render
+        return None  # Unknown player; don't render
 
     def get_player_side(self, center_point, homography, net_y_on_ref):
-        pt = np.array([[[float(center_point[0]), float(center_point[1])]]], dtype=np.float32)
+        pt = np.array(
+            [[[float(center_point[0]), float(center_point[1])]]], dtype=np.float32
+        )
         try:
             transformed = cv2.perspectiveTransform(pt, homography)
-            return "top" if transformed[0,0,1] < net_y_on_ref else "bottom"
+            return "top" if transformed[0, 0, 1] < net_y_on_ref else "bottom"
         except:
             return None
+
     def detect_role_switch(self):
         """
         If both tracked player roles have switched sides consistently for a few frames, swap their labels.
@@ -1265,14 +1465,16 @@ class PlayerTracker:
         for role, tid in self.role_to_track_id.items():
             if tid in self.track_history:
                 for _, center in list(self.track_history[tid])[-10:]:  # Last 10 frames
-                    side = self.get_player_side(center, self.last_homography, self.center_line_y)
+                    side = self.get_player_side(
+                        center, self.last_homography, self.center_line_y
+                    )
                     if side:
                         recent_sides[role].append(side)
 
         if all(sides for sides in recent_sides.values()):
             roles_flipped = (
-                recent_sides["Player 1"].count("bottom") > 7 and
-                recent_sides["Player 2"].count("top") > 7
+                recent_sides["Player 1"].count("bottom") > 7
+                and recent_sides["Player 2"].count("top") > 7
             )
             if roles_flipped:
                 print("[PlayerTracker] Detected side switch. Swapping roles.")
@@ -1285,7 +1487,7 @@ class PlayerTracker:
         for role, tid in self.role_to_track_id.items():
             if tid == track_id:
                 return role
-            
+
     def force_reassign_roles(self, current_ids):
         """
         In case tracking fails or IDs change dramatically mid-match.
@@ -1293,9 +1495,6 @@ class PlayerTracker:
         if len(current_ids) >= 2:
             self.role_to_track_id["Player 1"] = current_ids[0]
             self.role_to_track_id["Player 2"] = current_ids[1]
-            print(f"[PlayerTracker] Forced reassignment: {self.role_to_track_id}")
-    
-                
 
 
 ## Bounce Detection
@@ -1763,18 +1962,193 @@ def add_bounces_to_minimap_video(
     return True
 
 
+## Pose Extraction
+
+
+class PoseExtractor:
+    def __init__(self, person_num=1, box=False, dtype=torch.FloatTensor):
+        """
+        Extractor for pose keypoints
+        :param person_num: int, number of person in the videos (default = 1)
+        :param box: bool, show person bounding box in the output frame (default = False)
+        :param dtype: torch.type, dtype of the mdoel and image, determine if we use GPU or not
+        """
+        self.pose_model = torchvision.models.detection.keypointrcnn_resnet50_fpn(
+            pretrained=True
+        )
+        self.pose_model.type(dtype)  # Also moves model to GPU if available
+        self.pose_model.eval()
+        self.dtype = dtype
+        self.person_num = person_num
+        self.box = box
+        self.PERSON_LABEL = 1
+        self.SCORE_MIN = 0.5
+        self.keypoint_threshold = 1.5
+        self.data = []
+        self.line_connection = [
+            (7, 9),
+            (7, 5),
+            (10, 8),
+            (8, 6),
+            (6, 5),
+            (15, 13),
+            (13, 11),
+            (11, 12),
+            (12, 14),
+            (14, 16),
+            (5, 11),
+            (12, 6),
+        ]
+        self.COCO_PERSON_KEYPOINT_NAMES = [
+            "nose",
+            "left_eye",
+            "right_eye",
+            "left_ear",
+            "right_ear",
+            "left_shoulder",
+            "right_shoulder",
+            "left_elbow",
+            "right_elbow",
+            "left_wrist",
+            "right_wrist",
+            "left_hip",
+            "right_hip",
+            "left_knee",
+            "right_knee",
+            "left_ankle",
+            "right_ankle",
+        ]
+
+    def _add_lines(self, frame, keypoints, keypoints_scores):
+        # Add line using the keypoints connections to create stick man
+        for a, b in self.line_connection:
+            if (
+                keypoints_scores[a] > self.keypoint_threshold
+                and keypoints_scores[b] > self.keypoint_threshold
+            ):
+                p1 = (int(keypoints[a][0]), int(keypoints[a][1]))
+                p2 = (int(keypoints[b][0]), int(keypoints[b][1]))
+                cv2.line(frame, p1, p2, [0, 0, 255], 2)
+        # Connect nose to center of torso
+        a = 0
+        p1 = (int(keypoints[a][0]), int(keypoints[a][1]))
+        p2 = (
+            int((keypoints[5][0] + keypoints[6][0]) / 2),
+            int((keypoints[5][1] + keypoints[6][1]) / 2),
+        )
+        cv2.line(frame, p1, p2, [0, 0, 255], 2)
+        return frame
+
+    def extract_pose(self, image, player_boxes):
+        """
+        extract pose from given image using pose_model
+        :param player_boxes:
+        :param image: ndarray, the image we would like to extract the pose from
+        :return: frame that include the pose stickman
+        """
+        height, width = image.shape[:2]
+        if len(player_boxes) > 0:
+            margin = 50
+            xt, yt, xb, yb = player_boxes[-1]
+            xt, yt, xb, yb = int(xt), int(yt), int(xb), int(yb)
+            # patch = image[max(yt - margin, 0):min(yb + margin, height), max(xt - margin, 0):min(xb + margin, width)].copy()
+            patch = image.copy()
+            xt, yt, xb, yb = 0, 0, width, height
+            margin = 0
+        else:
+            margin = 0
+            xt, yt, xb, yb = 0, 0, width, height
+            patch = image.copy()
+        # initialize pose stickman frame and data
+        stickman = np.zeros_like(image)
+        patch_zeros = np.zeros_like(patch)
+        x_data, y_data = [], []
+
+        # creating torch.tensor from the image ndarray
+        frame_t = patch.transpose((2, 0, 1)) / 255
+        frame_tensor = torch.from_numpy(frame_t).unsqueeze(0).type(self.dtype)
+
+        # Finding boxes and keypoints
+        with torch.no_grad():
+            # forward pass
+            p = self.pose_model(frame_tensor)
+
+        # add bounding box for each person found
+        if self.box:
+            # Marking every person found in the image with high score
+            for box, label, score in zip(
+                p[0]["boxes"][: self.person_num], p[0]["labels"], p[0]["scores"]
+            ):
+                if label == self.PERSON_LABEL and score > self.SCORE_MIN:
+                    cv2.rectangle(
+                        patch_zeros,
+                        (int(box[0]), int(box[1])),
+                        (int(box[2]), int(box[3])),
+                        [0, 0, 255],
+                        2,
+                    )
+        for i, score in enumerate(p[0]["scores"]):
+            print(f"[Person {i}] Detection Score: {score.item():.2f}")
+        print(f"Patch shape: {patch.shape}, from box: ({xt},{yt},{xb},{yb})")
+
+        # Marking all keypoints of the person we found, and connecting part to create the stick man
+        for keypoints, keypoint_scores, score in zip(
+            p[0]["keypoints"][: self.person_num],
+            p[0]["keypoints_scores"],
+            p[0]["scores"],
+        ):
+            # only find person with high score
+            if score > self.SCORE_MIN:
+                for i, ((x, y, v), key_point_score) in enumerate(
+                    zip(keypoints, keypoint_scores)
+                ):
+                    # add keypoint only if it exceed threshold score
+                    if key_point_score > self.keypoint_threshold:
+                        x_data.append(x.item() + max(xt - margin, 0))
+                        y_data.append(y.item() + max(yt - margin, 0))
+                        cv2.circle(patch_zeros, (int(x), int(y)), 2, [255, 0, 0], 2)
+                    else:
+                        # if the keypoint was not found we add None
+                        # in the smoothing section we will try to complete the missing data
+                        x_data.append(None)
+                        y_data.append(None)
+                # create the stickman using the keypoints we found
+                self._add_lines(patch_zeros, keypoints, keypoint_scores)
+            self.data.append(x_data + y_data)
+        stickman[
+            max(yt - margin, 0) : min(yb + margin, height),
+            max(xt - margin, 0) : min(xb + margin, width),
+        ] = patch_zeros
+
+        return stickman
+
+    def save_to_csv(self, output_folder):
+        """
+        Saves the pose keypoints data as csv
+        :param output_folder: str, path to output folder
+        :return: df, the data frame of the pose keypoints
+        """
+        columns = self.COCO_PERSON_KEYPOINT_NAMES
+        columns_x = [column + "_x" for column in columns]
+        columns_y = [column + "_y" for column in columns]
+        df = pd.DataFrame(self.data, columns=columns_x + columns_y)
+        outfile_path = os.path.join(output_folder, "stickman_data.csv")
+        df.to_csv(outfile_path, index=False)
+        return df
+
+
 if __name__ == "__main__":
     # --- Define Model Paths & Input/Output Paths (Update as needed) ---
     path_ball_track_model = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/models/ball_detection_weights/tracknet_weights.pt"
     path_court_model = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/models/court_detection_weights/model_tennis_court_det.pt"
     path_bounce_model = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/models/bounce_detection_weights/bounce_detection_weights.cbm"
 
-    path_input_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/game1_video.mp4"
-    path_intermediate_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/game1_video.mp4"  # Intermediate file if resizing needed
-    path_output_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/game1_1280x720.mp4"
-    path_minimap_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/game1_1280x720_minimap.mp4"  # Separate minimap path
-    path_output_bounce_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/game1_1280x720_bounce.png"
-    path_output_player_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/game1_1280x720_player.png"
+    path_input_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/10s_game2_1280x720.mp4"
+    path_intermediate_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/10s_game2_1280x720.mp4"  # Intermediate file if resizing needed
+    path_output_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/10s_game2_1280x720.mp4"
+    path_minimap_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/10s_game2_1280x720_minimap.mp4"  # Separate minimap path
+    path_output_bounce_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/10s_game2_1280x720_bounce.png"
+    path_output_player_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/10s_game2_1280x720_player.png"
 
     # Get reference court dimensions for minimap scaling (keep this here as it uses get_court_img())
     _temp_court_ref_img_for_dims = (
@@ -1794,6 +2168,39 @@ if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
     start_time = time.time()  # Overall script start time
+
+    # Initialize stroke recognition if enabled
+    stroke_recognizer = None
+    if ENABLE_STROKE_RECOGNITION:
+        try:
+            stroke_recognizer = ActionRecognition("stroke_model.pth")
+            print("Stroke recognition model initialized successfully")
+        except Exception as e:
+            print(f"Failed to initialize stroke recognition model: {e}")
+            ENABLE_STROKE_RECOGNITION = False
+
+    # Initialize pose detection if enabled
+    pose_extractor = None
+    if ENABLE_POSE_DETECTION:
+        try:
+            pose_extractor = PoseExtractor(
+                person_num=2,  # Allow detection of both players
+                box=True,  # Show bounding boxes
+                dtype=(
+                    torch.cuda.FloatTensor
+                    if torch.cuda.is_available()
+                    else torch.FloatTensor
+                ),
+            )
+            print("Pose detection model initialized successfully")
+            print(f"Pose detection configured with person_num=2, box=True")
+        except Exception as e:
+            print(f"Failed to initialize pose detection model: {e}")
+            print(f"Error details: {str(e)}")
+            import traceback
+
+            traceback.print_exc()
+            ENABLE_POSE_DETECTION = False
 
     # 1) Scale to 720p if needed
     time_scaling_start = time.time()
@@ -1929,7 +2336,6 @@ if __name__ == "__main__":
         pbar_main_loop = None
         print("tqdm not found, proceeding without progress bar for Pass 2.")
 
-
     prev_frame_for_cut = None
 
     while True:
@@ -1940,8 +2346,6 @@ if __name__ == "__main__":
         frame_count += 1
         if pbar_main_loop:
             pbar_main_loop.update(1)
-
-
 
         current_homography = None
         current_kps = None
@@ -1967,6 +2371,55 @@ if __name__ == "__main__":
                     frame, frame_num=frame_count, current_homography=current_homography
                 )
 
+                # Process stroke recognition if enabled
+                if ENABLE_STROKE_RECOGNITION and stroke_recognizer is not None:
+                    for bbox, center, track_id in tracked_players_current_frame:
+                        try:
+                            # Get stroke prediction
+                            probs, stroke_label = stroke_recognizer.predict_stroke(
+                                frame, bbox
+                            )
+                            # Store stroke info with player data
+                            if track_id not in player_tracker_instance.track_history:
+                                player_tracker_instance.track_history[track_id] = deque(
+                                    maxlen=60
+                                )
+                            player_tracker_instance.track_history[track_id].append(
+                                (frame_count, center, stroke_label)
+                            )
+                        except Exception as e:
+                            print(
+                                f"Error in stroke recognition for track_id {track_id}: {e}"
+                            )
+
+                # Process pose detection if enabled
+                if ENABLE_POSE_DETECTION and pose_extractor is not None:
+                    try:
+                        # Extract player bounding boxes
+                        player_boxes = [
+                            bbox for bbox, _, _ in tracked_players_current_frame
+                        ]
+                        if player_boxes:
+                            # Extract pose and get stickman overlay
+                            stickman_frame = pose_extractor.extract_pose(
+                                frame, player_boxes
+                            )
+                            # Overlay stickman on output frame
+                            if ENABLE_DRAWING and out_main is not None:
+                                # Create output frame if it doesn't exist yet
+                                if "output_frame" not in locals():
+                                    output_frame = frame.copy()
+                                # Blend the stickman overlay with the output frame
+                                output_frame = cv2.addWeighted(
+                                    output_frame, 0.7, stickman_frame, 0.3, 0
+                                )
+                    except Exception as e:
+                        print(f"Error in pose detection: {e}")
+                        print(f"Error details: {str(e)}")
+                        import traceback
+
+                        traceback.print_exc()
+
                 if frame_count == 0:
                     player_tracker_instance.assign_initial_player_roles(
                         tracked_players_current_frame, frame
@@ -1981,14 +2434,13 @@ if __name__ == "__main__":
                 frame, frame_num=frame_count, current_homography=current_homography
             )
 
-
         cut_detected = is_scene_cut(prev_frame_for_cut, frame, frame_idx=frame_count)
 
         prev_frame_for_cut = frame.copy()
         if cut_detected:
-            player_tracker_instance.reassign_roles_after_cut(tracked_players_current_frame, frame)
-
-
+            player_tracker_instance.reassign_roles_after_cut(
+                tracked_players_current_frame, frame
+            )
 
         final_persons_top_this_frame = []
         final_persons_bottom_this_frame = []
@@ -2090,42 +2542,96 @@ if __name__ == "__main__":
                 )
 
             # Draw players on MAIN output_frame
-            for (
-                bbox,
-                center_pt,
-                display_name,
-            ) in draw_persons_top_on_main_frame:  # Expects (bbox, center, display_name)
+            for bbox, center_pt, display_name in draw_persons_top_on_main_frame:
                 if bbox is not None and len(bbox) == 4:
                     x1, y1, x2, y2 = map(int, bbox)
                     cv2.rectangle(output_frame, (x1, y1), (x2, y2), box_color, 2)
-                    cv2.putText(
-                        output_frame,
-                        display_name,  # Use identified display_name
-                        (x1, y1 - 5),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7,
-                        box_color,
-                        2,
-                    )
-            for (
-                bbox,
-                center_pt,
-                display_name,
-            ) in (
-                draw_persons_bottom_on_main_frame
-            ):  # Expects (bbox, center, display_name)
+
+                    # Get latest stroke label if available
+                    stroke_label = ""
+                    if ENABLE_STROKE_RECOGNITION:
+                        track_id = None
+                        for (
+                            bbox_t,
+                            center_t,
+                            track_id_t,
+                        ) in tracked_players_current_frame:
+                            if (
+                                bbox_t == bbox
+                            ):  # Match the bounding box to get the correct track_id
+                                track_id = track_id_t
+                                break
+                        if (
+                            track_id
+                            and track_id in player_tracker_instance.track_history
+                        ):
+                            history = player_tracker_instance.track_history[track_id]
+                            if history:
+                                last_entry = history[-1]
+                                if (
+                                    len(last_entry) >= 3
+                                ):  # Check if we have enough values
+                                    _, _, last_stroke = last_entry
+                                    if last_stroke != "Unknown":
+                                        stroke_label = f" ({last_stroke})"
+
+                    # Only draw text if we have a valid display name
+                    if display_name is not None:
+                        cv2.putText(
+                            output_frame,
+                            display_name
+                            + stroke_label,  # Add stroke label to display name
+                            (x1, y1 - 5),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.7,
+                            box_color,
+                            2,
+                        )
+            for bbox, center_pt, display_name in draw_persons_bottom_on_main_frame:
                 if bbox is not None and len(bbox) == 4:
                     x1, y1, x2, y2 = map(int, bbox)
                     cv2.rectangle(output_frame, (x1, y1), (x2, y2), box_color, 2)
-                    cv2.putText(
-                        output_frame,
-                        display_name,  # Use identified display_name
-                        (x1, y1 - 5),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.7,
-                        box_color,
-                        2,
-                    )
+
+                    # Get latest stroke label if available
+                    stroke_label = ""
+                    if ENABLE_STROKE_RECOGNITION:
+                        track_id = None
+                        for (
+                            bbox_t,
+                            center_t,
+                            track_id_t,
+                        ) in tracked_players_current_frame:
+                            if (
+                                bbox_t == bbox
+                            ):  # Match the bounding box to get the correct track_id
+                                track_id = track_id_t
+                                break
+                        if (
+                            track_id
+                            and track_id in player_tracker_instance.track_history
+                        ):
+                            history = player_tracker_instance.track_history[track_id]
+                            if history:
+                                last_entry = history[-1]
+                                if (
+                                    len(last_entry) >= 3
+                                ):  # Check if we have enough values
+                                    _, _, last_stroke = last_entry
+                                    if last_stroke != "Unknown":
+                                        stroke_label = f" ({last_stroke})"
+
+                    # Only draw text if we have a valid display name
+                    if display_name is not None:
+                        cv2.putText(
+                            output_frame,
+                            display_name
+                            + stroke_label,  # Add stroke label to display name
+                            (x1, y1 - 5),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.7,
+                            box_color,
+                            2,
+                        )
 
             # --- Draw on MINIMAP (minimap_frame_current is the large reference court image) ---
             if (

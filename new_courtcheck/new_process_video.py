@@ -67,6 +67,7 @@ from collections import deque
 import catboost as ctb
 import pandas as pd
 import torch.nn.functional as F
+import random  # Added for random frame selection
 
 # from scenedetect.video_manager import VideoManager
 # from scenedetect.scene_manager import SceneManager
@@ -86,6 +87,8 @@ from ultralytics import YOLO
 # Imports for ReID
 import torchreid
 import torchvision.transforms as T
+import matplotlib.pyplot as plt  # For Colab display
+from IPython.display import Image, display  # For Colab display
 
 # torch.nn.functional as F is already imported above
 
@@ -1217,7 +1220,7 @@ def merge_lines(lines):
 class PlayerTracker:
     def __init__(
         self,
-        yolo_model_path="yolov8n.pt",
+        yolo_model_path="yolov8s.pt",  # Changed from yolov8n.pt
         device="cuda",
         reid_config=None,  # New parameter for ReID configuration
     ):
@@ -1236,14 +1239,20 @@ class PlayerTracker:
         self.track_history = {}  # {track_id: deque of (frame_num, center_point)}
         self.history_length = 60  # Adjust based on changeover duration
         self.role_to_track_id = {}  # {"Player 1": tid1, "Player 2": tid2}
-        self.player_appearance = {}  # {"Player 1": HSVhist, "Player 2": HSVhist}
+        self.player_appearance = {
+            "Player 1": [],
+            "Player 2": [],
+        }  # Stores list of HSV histograms
 
         # Initialize ReIDModel
         self.reid_model_instance = None
         self.reid_similarity_threshold = (
             0.65  # Default, can be overridden by reid_config
         )
-        self.initial_player_reid_features = {"Player 1": None, "Player 2": None}
+        self.initial_player_reid_features = {
+            "Player 1": [],
+            "Player 2": [],
+        }  # Stores list of ReID features
         self.REID_MODEL_PATH = None  # Placeholder for path to reid model weights
         self.MAX_FRAMES_PLAYER_LOST = (
             30  # Max frames a P1/P2 can be lost before ReID gives up temporarily
@@ -1284,8 +1293,8 @@ class PlayerTracker:
             self.reid_model_instance = ReIDModel(device=self.device)  # Default init
 
     def _get_player_patch(self, frame, bbox):
+        # Convert to integers and ensure coordinates are within frame boundaries
         x1, y1, x2, y2 = map(int, bbox)
-        # Ensure coordinates are within frame boundaries
         h, w = frame.shape[:2]
         x1, y1 = max(0, x1), max(0, y1)
         x2, y2 = min(w - 1, x2), min(h - 1, y2)
@@ -1295,7 +1304,7 @@ class PlayerTracker:
         return patch
 
     def update(
-        self, frame, frame_num=None, current_homography=None, person_min_score=0.5
+        self, frame, frame_num=None, current_homography=None, person_min_score=0.15
     ):
         """
         Detects and tracks players. Implements HSV for continuous tracking and Re-ID for recovery.
@@ -1392,79 +1401,97 @@ class PlayerTracker:
             )  # To avoid assigning multiple roles to the same new_tid or one role to multiple new_tids
 
             for role_to_find in roles_to_reid:
-                initial_features_lost_player = self.initial_player_reid_features[
-                    role_to_find
-                ]
-                if initial_features_lost_player is None:
+                # initial_features_lost_player is a LIST of ndarrays
+                list_of_initial_features_for_role = (
+                    self.initial_player_reid_features.get(role_to_find, [])
+                )
+
+                if not list_of_initial_features_for_role:  # Check if the list is empty
+                    # print(f"[PlayerTracker Update] No initial Re-ID features stored for {role_to_find}. Skipping Re-ID for this role.")
                     continue
 
-                best_match_tid = None
-                highest_similarity = -1
+                best_match_tid_for_role = None
+                highest_similarity_for_role = -1
 
-                for new_tid, new_features in unassigned_track_features.items():
+                for new_tid, current_new_features in unassigned_track_features.items():
                     if (
                         new_tid in reid_assignments_this_frame.values()
-                    ):  # Already assigned to another role this frame
+                    ):  # Already assigned to another role in this frame
                         continue
-                    if new_features is None:
-                        continue
-
-                    try:
-                        similarity = F.cosine_similarity(
-                            torch.from_numpy(initial_features_lost_player).unsqueeze(0),
-                            torch.from_numpy(new_features).unsqueeze(0),
-                        ).item()
-
-                        if similarity > highest_similarity:
-                            highest_similarity = similarity
-                            best_match_tid = new_tid
-                    except Exception as e_sim:
-                        print(
-                            f"[PlayerTracker Update] Cosine similarity error during Re-ID for {role_to_find} with new_tid {new_tid}: {e_sim}"
-                        )
+                    if current_new_features is None:
                         continue
 
+                    max_similarity_for_this_new_track = -1
+
+                    for (
+                        ref_feature
+                    ) in (
+                        list_of_initial_features_for_role
+                    ):  # Iterate through each stored feature for the role
+                        if not isinstance(ref_feature, np.ndarray):
+                            print(
+                                f"[PlayerTracker Update] Warning: Stored reference feature for {role_to_find} is not an ndarray. Type: {type(ref_feature)}. Skipping this ref feature."
+                            )
+                            continue
+                        try:
+                            similarity = F.cosine_similarity(
+                                torch.from_numpy(ref_feature).unsqueeze(0),
+                                torch.from_numpy(current_new_features).unsqueeze(0),
+                            ).item()
+                            if similarity > max_similarity_for_this_new_track:
+                                max_similarity_for_this_new_track = similarity
+                        except Exception as e_sim:
+                            print(
+                                f"[PlayerTracker Update] Cosine similarity error during Re-ID for {role_to_find} with new_tid {new_tid} (ref vs current): {e_sim}"
+                            )
+                            # continue to next ref_feature or new_tid based on desired error handling
+
+                    # Check if this new_tid is a better match for the role_to_find than previously checked new_tids
+                    if max_similarity_for_this_new_track > highest_similarity_for_role:
+                        highest_similarity_for_role = max_similarity_for_this_new_track
+                        best_match_tid_for_role = new_tid
+
+                # After checking all new_tids against all ref_features for role_to_find:
                 if (
-                    best_match_tid
-                    and highest_similarity >= self.reid_similarity_threshold
+                    best_match_tid_for_role is not None
+                    and highest_similarity_for_role >= self.reid_similarity_threshold
                 ):
                     if (
-                        role_to_find not in reid_assignments_this_frame
-                    ):  # Ensure this role hasn't been assigned yet this frame
+                        role_to_find
+                        not in reid_assignments_this_frame  # Ensure this role hasn't been assigned yet this frame
+                        # and best_match_tid_for_role not in reid_assignments_this_frame.values() # Ensure tid not taken by another role (already handled by inner check)
+                    ):
                         print(
-                            f"[Frame {frame_num}] Re-ID SUCCESS: {role_to_find} (lost) re-identified as new TrackID {best_match_tid} with similarity {highest_similarity:.2f}"
+                            f"[Frame {frame_num}] Re-ID SUCCESS: {role_to_find} (lost) re-identified as new TrackID {best_match_tid_for_role} with similarity {highest_similarity_for_role:.2f}"
                         )
 
-                        # 1. Update role_to_track_id
-                        self.role_to_track_id[role_to_find] = best_match_tid
-                        reid_assignments_this_frame[role_to_find] = best_match_tid
+                        self.role_to_track_id[role_to_find] = best_match_tid_for_role
+                        reid_assignments_this_frame[role_to_find] = (
+                            best_match_tid_for_role
+                        )
 
-                        # 2. Update HSV appearance model for this player
-                        bbox_reid, _ = raw_detections_map[best_match_tid]
+                        bbox_reid, _ = raw_detections_map[best_match_tid_for_role]
                         hsv_hist_reid = self.extract_player_hsv_histogram(
                             frame, bbox_reid
                         )
                         if hsv_hist_reid is not None:
-                            self.player_appearance[role_to_find] = hsv_hist_reid
+                            self.player_appearance[role_to_find].append(
+                                hsv_hist_reid
+                            )  # Append to list
                             print(
-                                f"  Updated HSV model for {role_to_find} based on TrackID {best_match_tid}."
+                                f"  Updated HSV model for {role_to_find} based on TrackID {best_match_tid_for_role}."
                             )
 
-                        self.player_lost_frames_count[role_to_find] = (
-                            0  # Reset lost counter
-                        )
-                        active_roles.add(role_to_find)  # Mark as active now
-                        # Remove from unassigned_track_features so it's not considered again for other roles in this frame
-                        if best_match_tid in unassigned_track_features:
-                            del unassigned_track_features[best_match_tid]
-                        if best_match_tid in unassigned_track_ids:
-                            unassigned_track_ids.remove(
-                                best_match_tid
-                            )  # Also remove from general unassigned set
+                        self.player_lost_frames_count[role_to_find] = 0
+                        active_roles.add(role_to_find)
+                        if best_match_tid_for_role in unassigned_track_features:
+                            del unassigned_track_features[best_match_tid_for_role]
+                        if best_match_tid_for_role in unassigned_track_ids:
+                            unassigned_track_ids.remove(best_match_tid_for_role)
                     # else:
-                    # print(f"[Frame {frame_num}] Re-ID Conflict: Role {role_to_find} was already assigned this frame. Skipping match with new_tid {best_match_tid}")
+                    # print(f"[Frame {frame_num}] Re-ID Conflict or already assigned: Role {role_to_find} / TID {best_match_tid_for_role}")
                 # else:
-                # print(f"[Frame {frame_num}] Re-ID FAILED for {role_to_find}: No new track found with sufficient similarity (best was {highest_similarity:.2f} for TID {best_match_tid}). Lost count: {self.player_lost_frames_count[role_to_find]}")
+                # print(f"[Frame {frame_num}] Re-ID FAILED for {role_to_find}: No new track found with sufficient similarity (best was {highest_similarity_for_role:.2f} for TID {best_match_tid_for_role}). Lost count: {self.player_lost_frames_count[role_to_find]}")
 
         # If roles are still not active after Re-ID attempt, and they've been lost for too long, clear their track_id
         # This allows assign_initial_player_roles or HSV reassign to potentially pick them up later if they reappear distinctly
@@ -1485,7 +1512,8 @@ class PlayerTracker:
         return tracked_players_output  # Return the raw YOLO detections
 
     def extract_player_hsv_histogram(self, frame, bbox):
-        x1, y1, x2, y2 = bbox
+        # Convert bbox coordinates to integers to avoid slice index errors
+        x1, y1, x2, y2 = map(int, bbox)
         roi = frame[y1:y2, x1:x2]
         if roi.size == 0:
             return None
@@ -1494,73 +1522,303 @@ class PlayerTracker:
         cv2.normalize(hist, hist)
         return hist.flatten()
 
-    def assign_initial_player_roles(self, tracked_players, frame):
-        seen_ids = set()
-        assigned_count = 0  # Use a counter for P1, P2
-        for bbox, center, track_id in tracked_players:
-            if track_id not in seen_ids:
-                seen_ids.add(track_id)
-                # Try to assign P1 then P2
-                role_to_assign = None
-                if (
-                    self.player_appearance.get("Player 1") is None
-                    and assigned_count == 0
-                ):
-                    role_to_assign = "Player 1"
-                elif (
-                    self.player_appearance.get("Player 2") is None
-                    and assigned_count == 1
-                ):
-                    role_to_assign = "Player 2"
+    def _create_augmented_bboxes(self, original_bbox, frame_shape):
+        """Create augmented versions of a bounding box with slight variations
+        Returns a list of augmented bboxes including the original bbox"""
+        augmented_bboxes = [original_bbox]  # Start with the original bbox
+        x1, y1, x2, y2 = original_bbox
+        w, h = x2 - x1, y2 - y1
+        frame_h, frame_w = frame_shape[:2]
 
-                if role_to_assign:
-                    self.role_to_track_id[role_to_assign] = track_id
-                    hist = self.extract_player_hsv_histogram(frame, bbox)
-                    if hist is not None:
-                        self.player_appearance[role_to_assign] = hist
-                        print(
-                            f"[PlayerTracker] Assigned initial HSV role: {role_to_assign} to track_id {track_id}"
-                        )
+        # 1. Slightly larger box (5% expansion)
+        expanded_x1 = max(0, x1 - w * 0.05)
+        expanded_y1 = max(0, y1 - h * 0.05)
+        expanded_x2 = min(frame_w, x2 + w * 0.05)
+        expanded_y2 = min(frame_h, y2 + h * 0.05)
+        augmented_bboxes.append([expanded_x1, expanded_y1, expanded_x2, expanded_y2])
 
-                    # Store initial Re-ID features
-                    if (
-                        self.reid_model_instance and self.reid_model_instance.model
-                    ):  # Check if reid model is loaded
-                        if (
-                            self.initial_player_reid_features.get(role_to_assign)
-                            is None
-                        ):
-                            patch = self._get_player_patch(frame, bbox)
-                            if patch.size > 0:
-                                reid_features = (
-                                    self.reid_model_instance.extract_features(patch)
-                                )
-                                self.initial_player_reid_features[role_to_assign] = (
-                                    reid_features
-                                )
-                                print(
-                                    f"[PlayerTracker] Stored initial Re-ID features for {role_to_assign} (Track ID: {track_id})"
-                                )
-                            else:
-                                print(
-                                    f"[PlayerTracker] Could not get patch for Re-ID for {role_to_assign} (Track ID: {track_id})"
-                                )
-                    else:
-                        print(
-                            f"[PlayerTracker] ReID model not available, skipping Re-ID feature storage for {role_to_assign}."
-                        )
+        # 2. Slightly smaller box (5% contraction)
+        if w > 20 and h > 20:  # Only if box is large enough
+            contracted_x1 = min(x1 + w * 0.05, x2 - 10)
+            contracted_y1 = min(y1 + h * 0.05, y2 - 10)
+            contracted_x2 = max(contracted_x1 + 10, x2 - w * 0.05)
+            contracted_y2 = max(contracted_y1 + 10, y2 - h * 0.05)
+            if contracted_x2 > contracted_x1 and contracted_y2 > contracted_y1:
+                augmented_bboxes.append(
+                    [contracted_x1, contracted_y1, contracted_x2, contracted_y2]
+                )
 
-                    assigned_count += 1
-            if assigned_count == 2:
-                break
-
-        print(
-            f"[PlayerTracker] Assigned initial roles (HSV & ReID if available): {self.role_to_track_id}"
+        # 3. Shifted slightly down (for crouching/standing variations)
+        shift_down_x1 = x1
+        shift_down_y1 = min(frame_h - h, y1 + h * 0.05)
+        shift_down_x2 = x2
+        shift_down_y2 = min(frame_h, y2 + h * 0.05)
+        augmented_bboxes.append(
+            [shift_down_x1, shift_down_y1, shift_down_x2, shift_down_y2]
         )
-        if self.initial_player_reid_features["Player 1"] is not None:
-            print("[PlayerTracker] Initial Player 1 Re-ID features stored.")
-        if self.initial_player_reid_features["Player 2"] is not None:
-            print("[PlayerTracker] Initial Player 2 Re-ID features stored.")
+
+        return augmented_bboxes
+
+    def prime_with_multiple_user_selections(
+        self, player1_patches_and_frames, player2_patches_and_frames
+    ):
+        print(
+            "[PlayerTracker] Priming with multiple user selections (with data augmentation)."
+        )
+        self.initial_player_reid_features["Player 1"] = []
+        self.player_appearance["Player 1"] = []
+        self.initial_player_reid_features["Player 2"] = []
+        self.player_appearance["Player 2"] = []
+
+        if self.reid_model_instance and self.reid_model_instance.model:
+            # Player 1
+            for item in player1_patches_and_frames:
+                frame_img, bbox = None, None
+                if isinstance(item, tuple) and len(item) == 2:  # Expected (frame, bbox)
+                    frame_img, bbox = item
+                elif hasattr(item, "shape"):  # Assume it's a patch
+                    # This case is harder to handle for HSV without original frame, focusing on (frame, bbox)
+                    print(
+                        "  [Warning] Direct patch priming for HSV not fully supported, skipping HSV for this item if it's a patch."
+                    )
+                    patch = item
+                    if patch.size > 0:
+                        reid_features = self.reid_model_instance.extract_features(patch)
+                        self.initial_player_reid_features["Player 1"].append(
+                            reid_features
+                        )
+                    continue  # Skip HSV part for direct patch
+
+                if frame_img is not None and bbox is not None:
+                    # Create augmented versions of the bbox
+                    augmented_bboxes = self._create_augmented_bboxes(
+                        bbox, frame_img.shape
+                    )
+
+                    # Process original and augmented bboxes
+                    for aug_bbox in augmented_bboxes:
+                        patch = self._get_player_patch(frame_img, aug_bbox)
+                        if patch.size > 0:
+                            reid_features = self.reid_model_instance.extract_features(
+                                patch
+                            )
+                            self.initial_player_reid_features["Player 1"].append(
+                                reid_features
+                            )
+                            hsv_hist = self.extract_player_hsv_histogram(
+                                frame_img, aug_bbox
+                            )
+                            if hsv_hist is not None:
+                                self.player_appearance["Player 1"].append(hsv_hist)
+            print(
+                f"  Stored {len(self.initial_player_reid_features['Player 1'])} ReID features and {len(self.player_appearance['Player 1'])} HSV histograms for Player 1 (including augmented samples)."
+            )
+
+            # Player 2
+            for item in player2_patches_and_frames:
+                frame_img, bbox = None, None
+                if isinstance(item, tuple) and len(item) == 2:
+                    frame_img, bbox = item
+                elif hasattr(item, "shape"):
+                    print(
+                        "  [Warning] Direct patch priming for HSV not fully supported, skipping HSV for this item if it's a patch."
+                    )
+                    patch = item
+                    if patch.size > 0:
+                        reid_features = self.reid_model_instance.extract_features(patch)
+                        self.initial_player_reid_features["Player 2"].append(
+                            reid_features
+                        )
+                    continue
+
+                if frame_img is not None and bbox is not None:
+                    # Create augmented versions of the bbox
+                    augmented_bboxes = self._create_augmented_bboxes(
+                        bbox, frame_img.shape
+                    )
+
+                    # Process original and augmented bboxes
+                    for aug_bbox in augmented_bboxes:
+                        patch = self._get_player_patch(frame_img, aug_bbox)
+                        if patch.size > 0:
+                            reid_features = self.reid_model_instance.extract_features(
+                                patch
+                            )
+                            self.initial_player_reid_features["Player 2"].append(
+                                reid_features
+                            )
+                            hsv_hist = self.extract_player_hsv_histogram(
+                                frame_img, aug_bbox
+                            )
+                            if hsv_hist is not None:
+                                self.player_appearance["Player 2"].append(hsv_hist)
+            print(
+                f"  Stored {len(self.initial_player_reid_features['Player 2'])} ReID features and {len(self.player_appearance['Player 2'])} HSV histograms for Player 2 (including augmented samples)."
+            )
+        else:
+            print(
+                "[PlayerTracker] ReID model not available. Cannot prime with user selection features."
+            )
+
+    def assign_initial_player_roles(self, tracked_players, frame):
+        # Check if features were primed by user (i.e., if the lists are non-empty)
+        user_primed_p1 = bool(self.initial_player_reid_features.get("Player 1"))
+        user_primed_p2 = bool(self.initial_player_reid_features.get("Player 2"))
+
+        assigned_p1 = self.role_to_track_id.get("Player 1") is not None
+        assigned_p2 = self.role_to_track_id.get("Player 2") is not None
+
+        if user_primed_p1 and user_primed_p2 and not (assigned_p1 and assigned_p2):
+            print(
+                "[PlayerTracker] Attempting to assign roles based on user-primed features (multiple)."
+            )
+
+            # Create a list of (track_id, current_features, bbox) for all current tracks
+            live_tracks_data = []
+            for bbox_live, center_live, track_id_live in tracked_players:
+                if not (self.reid_model_instance and self.reid_model_instance.model):
+                    print("  ReID model not available for matching.")
+                    break
+                patch_live = self._get_player_patch(frame, bbox_live)
+                if patch_live.size == 0:
+                    continue
+                current_features_live = self.reid_model_instance.extract_features(
+                    patch_live
+                )
+                live_tracks_data.append(
+                    (track_id_live, current_features_live, bbox_live)
+                )
+
+            # Try to assign Player 1
+            if not assigned_p1:
+                best_match_tid_p1 = None
+                highest_similarity_p1 = -1
+                best_match_bbox_p1 = None
+
+                for track_id_live, current_features_live, bbox_live in live_tracks_data:
+                    for ref_feature_p1 in self.initial_player_reid_features["Player 1"]:
+                        try:
+                            similarity = F.cosine_similarity(
+                                torch.from_numpy(ref_feature_p1).unsqueeze(0),
+                                torch.from_numpy(current_features_live).unsqueeze(0),
+                            ).item()
+                            if similarity > highest_similarity_p1:
+                                highest_similarity_p1 = similarity
+                                best_match_tid_p1 = track_id_live
+                                best_match_bbox_p1 = bbox_live
+                        except Exception as e:
+                            print(
+                                f"  Error comparing features for Player 1 (TrackID {track_id_live}): {e}"
+                            )
+
+                if (
+                    best_match_tid_p1
+                    and highest_similarity_p1 >= self.reid_similarity_threshold
+                ):
+                    # Check if this tid is already assigned to Player 2
+                    if self.role_to_track_id.get("Player 2") != best_match_tid_p1:
+                        self.role_to_track_id["Player 1"] = best_match_tid_p1
+                        # Optionally update current appearance based on this match
+                        hsv_hist = self.extract_player_hsv_histogram(
+                            frame, best_match_bbox_p1
+                        )
+                        if hsv_hist is not None:
+                            # If player_appearance for P1 is empty or needs update
+                            if not self.player_appearance[
+                                "Player 1"
+                            ]:  # Or some other logic
+                                self.player_appearance["Player 1"].append(hsv_hist)
+                        print(
+                            f"  Assigned Player 1 to TrackID {best_match_tid_p1} (Max Similarity: {highest_similarity_p1:.2f})."
+                        )
+                        assigned_p1 = True
+                        if best_match_tid_p1 in self.generic_player_labels:
+                            del self.generic_player_labels[best_match_tid_p1]
+
+            # Try to assign Player 2
+            if not assigned_p2:
+                best_match_tid_p2 = None
+                highest_similarity_p2 = -1
+                best_match_bbox_p2 = None
+
+                for track_id_live, current_features_live, bbox_live in live_tracks_data:
+                    # Ensure this track_id is not already Player 1
+                    if self.role_to_track_id.get("Player 1") == track_id_live:
+                        continue
+                    for ref_feature_p2 in self.initial_player_reid_features["Player 2"]:
+                        try:
+                            similarity = F.cosine_similarity(
+                                torch.from_numpy(ref_feature_p2).unsqueeze(0),
+                                torch.from_numpy(current_features_live).unsqueeze(0),
+                            ).item()
+                            if similarity > highest_similarity_p2:
+                                highest_similarity_p2 = similarity
+                                best_match_tid_p2 = track_id_live
+                                best_match_bbox_p2 = bbox_live
+                        except Exception as e:
+                            print(
+                                f"  Error comparing features for Player 2 (TrackID {track_id_live}): {e}"
+                            )
+
+                if (
+                    best_match_tid_p2
+                    and highest_similarity_p2 >= self.reid_similarity_threshold
+                ):
+                    self.role_to_track_id["Player 2"] = best_match_tid_p2
+                    hsv_hist = self.extract_player_hsv_histogram(
+                        frame, best_match_bbox_p2
+                    )
+                    if hsv_hist is not None:
+                        if not self.player_appearance["Player 2"]:
+                            self.player_appearance["Player 2"].append(hsv_hist)
+                    print(
+                        f"  Assigned Player 2 to TrackID {best_match_tid_p2} (Max Similarity: {highest_similarity_p2:.2f})."
+                    )
+                    assigned_p2 = True
+                    if best_match_tid_p2 in self.generic_player_labels:
+                        del self.generic_player_labels[best_match_tid_p2]
+
+            if assigned_p1 and assigned_p2:
+                print(
+                    "[PlayerTracker] Both Player 1 and Player 2 assigned from user-primed features."
+                )
+            elif not (assigned_p1 and assigned_p2):
+                print(
+                    "[PlayerTracker] Could not assign one or both roles from user-primed features in this frame. Will retry or may need fallback."
+                )
+
+        elif not (assigned_p1 and assigned_p2):
+            print(
+                "[PlayerTracker] User priming skipped, failed, or not enough data yet. Using original automatic role assignment logic."
+            )
+            # Fallback to original behavior if not primed or if priming failed to assign
+
+    def prime_with_user_selection(self, selection_frame, p1_bbox, p2_bbox):
+        # This method is deprecated and replaced by prime_with_multiple_user_selections
+        # Kept for now to avoid breaking existing calls if any, but should be removed.
+        print(
+            "[PlayerTracker] WARNING: prime_with_user_selection is deprecated. Use prime_with_multiple_user_selections."
+        )
+
+        # For compatibility, we can adapt it to call the new method with single items
+        # But it's better to update the calling code.
+        # For now, let's make it a no-op or call the new method with single item lists
+
+        p1_item = (
+            (selection_frame, p1_bbox)
+            if selection_frame is not None and p1_bbox is not None
+            else None
+        )
+        p2_item = (
+            (selection_frame, p2_bbox)
+            if selection_frame is not None and p2_bbox is not None
+            else None
+        )
+
+        p1_list = [p1_item] if p1_item else []
+        p2_list = [p2_item] if p2_item else []
+
+        self.prime_with_multiple_user_selections(p1_list, p2_list)
 
     def reassign_roles_after_cut(self, new_tracks, frame):
         """
@@ -1574,27 +1832,80 @@ class PlayerTracker:
 
         reassigned = {}
         used_tids = set()
-        for role, prev_hist in self.player_appearance.items():
-            best_tid = None
-            best_score = float("inf")
-            for tid, cand_hist in candidates.items():
-                if tid in used_tids:
-                    continue
-                score = cv2.compareHist(prev_hist, cand_hist, cv2.HISTCMP_BHATTACHARYYA)
-                if score < best_score:
-                    best_score = score
-                    best_tid = tid
-            if best_tid is not None:
-                reassigned[role] = best_tid
-                used_tids.add(best_tid)
+        for role, prev_hist_list in self.player_appearance.items():
+            if not prev_hist_list:  # No appearance model for this role
+                continue
 
-        if len(reassigned) == 2:
+            # Use the average of stored histograms, or the first one if only one
+            # For simplicity, let's use the first one for now, or average if multiple
+            # This part might need refinement depending on how HSV matching against a list is best done.
+            # For now, we'll match against the first stored HSV. A more robust way would be to average them
+            # or find max similarity against any of them.
+            # Let's assume for now we match against the first one, if available.
+            if not prev_hist_list:
+                continue
+
+            # Simple approach: use the first available histogram as reference
+            # More complex: average histograms or find best match across all stored histograms
+            # For now, let's use the first one as a placeholder for more complex logic if needed.
+            # Or, if we want to be more robust, we should consider how to best use a list of HSV appearances.
+            # Perhaps averaging them is a good start if the list is not too diverse.
+
+            # Let's try matching against each stored histogram and take the best overall score.
+            best_tid_for_role = None
+            best_score_for_role = float("inf")
+
+            for (
+                prev_hist_single
+            ) in prev_hist_list:  # Iterate through stored HSV for this role
+                current_best_tid_for_hist = None
+                current_best_score_for_hist = float("inf")
+                for tid, cand_hist in candidates.items():
+                    if (
+                        tid in used_tids
+                    ):  # If this track ID is already assigned to another role
+                        continue
+                    score = cv2.compareHist(
+                        prev_hist_single, cand_hist, cv2.HISTCMP_BHATTACHARYYA
+                    )
+                    if score < current_best_score_for_hist:
+                        current_best_score_for_hist = score
+                        current_best_tid_for_hist = tid
+
+                # If this histogram provided a better match for the role than previous histograms for the same role
+                if (
+                    current_best_tid_for_hist is not None
+                    and current_best_score_for_hist < best_score_for_role
+                ):
+                    best_score_for_role = current_best_score_for_hist
+                    best_tid_for_role = current_best_tid_for_hist
+
+            if best_tid_for_role is not None:
+                reassigned[role] = best_tid_for_role
+                used_tids.add(
+                    best_tid_for_role
+                )  # Mark this track ID as used for this frame's reassignment
+
+        if len(reassigned) == 2:  # If both P1 and P2 were successfully reassigned
             self.role_to_track_id = reassigned
             print(
                 f"[PlayerTracker] Reassigned roles after cut: {self.role_to_track_id}"
             )
+        elif len(reassigned) == 1:  # If only one player was reassigned
+            # This case is tricky. Do we update one and leave the other? Or clear the other?
+            # For now, let's update the one that was found.
+            for role, tid in reassigned.items():
+                self.role_to_track_id[role] = tid
+            print(
+                f"[PlayerTracker] Partially reassigned roles after cut: {self.role_to_track_id}. Other role might be lost or unclear."
+            )
         else:
-            print("[PlayerTracker] Failed to reassign both roles after cut.")
+            print(
+                "[PlayerTracker] Failed to reassign roles after cut (0 players matched). Roles might be lost or appearances changed too much."
+            )
+            # Potentially clear self.role_to_track_id for P1 and P2 if reassign consistently fails
+            # self.role_to_track_id["Player 1"] = None
+            # self.role_to_track_id["Player 2"] = None
 
     def get_player_display_name(self, track_id):
         # This method primarily relies on self.role_to_track_id,
@@ -1916,212 +2227,7 @@ def write(imgs_res, fps, output_path):
     print(f"[write] Finished writing {output_path}")
 
 
-def add_bounces_to_minimap_video(
-    original_minimap_path,
-    output_minimap_path_final,  # Path for the final minimap with bounces
-    temp_bounce_minimap_path,  # Temporary path for writing minimap with bounces
-    fps,
-    minimap_width,
-    minimap_height,
-    bounces_set,  # The set of bounce frame numbers
-    ball_track_list,  # Full list of ball positions
-    homography_matrices_list,  # Full list of inverse homographies
-    ref_court_width,  # Width of the reference court image used for initial projection
-    ref_court_height,  # Height of the reference court image used for initial projection
-    bounce_color_tuple=(0, 255, 255),
-    bounce_radius=10,
-    bounce_thickness=-1,
-):
-    print(
-        f"Attempting to add bounces to minimap video: {original_minimap_path} -> {temp_bounce_minimap_path}"
-    )
-    print(f"[DEBUG] add_bounces_to_minimap_video ENTERED:")
-    print(f"  original_minimap_path: {original_minimap_path}")
-    print(f"  output_minimap_path_final: {output_minimap_path_final}")
-    print(f"  temp_bounce_minimap_path: {temp_bounce_minimap_path}")
-    print(
-        f"  fps: {fps}, minimap_width: {minimap_width}, minimap_height: {minimap_height}"
-    )
-    print(
-        f"  len(bounces_set): {len(bounces_set)}, bounces_set: {bounces_set if len(bounces_set) < 20 else str(list(bounces_set)[:20]) + '...'}"
-    )
-    print(f"  len(ball_track_list): {len(ball_track_list)}")
-    print(f"  len(homography_matrices_list): {len(homography_matrices_list)}")
-    print(f"  ref_court_width: {ref_court_width}, ref_court_height: {ref_court_height}")
-
-    cap_minimap = cv2.VideoCapture(original_minimap_path)
-    if not cap_minimap.isOpened():
-        print(
-            f"Error: Could not open minimap video for bounce addition: {original_minimap_path}"
-        )
-        return False
-
-    temp_dir = os.path.dirname(temp_bounce_minimap_path)
-    if temp_dir and not os.path.exists(temp_dir):
-        os.makedirs(temp_dir, exist_ok=True)
-
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    out_minimap_with_bounces = cv2.VideoWriter(
-        temp_bounce_minimap_path, fourcc, float(fps), (minimap_width, minimap_height)
-    )
-
-    if not out_minimap_with_bounces.isOpened():
-        print(
-            f"Error: Could not open temporary minimap video for writing: {temp_bounce_minimap_path}"
-        )
-        cap_minimap.release()
-        return False
-
-    frame_idx = 0
-    total_frames_minimap = int(cap_minimap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-    print(f"Processing {total_frames_minimap} frames for bounce overlay on minimap...")
-    try:
-        pbar_bounce = tqdm(total=total_frames_minimap, desc="Adding Bounces to Minimap")
-    except NameError:  # If tqdm is not available
-        pbar_bounce = None
-        print("tqdm not found, proceeding without progress bar for bounce overlay.")
-
-    while True:
-        ret, minimap_frame = cap_minimap.read()
-        if not ret:
-            print(
-                f"[DEBUG] add_bounces_to_minimap_video: End of minimap frames at frame_idx {frame_idx}."
-            )
-            break
-
-        minimap_frame_copy = minimap_frame.copy()
-
-        current_homography = None
-        if frame_idx < len(homography_matrices_list):
-            current_homography = homography_matrices_list[frame_idx]
-
-        if frame_idx % 30 == 0:  # Print every 30 frames to reduce verbosity
-            print(
-                f"[DEBUG] add_bounces: frame_idx {frame_idx}, current_homography is {'None' if current_homography is None else 'Valid'}"
-            )
-
-        if current_homography is not None:
-            for bounce_frame_num in bounces_set:
-                if bounce_frame_num <= frame_idx:
-                    ball_pos_at_bounce = None
-                    if bounce_frame_num < len(ball_track_list):
-                        ball_pos_at_bounce = ball_track_list[bounce_frame_num]
-
-                    if (
-                        ball_pos_at_bounce
-                        and ball_pos_at_bounce[0] is not None
-                        and ball_pos_at_bounce[1] is not None
-                    ):
-                        bpx, bpy = ball_pos_at_bounce
-                        pt_to_transform = np.array(
-                            [[[float(bpx), float(bpy)]]], dtype=np.float32
-                        )
-                        if (
-                            frame_idx % 10 == 0 or bounce_frame_num == frame_idx
-                        ):  # reduce verbosity, but print if bounce is current
-                            print(
-                                f"  [DEBUG] Drawing bounce: bounce_frame_num {bounce_frame_num} on minimap_frame_idx {frame_idx}"
-                            )
-                            print(
-                                f"    ball_pos_at_bounce ({bounce_frame_num}): ({bpx}, {bpy})"
-                            )
-                        try:
-                            mapped_bounce = cv2.perspectiveTransform(
-                                pt_to_transform, current_homography
-                            )
-                            if mapped_bounce is not None:
-                                mx_bounce = int(
-                                    mapped_bounce[0, 0, 0]
-                                )  # This is on the large reference court scale
-                                my_bounce = int(
-                                    mapped_bounce[0, 0, 1]
-                                )  # This is on the large reference court scale
-
-                                # Scale bounce coordinates from reference court to minimap size
-                                # Ensure ref_court_width and ref_court_height are not zero to avoid division by zero
-                                if ref_court_width == 0 or ref_court_height == 0:
-                                    # This case should ideally not happen if REF_COURT_WIDTH/HEIGHT are correctly obtained
-                                    # print(f"Warning: ref_court_width ({ref_court_width}) or ref_court_height ({ref_court_height}) is zero. Skipping bounce scaling.")
-                                    scaled_mx_bounce = mx_bounce
-                                    scaled_my_bounce = my_bounce
-                                else:
-                                    scaled_mx_bounce = int(
-                                        mx_bounce * minimap_width / ref_court_width
-                                    )
-                                    scaled_my_bounce = int(
-                                        my_bounce * minimap_height / ref_court_height
-                                    )
-
-                                if (
-                                    frame_idx % 10 == 0 or bounce_frame_num == frame_idx
-                                ):  # reduce verbosity
-                                    print(
-                                        f"    Unscaled bounce on ref court: ({mx_bounce}, {my_bounce})"
-                                    )
-                                    print(
-                                        f"    Scaled bounce on minimap: ({scaled_mx_bounce}, {scaled_my_bounce})"
-                                    )
-
-                                # Draw if within minimap bounds using scaled coordinates
-                                if (
-                                    0 <= scaled_mx_bounce < minimap_width
-                                    and 0 <= scaled_my_bounce < minimap_height
-                                ):
-                                    cv2.circle(
-                                        minimap_frame_copy,  # Draw on the frame read from the input minimap video
-                                        (
-                                            scaled_mx_bounce,
-                                            scaled_my_bounce,
-                                        ),  # Use scaled coords
-                                        bounce_radius,
-                                        bounce_color_tuple,
-                                        bounce_thickness,
-                                    )
-                        except cv2.error:
-                            if frame_idx % 10 == 0 or bounce_frame_num == frame_idx:
-                                print(
-                                    f"    [DEBUG] cv2.error during perspectiveTransform for bounce {bounce_frame_num} on minimap_frame {frame_idx}"
-                                )
-                            pass  # Ignore perspective transform errors
-
-        out_minimap_with_bounces.write(minimap_frame_copy)
-        if pbar_bounce:
-            pbar_bounce.update(1)
-        frame_idx += 1
-
-    if pbar_bounce:
-        pbar_bounce.close()
-
-    cap_minimap.release()
-    out_minimap_with_bounces.release()
-
-    try:
-        final_dir = os.path.dirname(output_minimap_path_final)
-        if final_dir and not os.path.exists(final_dir):
-            os.makedirs(final_dir, exist_ok=True)
-        if os.path.exists(temp_bounce_minimap_path):
-            os.replace(temp_bounce_minimap_path, output_minimap_path_final)
-            print(
-                f"Successfully added bounces. Final minimap video: {output_minimap_path_final}"
-            )
-            print(
-                f"[DEBUG] os.replace successful: {temp_bounce_minimap_path} -> {output_minimap_path_final}"
-            )
-        else:
-            print(
-                f"Error: Temporary minimap video not found at {temp_bounce_minimap_path}"
-            )
-            print(f"[DEBUG] os.replace FAILED: {temp_bounce_minimap_path} not found.")
-            return False
-    except OSError as e:
-        print(
-            f"Error replacing original minimap with bounced version: {e}. Bounced minimap is at {temp_bounce_minimap_path}"
-        )
-        print(f"[DEBUG] os.replace FAILED with OSError: {e}")
-        return False
-
-    return True
+# Function removed as it's only used for separate minimap video processing
 
 
 if __name__ == "__main__":
@@ -2130,12 +2236,11 @@ if __name__ == "__main__":
     path_court_model = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/models/court_detection_weights/model_tennis_court_det.pt"
     path_bounce_model = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/models/bounce_detection_weights/bounce_detection_weights.cbm"
 
-    path_input_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/game1_video.mp4"
-    path_intermediate_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/game1_video.mp4"  # Intermediate file if resizing needed
-    path_output_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/game1_1280x720.mp4"
-    path_minimap_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/game1_1280x720_minimap.mp4"  # Separate minimap path
-    path_output_bounce_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/game1_1280x720_bounce.png"
-    path_output_player_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/game1_1280x720_player.png"
+    path_input_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/UCDwten/2/hawaii_2_edited.mp4"
+    path_intermediate_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/hawaii_2_2_video.mp4"  # Intermediate file if resizing needed
+    path_output_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/hawaii_2_2.mp4"
+    path_output_bounce_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/hawaii_2_2_bounce.png"
+    path_output_player_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/hawaii_2_2_player.png"
 
     # Get reference court dimensions for minimap scaling (keep this here as it uses get_court_img())
     _temp_court_ref_img_for_dims = (
@@ -2149,7 +2254,7 @@ if __name__ == "__main__":
     # bounce_color = (0, 255, 255) # Now handled by add_bounces_to_minimap_video defaults
     box_color = (255, 0, 0)
     player_minimap_color = (255, 0, 0)
-    player_minimap_radius = 48
+    player_minimap_radius = 20  # Smaller radius for players on minimap
 
     # --- Initialization ---
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -2161,33 +2266,577 @@ if __name__ == "__main__":
     final_input = ensure_720p(path_input_video, path_intermediate_video)
     time_scaling_end = time.time()
 
-    cap = cv2.VideoCapture(final_input)
-    if not cap.isOpened():
-        print(f"Error: Could not open video {final_input}")
+    cap_check_total_frames = cv2.VideoCapture(final_input)
+    if not cap_check_total_frames.isOpened():
+        print(f"Error: Could not open video {final_input} to get total frame count.")
         sys.exit()
-
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    # Fallback fps if cap.get(cv2.CAP_PROP_FPS) returns 0 or invalid
-    if not fps or fps <= 0:
-        print(f"Warning: Invalid FPS: {fps} detected. Defaulting to 30.0 FPS.")
-        fps = 30.0
-
-    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    print(
-        f"Input video: {frame_width}x{frame_height} @ {float(fps):.2f} FPS, Total Frames: {total_frames}"
+    total_frames_for_selection = int(
+        cap_check_total_frames.get(cv2.CAP_PROP_FRAME_COUNT)
     )
+    fps_for_selection = cap_check_total_frames.get(cv2.CAP_PROP_FPS)
+    cap_check_total_frames.release()
+    # Fallback fps if cap.get(cv2.CAP_PROP_FPS) returns 0 or invalid
+    if not fps_for_selection or fps_for_selection <= 0:
+        fps_for_selection = 30.0  # Default if needed
+
+    print(f"Video has {total_frames_for_selection} total frames.")
 
     ball_detector = BallDetector(path_ball_track_model, device)
     court_detector = CourtDetectorNet(path_court_model, device)
     player_tracker_instance = PlayerTracker(device=device)  # New PlayerTracker
     bounce_detector = BounceDetector(path_bounce_model if DETECT_BOUNCES else None)
 
+    # Helper function for Colab display (re-added)
+    def display_frame_with_detections_colab(frame_img, detections, frame_label):
+        # Detections is a list of (bbox_xyxy, temp_id)
+        display_img = frame_img.copy()
+        for i, (bbox, temp_id) in enumerate(detections):
+            x1, y1, x2, y2 = map(int, bbox)
+            cv2.rectangle(display_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(
+                display_img,
+                f"ID: {temp_id}",
+                (x1, y1 - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (0, 255, 0),
+                2,
+            )
+
+        print(f"\n--- {frame_label} ---")
+        # Convert BGR to RGB for matplotlib
+        plt.figure(figsize=(12, 7))  # Adjusted figure size
+        plt.imshow(cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB))
+        plt.axis("off")
+        plt.show()
+        plt.close("all")  # Ensure plot is closed to avoid blocking
+
+        # Give terminal time to settle after matplotlib display and make input prompt visible
+        time.sleep(1.0)
+        print("\n\n======== READY FOR INPUT ========")
+        sys.stdout.flush()
+
+    # --- Helper function for the new confirmation phase ---
+    def display_and_confirm_all_selections(
+        player1_patches,
+        player2_patches,
+        min_confirmations_target,
+        figure_size=(15, 7),
+    ):
+        """
+        Show all Player 1 and Player 2 selections with zoomed views for verification.
+        Returns: "yes" (confirm all), "skip" (proceed anyway), or "redo" (restart process)
+        """
+        if not player1_patches and not player2_patches:
+            print("No selections available to confirm.")
+            return "skip"
+
+        zoom_padding = 75  # Pixels around the bbox for zoom
+
+        # First display all Player 1 selections
+        if player1_patches:
+            print(
+                f"\n--- Confirming Player 1 Selections ({len(player1_patches)}/{min_confirmations_target}) ---"
+            )
+            for i, (frame_img, bbox) in enumerate(player1_patches):
+                print(f"\nReviewing Player 1 - Selection {i+1}/{len(player1_patches)}")
+
+                display_frame_confirm = frame_img.copy()
+                x1_c, y1_c, x2_c, y2_c = map(int, bbox)
+
+                cv2.rectangle(
+                    display_frame_confirm, (x1_c, y1_c), (x2_c, y2_c), (0, 0, 255), 3
+                )  # Red thicker box
+
+                H_img_c, W_img_c = frame_img.shape[:2]
+                crop_x1_c = max(0, x1_c - zoom_padding)
+                crop_y1_c = max(0, y1_c - zoom_padding)
+                crop_x2_c = min(W_img_c, x2_c + zoom_padding)
+                crop_y2_c = min(H_img_c, y2_c + zoom_padding)
+
+                zoomed_patch_confirm = frame_img[
+                    crop_y1_c:crop_y2_c, crop_x1_c:crop_x2_c
+                ]
+
+                fig_c, axes_c = plt.subplots(1, 2, figsize=figure_size)
+
+                axes_c[0].imshow(cv2.cvtColor(display_frame_confirm, cv2.COLOR_BGR2RGB))
+                axes_c[0].set_title(f"Player 1 - Selection {i+1} (Full View)")
+                axes_c[0].axis("off")
+
+                if zoomed_patch_confirm.size > 0:
+                    axes_c[1].imshow(
+                        cv2.cvtColor(zoomed_patch_confirm, cv2.COLOR_BGR2RGB)
+                    )
+                    axes_c[1].set_title(f"Player 1 - Selection {i+1} (Zoomed In)")
+                else:
+                    axes_c[1].set_title(
+                        f"Player 1 - Selection {i+1} (Zoomed In - Error)"
+                    )
+                axes_c[1].axis("off")
+
+                plt.suptitle(
+                    f"Player 1 - Selection {i+1}. BBox: ({x1_c},{y1_c})-({x2_c},{y2_c})",
+                    fontsize=10,
+                )
+                plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+                plt.show()
+                plt.close("all")  # Ensure plot is closed
+
+        # Then display all Player 2 selections
+        if player2_patches:
+            print(
+                f"\n--- Confirming Player 2 Selections ({len(player2_patches)}/{min_confirmations_target}) ---"
+            )
+            for i, (frame_img, bbox) in enumerate(player2_patches):
+                print(f"\nReviewing Player 2 - Selection {i+1}/{len(player2_patches)}")
+
+                display_frame_confirm = frame_img.copy()
+                x1_c, y1_c, x2_c, y2_c = map(int, bbox)
+
+                cv2.rectangle(
+                    display_frame_confirm, (x1_c, y1_c), (x2_c, y2_c), (0, 0, 255), 3
+                )  # Red thicker box
+
+                H_img_c, W_img_c = frame_img.shape[:2]
+                crop_x1_c = max(0, x1_c - zoom_padding)
+                crop_y1_c = max(0, y1_c - zoom_padding)
+                crop_x2_c = min(W_img_c, x2_c + zoom_padding)
+                crop_y2_c = min(H_img_c, y2_c + zoom_padding)
+
+                zoomed_patch_confirm = frame_img[
+                    crop_y1_c:crop_y2_c, crop_x1_c:crop_x2_c
+                ]
+
+                fig_c, axes_c = plt.subplots(1, 2, figsize=figure_size)
+
+                axes_c[0].imshow(cv2.cvtColor(display_frame_confirm, cv2.COLOR_BGR2RGB))
+                axes_c[0].set_title(f"Player 2 - Selection {i+1} (Full View)")
+                axes_c[0].axis("off")
+
+                if zoomed_patch_confirm.size > 0:
+                    axes_c[1].imshow(
+                        cv2.cvtColor(zoomed_patch_confirm, cv2.COLOR_BGR2RGB)
+                    )
+                    axes_c[1].set_title(f"Player 2 - Selection {i+1} (Zoomed In)")
+                else:
+                    axes_c[1].set_title(
+                        f"Player 2 - Selection {i+1} (Zoomed In - Error)"
+                    )
+                axes_c[1].axis("off")
+
+                plt.suptitle(
+                    f"Player 2 - Selection {i+1}. BBox: ({x1_c},{y1_c})-({x2_c},{y2_c})",
+                    fontsize=10,
+                )
+                plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+                plt.show()
+                plt.close("all")  # Ensure plot is closed
+
+        # Ask for confirmation of ALL selections
+        print("\n-----------------------------------")
+        print(f"All selections displayed:")
+        print(
+            f"- Player 1: {len(player1_patches)}/{min_confirmations_target} selections"
+        )
+        print(
+            f"- Player 2: {len(player2_patches)}/{min_confirmations_target} selections"
+        )
+        print("-----------------------------------")
+
+        while True:
+            # Make confirmation prompt very visible
+            time.sleep(1.0)
+            print("\n\n>>> CONFIRMATION REQUIRED <<<")
+            print(">>> PLEASE REVIEW ALL SELECTIONS <<<")
+            sys.stdout.flush()
+            time.sleep(0.5)
+            confirmation = (
+                input("Are ALL these selections correct? (yes/skip/redo): ")
+                .strip()
+                .lower()
+            )
+            if confirmation in ["yes", "skip", "redo"]:
+                return confirmation
+            else:
+                print("Invalid input. Please enter 'yes', 'skip', or 'redo'.")
+
+    # --- New User-assisted Player Designation System ---
+    MIN_CONFIRMATIONS = 15
+    user_skipped_designation_entirely = (
+        False  # Global skip for the whole priming process
+    )
+    user_did_select_players = False  # Will be true if any player is successfully primed
+
+    try:
+        enable_user_selection_main = (
+            input("Enable multi-frame user-assisted player selection? (yes/no): ")
+            .strip()
+            .lower()
+        )
+        sys.stdout.flush()
+
+        if enable_user_selection_main == "yes":
+            yolo_model_for_selection_path = "yolov8s.pt"
+            print(f"Loading YOLO model for selection: {yolo_model_for_selection_path}")
+            yolo_model_for_selection = YOLO(yolo_model_for_selection_path)
+            yolo_model_for_selection.to(device)
+
+            # Collection phase variables
+            player1_collected_patches = []
+            player2_collected_patches = []
+            shown_frame_indices = set()
+
+            print(f"\n--- Starting Player Designation Process ---")
+            print(
+                f"Goal: Collect at least {MIN_CONFIRMATIONS} selections for each player"
+            )
+
+            # Continue until we have enough samples for both players
+            while (
+                len(player1_collected_patches) < MIN_CONFIRMATIONS
+                or len(player2_collected_patches) < MIN_CONFIRMATIONS
+            ):
+
+                print(f"\n--- Current Progress ---")
+                print(
+                    f"Player 1: {len(player1_collected_patches)}/{MIN_CONFIRMATIONS} selections"
+                )
+                print(
+                    f"Player 2: {len(player2_collected_patches)}/{MIN_CONFIRMATIONS} selections"
+                )
+
+                # Pick a random frame that hasn't been shown yet
+                cap_select = cv2.VideoCapture(final_input)
+                if not cap_select.isOpened():
+                    print(
+                        f"Error: Could not open video {final_input} for player selection."
+                    )
+                    user_skipped_designation_entirely = True
+                    break
+
+                total_frames_video = int(cap_select.get(cv2.CAP_PROP_FRAME_COUNT))
+
+                # Find frames we haven't shown yet
+                possible_indices = list(
+                    set(range(total_frames_video)) - shown_frame_indices
+                )
+                if not possible_indices:
+                    print("All frames have been shown. Reusing some frames.")
+                    possible_indices = list(range(total_frames_video))
+
+                # Pick one random frame
+                frame_idx = random.choice(possible_indices)
+                shown_frame_indices.add(frame_idx)
+
+                # Read and process the frame
+                cap_select.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+                ret, frame = cap_select.read()
+                cap_select.release()
+
+                if not ret:
+                    print(f"Could not read frame {frame_idx}")
+                    continue
+
+                # Detect people in the frame
+                frame_copy = frame.copy()
+                results = yolo_model_for_selection.predict(
+                    frame_copy, classes=[0], verbose=False, conf=0.15
+                )
+
+                # Create list of detections with temp IDs
+                detections = []
+                if results and results[0].boxes:
+                    for i, box in enumerate(results[0].boxes):
+                        bbox = box.xyxy[0].cpu().numpy()
+                        detections.append((bbox, i))  # i is the temp ID
+
+                if not detections:
+                    print(f"No people detected in frame {frame_idx}. Skipping.")
+                    continue
+
+                # Display the frame with detections
+                display_frame_with_detections_colab(
+                    frame_copy,
+                    detections,
+                    f"Frame {frame_idx} - Select Player 1 and Player 2",
+                )
+
+                # Get user input for Player 1 (only if needed)
+                print(f"--- Frame {frame_idx}: Select Players ---")
+
+                p1_input = "skip"  # Default to skip if we don't need more P1 selections
+
+                # Only ask for Player 1 if we still need more selections
+                if len(player1_collected_patches) < MIN_CONFIRMATIONS:
+                    # Make input prompt more visible
+                    time.sleep(1.0)
+                    print("\n>>> SELECT PLAYER 1 <<<")
+                    sys.stdout.flush()
+                    while True:
+                        p1_input = (
+                            input(
+                                f"Enter temp ID for Player 1 (or 'skip' to skip this frame): "
+                            )
+                            .strip()
+                            .lower()
+                        )
+                        if p1_input == "skip":
+                            print("Skipping this frame.")
+                            break
+
+                        try:
+                            p1_id = int(p1_input)
+                            p1_bbox = None
+                            for bbox, temp_id in detections:
+                                if temp_id == p1_id:
+                                    p1_bbox = bbox
+                                    break
+
+                            if p1_bbox is not None:
+                                # Found valid bbox for Player 1
+                                player1_collected_patches.append((frame_copy, p1_bbox))
+                                print(
+                                    f"Player 1 selected. Total: {len(player1_collected_patches)}/{MIN_CONFIRMATIONS}"
+                                )
+                                break
+                            else:
+                                print(f"Invalid temp ID {p1_id}. Try again.")
+                        except ValueError:
+                            print("Invalid input. Please enter a number or 'skip'.")
+                else:
+                    print(
+                        f"Player 1 already has {len(player1_collected_patches)}/{MIN_CONFIRMATIONS} selections. Skipping."
+                    )
+
+                # Only skip the entire frame in specific cases:
+                # 1. User explicitly entered "skip" for Player 1 (not auto-skipped)
+                # 2. Both players already have enough samples
+
+                # Auto-skipping for Player 1 should not skip Player 2 selection
+                auto_skipped_p1 = len(player1_collected_patches) >= MIN_CONFIRMATIONS
+                user_skipped_p1 = p1_input == "skip" and not auto_skipped_p1
+
+                # Only skip the whole frame if user explicitly skipped it
+                if user_skipped_p1:
+                    continue
+
+                # Get user input for Player 2 (only if needed)
+                # Only ask for Player 2 if we still need more selections
+                # But don't auto-skip to next frame even if Player 2 is full
+                if len(player2_collected_patches) < MIN_CONFIRMATIONS:
+                    # Make input prompt more visible
+                    time.sleep(1.0)
+                    print("\n>>> SELECT PLAYER 2 <<<")
+                    sys.stdout.flush()
+                    while True:
+                        p2_input = (
+                            input(
+                                f"Enter temp ID for Player 2 (or 'skip' to skip Player 2 for this frame): "
+                            )
+                            .strip()
+                            .lower()
+                        )
+                        if p2_input == "skip":
+                            print("Skipping Player 2 for this frame.")
+                            break
+
+                        try:
+                            p2_id = int(p2_input)
+                            # Check that P2 ID is not the same as P1
+                            if (
+                                len(player1_collected_patches) >= MIN_CONFIRMATIONS
+                                or p1_input == "skip"
+                            ):
+                                pass  # No need to check if P1 was skipped or already complete
+                            elif p2_id == p1_id:
+                                print(
+                                    "Player 2 cannot be the same as Player 1. Try again."
+                                )
+                                continue
+
+                            p2_bbox = None
+                            for bbox, temp_id in detections:
+                                if temp_id == p2_id:
+                                    p2_bbox = bbox
+                                    break
+
+                            if p2_bbox is not None:
+                                # Found valid bbox for Player 2
+                                player2_collected_patches.append((frame_copy, p2_bbox))
+                                print(
+                                    f"Player 2 selected. Total: {len(player2_collected_patches)}/{MIN_CONFIRMATIONS}"
+                                )
+                                break
+                            else:
+                                print(f"Invalid temp ID {p2_id}. Try again.")
+                        except ValueError:
+                            print("Invalid input. Please enter a number or 'skip'.")
+                else:
+                    print(
+                        f"Player 2 already has {len(player2_collected_patches)}/{MIN_CONFIRMATIONS} selections. Skipping."
+                    )
+
+                # Check if both players have reached minimum selections
+                if (
+                    len(player1_collected_patches) >= MIN_CONFIRMATIONS
+                    and len(player2_collected_patches) >= MIN_CONFIRMATIONS
+                ):
+                    print("\nMinimum selections reached for both players!")
+                    break
+
+                # Early exit check - if both were auto-skipped, go to next frame
+                both_auto_skipped = (
+                    len(player1_collected_patches) >= MIN_CONFIRMATIONS
+                    and len(player2_collected_patches) >= MIN_CONFIRMATIONS
+                )
+                if both_auto_skipped:
+                    # Skip the continue-to-next prompt and go directly to next frame
+                    continue
+
+                # Make continue prompt more visible
+                time.sleep(1.0)
+                print("\n>>> CONTINUE OR STOP? <<<")
+                sys.stdout.flush()
+                continue_selection = (
+                    input("\nContinue to next frame? (yes/no): ").strip().lower()
+                )
+                if continue_selection != "yes":
+                    print("User ended selection process.")
+                    break
+
+            # Only move to confirmation if we collected any selections
+            if player1_collected_patches or player2_collected_patches:
+                # Single confirmation phase for ALL selections
+                confirmation_result = display_and_confirm_all_selections(
+                    player1_collected_patches,
+                    player2_collected_patches,
+                    MIN_CONFIRMATIONS,
+                )
+
+                if confirmation_result == "yes":
+                    # User confirmed all selections
+                    if (
+                        len(player1_collected_patches) >= MIN_CONFIRMATIONS
+                        and len(player2_collected_patches) >= MIN_CONFIRMATIONS
+                    ) or input(
+                        "Not enough selections for both players. Use anyway? (yes/no): "
+                    ).strip().lower() == "yes":
+                        # Prime the tracker with confirmed selections
+                        player_tracker_instance.prime_with_multiple_user_selections(
+                            player1_collected_patches, player2_collected_patches
+                        )
+                        user_did_select_players = True
+                        print(
+                            "Player tracker successfully primed with user selections."
+                        )
+                    else:
+                        print("Not enough selections and user chose not to proceed.")
+                        user_did_select_players = False
+
+                elif confirmation_result == "skip":
+                    # User wants to proceed anyway
+                    if (
+                        input("Proceed with current selections? (yes/no): ")
+                        .strip()
+                        .lower()
+                        == "yes"
+                    ):
+                        player_tracker_instance.prime_with_multiple_user_selections(
+                            player1_collected_patches, player2_collected_patches
+                        )
+                        user_did_select_players = True
+                        print("Player tracker primed with skipped verification.")
+                    else:
+                        print("User chose not to proceed with selections.")
+                        user_did_select_players = False
+
+                elif confirmation_result == "redo":
+                    print("User chose to redo the selection process.")
+                    if (
+                        input(
+                            "Are you sure you want to redo the entire selection process? (yes/no): "
+                        )
+                        .strip()
+                        .lower()
+                        == "yes"
+                    ):
+                        # This would go back to the beginning of the selection process
+                        # But since we're at the end of the try block, we'll just set flags
+                        user_skipped_designation_entirely = True
+                        user_did_select_players = False
+                        print(
+                            "Selection process aborted. Player tracker will use automatic assignment."
+                        )
+            else:
+                print("No selections were made for either player.")
+                user_did_select_players = False
+
+        elif enable_user_selection_main == "no":
+            print(
+                "User-assisted player selection disabled by choice. Using automatic assignment."
+            )
+            sys.stdout.flush()
+            user_skipped_designation_entirely = True
+            user_did_select_players = False
+        else:
+            print(
+                "Invalid input for enabling player selection. Defaulting to automatic assignment."
+            )
+            sys.stdout.flush()
+            user_skipped_designation_entirely = True
+            user_did_select_players = False
+
+    except Exception as e_user_select_main:
+        print(
+            f"Error during multi-frame user-assisted player selection: {e_user_select_main}. Falling back to automatic player assignment."
+        )
+        import traceback
+
+        traceback.print_exc()  # Print the full traceback for debugging
+        user_skipped_designation_entirely = True
+        user_did_select_players = False
+    # --- End of New User-assisted Player Designation System ---
+
     # --- Pass 1: Ball tracking ---
     print("Starting Pass 1: Ball tracking...")
     time_pass1_start = time.time()  # Start of Pass 1 timing
     ball_track_all = []  # Initialize ball_track_all for Pass 1
+
+    # Re-initialize main video capture for Pass 1
+    cap = cv2.VideoCapture(final_input)
+    if not cap.isOpened():
+        print(f"Error: Could not open video {final_input} for Pass 1")
+        sys.exit()
+
+    # Use globally determined fps and total_frames, but re-fetch for this specific cap instance just in case
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if not fps or fps <= 0:
+        print(
+            f"Warning: Invalid FPS: {fps} from main cap. Using {fps_for_selection} FPS."
+        )
+        fps = fps_for_selection  # Use the one determined earlier
+
+    # GET frame_width and frame_height HERE
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    if total_frames == 0 and total_frames_for_selection > 0:
+        print(
+            f"Warning: Main cap reported 0 total frames. Using {total_frames_for_selection} from pre-check."
+        )
+        total_frames = total_frames_for_selection
+    elif total_frames == 0:
+        print(
+            "CRITICAL ERROR: total_frames is 0 from all checks. Cannot proceed with progress bars or duration calculation."
+        )
+        # Allow to proceed but some logging might be off
+
+    # Add print statement for clarity, similar to original
+    print(
+        f"Input video for processing: {frame_width}x{frame_height} @ {float(fps):.2f} FPS, Total Frames: {total_frames}"
+    )
 
     temp_frame_count_pass1 = 0
     try:
@@ -2246,7 +2895,6 @@ if __name__ == "__main__":
         sys.exit()
 
     out_main = None
-    out_minimap = None
     bounce_color_og = (0, 255, 255)  # OG bounce color
 
     if ENABLE_DRAWING:
@@ -2254,13 +2902,7 @@ if __name__ == "__main__":
         out_main = cv2.VideoWriter(
             path_output_video, fourcc, float(fps), (frame_width, frame_height)
         )
-        out_minimap = (
-            cv2.VideoWriter(  # This will now contain accumulated bounces directly
-                path_minimap_video, fourcc, float(fps), (MINIMAP_WIDTH, MINIMAP_HEIGHT)
-            )
-        )
         print(f"Output video enabled: {path_output_video}")
-        print(f"Minimap video (with accumulated bounces) will be: {path_minimap_video}")
     else:
         print("Drawing disabled. Running in analytics-only mode.")
 
@@ -2291,6 +2933,9 @@ if __name__ == "__main__":
         print("tqdm not found, proceeding without progress bar for Pass 2.")
 
     prev_frame_for_cut = None
+    last_tracked_players_for_interval = (
+        []
+    )  # To store player tracks from interval frames
 
     while True:
         ret, frame = cap.read()
@@ -2303,6 +2948,8 @@ if __name__ == "__main__":
 
         current_homography = None
         current_kps = None
+        tracked_players_current_frame = []  # Initialize for current frame
+
         # current_persons_top = [] # Not needed, derived from tracker
         # current_persons_bottom = [] # Not needed, derived from tracker
 
@@ -2312,7 +2959,7 @@ if __name__ == "__main__":
             else (None, None)
         )
 
-        tracked_players_current_frame = []  # List of (bbox, center, track_id)
+        # tracked_players_current_frame = []  # List of (bbox, center, track_id) # Moved up
 
         process_this_frame = frame_count % FRAME_PROCESSING_INTERVAL == 0
 
@@ -2324,20 +2971,81 @@ if __name__ == "__main__":
                 tracked_players_current_frame = player_tracker_instance.update(
                     frame, frame_num=frame_count, current_homography=current_homography
                 )
+                last_tracked_players_for_interval = (
+                    tracked_players_current_frame  # Store for intermediate frames
+                )
 
-                if frame_count == 0:
+                if (
+                    not user_did_select_players and frame_count == 0
+                ):  # Only call auto-assign if user didn't select AND it's the first frame eligible
+                    print(
+                        f"[Frame {frame_count}] Attempting initial automatic role assignment as user did not select or it's frame 0."
+                    )
                     player_tracker_instance.assign_initial_player_roles(
                         tracked_players_current_frame, frame
                     )
+                elif (  # This condition might need review based on when assign_initial_player_roles should run if user *did* select.
+                    user_did_select_players  # If user priming happened
+                    and not player_tracker_instance.role_to_track_id.get(
+                        "Player 1"
+                    )  # and P1 is not yet assigned a track ID
+                    and not player_tracker_instance.role_to_track_id.get(
+                        "Player 2"
+                    )  # and P2 is not yet assigned a track ID
+                    # And perhaps some frame counter condition, e.g. try for first few frames
+                    and frame_count < fps * 5  # Example: try for first 5 seconds
+                ):
+                    # If user selected, but roles are not yet matched to track IDs, try to assign.
+                    # This allows assign_initial_player_roles to match primed features to live tracks.
+                    print(
+                        f"[Frame {frame_count}] User selected players. Attempting to match primed features to live tracks via assign_initial_player_roles."
+                    )
+                    player_tracker_instance.assign_initial_player_roles(
+                        tracked_players_current_frame, frame
+                    )
+            else:  # current_homography is None
+                tracked_players_current_frame = []
+                last_tracked_players_for_interval = []
 
             last_processed_homography = current_homography
             last_processed_kps = current_kps
         else:
             current_homography = last_processed_homography
             current_kps = last_processed_kps
-            tracked_players_current_frame = player_tracker_instance.update(
-                frame, frame_num=frame_count, current_homography=current_homography
+            tracked_players_current_frame = (
+                last_tracked_players_for_interval  # Use stale player tracks
             )
+            # The call to player_tracker_instance.update for non-interval frames is now removed.
+
+        # Call detect_role_switch here, after player positions and homography for the frame are settled
+        if (
+            current_homography is not None
+            and player_tracker_instance.role_to_track_id.get("Player 1")
+            and player_tracker_instance.role_to_track_id.get("Player 2")
+        ):
+            # Ensure homography and center_line_y are available if detect_role_switch needs them.
+            # Need to set self.last_homography and self.center_line_y in PlayerTracker or pass them.
+            # For now, assuming PlayerTracker can access them or it's handled internally.
+            # The original detect_role_switch uses self.last_homography and self.center_line_y
+            # We need to ensure these are updated in PlayerTracker.
+            # A simpler approach for now is to pass necessary info if the function is modified,
+            # or ensure PlayerTracker updates these attributes.
+            # Let's assume it's called after player_tracker_instance.update and relevant data is available internally.
+            # The original `detect_role_switch` seems to rely on internal state `self.last_homography` and `self.center_line_y`
+            # which are not explicitly set in the provided main loop snippet.
+            # For a minimally invasive change, we'll call it, assuming it might need adjustment if those attributes aren't correctly populated.
+            # However, the PlayerTracker class does not show these attributes being set from outside.
+            # Let's modify PlayerTracker.detect_role_switch to accept homography and net_y_on_ref
+            # Or, more simply, ensure that player_tracker_instance has these updated.
+            # The current structure of detect_role_switch uses self.last_homography and self.center_line_y.
+            # These are not set in the PlayerTracker instance from the main loop.
+            # A quick fix is to set them before calling.
+            player_tracker_instance.last_homography = current_homography  # Assuming this is the correct homography (frame to ref)
+            court_ref_temp = CourtReference()  # To get net_y
+            player_tracker_instance.center_line_y = court_ref_temp.net[0][
+                1
+            ]  # y-coord of net on reference court
+            player_tracker_instance.detect_role_switch()
 
         cut_detected = is_scene_cut(prev_frame_for_cut, frame, frame_idx=frame_count)
 
@@ -2395,7 +3103,7 @@ if __name__ == "__main__":
         else:
             pass
 
-        if ENABLE_DRAWING and out_main is not None and out_minimap is not None:
+        if ENABLE_DRAWING and out_main is not None:
             output_frame = frame.copy()
             minimap_frame_current = get_court_img()  # Fresh large minimap background
 
@@ -2680,11 +3388,10 @@ if __name__ == "__main__":
                     except cv2.error:
                         pass
 
-            # Resize minimap_frame_current (which now has trace, accumulated bounces, players) and write it
+            # Resize minimap_frame_current (which now has trace, accumulated bounces, players)
             minimap_resized = cv2.resize(
                 minimap_frame_current, (MINIMAP_WIDTH, MINIMAP_HEIGHT)
             )
-            out_minimap.write(minimap_resized)
 
             # Overlay minimap on main output frame
             output_frame[0:MINIMAP_HEIGHT, 0:MINIMAP_WIDTH] = minimap_resized
@@ -2699,8 +3406,6 @@ if __name__ == "__main__":
 
     if out_main:
         out_main.release()
-    if out_minimap:
-        out_minimap.release()
 
     # bounces_all is already computed from Pass 1.
     # The section for calling add_bounces_to_minimap_video is already commented out.
@@ -2774,8 +3479,6 @@ if __name__ == "__main__":
 
     if ENABLE_DRAWING:
         print(f"Output video saved to: {path_output_video}")
-        # Path_minimap_video now refers to the one potentially with bounces
-        print(f"Minimap video saved to: {path_minimap_video}")
     if DETECT_BOUNCES:
         print(f"Bounces detected: {len(bounces_all)}")
     if GENERATE_HEATMAPS:

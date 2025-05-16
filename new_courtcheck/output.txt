@@ -1,78 +1,1465 @@
-Pass 1: Ball tracking complete. Processed 307 frames with enhanced batch detection.
-Running enhanced bounce detection with special handling for far-court bounces...
-Running enhanced bounce detection with improved trajectory analysis...
-Applying enhanced ball trajectory smoothing...
-Enhanced trajectory smoothing filled 0 gaps
-Detected 9 bounces in total
-Successfully detected 9 bounces with enhanced detection
+-----------------------------------
+All selections displayed:
+- Player 1: 15/15 selections
+- Player 2: 15/15 selections
+-----------------------------------
+
+
+>>> CONFIRMATION REQUIRED <<<
+>>> PLEASE REVIEW ALL SELECTIONS <<<
+Are ALL these selections correct? (yes/skip/redo): yes
+[PlayerTracker] Priming with multiple user selections (with data augmentation).
+  Stored 60 ReID features and 60 HSV histograms for Player 1 (including augmented samples).
+  Stored 59 ReID features and 59 HSV histograms for Player 2 (including augmented samples).
+Player tracker successfully primed with user selections.
+Starting Pass 1: Ball tracking...
+Input video for processing: 1280x720 @ 30.00 FPS, Total Frames: 789
+Pass 1: Ball tracking complete. Processed 789 frames for ball_track_all.
+Running bounce detection (after Pass 1)...
 Starting Pass 2: Main processing and drawing...
-Output video enabled: /content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/10sec_new.mp4
-
-Pass 2: Processing Frames:   0%|          | 0/307 [00:00<?, ?it/s]
+Output video enabled: /content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/UCDwten_edited5a.mp4
+Pass 2: Processing Frames:   0%|          | 0/789 [00:00<?, ?it/s][Frame 0] Re-ID SUCCESS: Player 1 (lost) re-identified as new TrackID 1 with similarity 0.82
+  Updated HSV model for Player 1 based on TrackID 1.
+[Frame 0] Re-ID SUCCESS: Player 2 (lost) re-identified as new TrackID 3 with similarity 0.80
+  Updated HSV model for Player 2 based on TrackID 3.
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:   0%|          | 2/789 [00:00<03:15,  4.02it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   1%|          | 4/789 [00:00<01:49,  7.19it/s]Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   1%|          | 6/789 [00:00<01:19,  9.87it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   1%|          | 8/789 [00:01<01:29,  8.76it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
 Traceback (most recent call last):
-
-  File "/usr/local/lib/python3.11/dist-packages/IPython/core/interactiveshell.py", line 3553, in run_code
-    exec(code_obj, self.user_global_ns, self.user_ns)
-
-  File "<ipython-input-6-19ec16b1a198>", line 3380, in <cell line: 0>
-    tracked_players_current_frame = player_tracker_instance.update(
-
-  File "<ipython-input-6-19ec16b1a198>", line 1348, in update
-    results = self.yolo_model.track(
-
-  File "/usr/local/lib/python3.11/dist-packages/ultralytics/engine/model.py", line 596, in track
-    return self.predict(source=source, stream=stream, **kwargs)
-
-  File "/usr/local/lib/python3.11/dist-packages/ultralytics/engine/model.py", line 544, in predict
-    self.predictor = (predictor or self._smart_load("predictor"))(overrides=args, _callbacks=self.callbacks)
-
-  File "/usr/local/lib/python3.11/dist-packages/ultralytics/engine/predictor.py", line 117, in __init__
-    self.args = get_cfg(cfg, overrides)
-
-  File "/usr/local/lib/python3.11/dist-packages/ultralytics/cfg/__init__.py", line 308, in get_cfg
-    check_dict_alignment(cfg, overrides)
-
-  File "/usr/local/lib/python3.11/dist-packages/ultralytics/cfg/__init__.py", line 498, in check_dict_alignment
-    raise SyntaxError(string + CLI_HELP_MSG) from e
-
-  File "<string>", line unknown
-SyntaxError: 'min_hits' is not a valid YOLO argument. 
-'max_age' is not a valid YOLO argument. Similar arguments are i.e. ['max_det=300'].
-
-    Arguments received: ['yolo', '-f', '/root/.local/share/jupyter/runtime/kernel-0a3f86e8-fe32-4f24-874e-d6c68745c497.json']. Ultralytics 'yolo' commands use the following syntax:
-
-        yolo TASK MODE ARGS
-
-        Where   TASK (optional) is one of frozenset({'obb', 'pose', 'detect', 'classify', 'segment'})
-                MODE (required) is one of frozenset({'val', 'export', 'train', 'benchmark', 'track', 'predict'})
-                ARGS (optional) are any number of custom 'arg=value' pairs like 'imgsz=320' that override defaults.
-                    See all ARGS at https://docs.ultralytics.com/usage/cfg or with 'yolo cfg'
-
-    1. Train a detection model for 10 epochs with an initial learning_rate of 0.01
-        yolo train data=coco8.yaml model=yolo11n.pt epochs=10 lr0=0.01
-
-    2. Predict a YouTube video using a pretrained segmentation model at image size 320:
-        yolo predict model=yolo11n-seg.pt source='https://youtu.be/LNwODJXcvt4' imgsz=320
-
-    3. Val a pretrained detection model at batch-size 1 and image size 640:
-        yolo val model=yolo11n.pt data=coco8.yaml batch=1 imgsz=640
-
-    4. Export a YOLO11n classification model to ONNX format at image size 224 by 128 (no TASK required)
-        yolo export model=yolo11n-cls.pt format=onnx imgsz=224,128
-
-    5. Ultralytics solutions usage
-        yolo solutions count or in ['crop', 'blur', 'workout', 'heatmap', 'isegment', 'visioneye', 'speed', 'queue', 'analytics', 'inference', 'trackzone'] source="path/to/video.mp4"
-
-    6. Run special commands:
-        yolo help
-        yolo checks
-        yolo version
-        yolo settings
-        yolo copy-cfg
-        yolo cfg
-        yolo solutions help
-
-    Docs: https://docs.ultralytics.com
-    Solutions: https://docs.ultralytics.com/solutions/
-    Community: https://community.ultralytics.com
-    GitHub: https://github.com/ultralytics/ultralytics
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:   1%|▏         | 10/789 [00:01<01:13, 10.58it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   2%|▏         | 12/789 [00:01<01:26,  9.01it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   2%|▏         | 14/789 [00:01<01:13, 10.53it/s]Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   2%|▏         | 16/789 [00:01<01:04, 12.05it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   2%|▏         | 18/789 [00:01<01:17,  9.97it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:   3%|▎         | 20/789 [00:02<01:07, 11.43it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   3%|▎         | 22/789 [00:02<01:17,  9.84it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   3%|▎         | 24/789 [00:02<01:07, 11.31it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   3%|▎         | 26/789 [00:02<00:59, 12.72it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   4%|▎         | 28/789 [00:02<01:11, 10.65it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:   4%|▍         | 30/789 [00:02<01:03, 12.01it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   4%|▍         | 32/789 [00:03<01:13, 10.36it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   4%|▍         | 34/789 [00:03<01:03, 11.90it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   5%|▍         | 36/789 [00:03<00:56, 13.28it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   5%|▍         | 38/789 [00:03<01:08, 10.91it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:   5%|▌         | 40/789 [00:03<01:00, 12.32it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   5%|▌         | 42/789 [00:04<01:11, 10.42it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   6%|▌         | 44/789 [00:04<01:02, 11.94it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   6%|▌         | 46/789 [00:04<00:55, 13.32it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   6%|▌         | 48/789 [00:04<01:06, 11.10it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:   6%|▋         | 50/789 [00:04<00:58, 12.57it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   7%|▋         | 52/789 [00:04<01:09, 10.57it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   7%|▋         | 54/789 [00:04<01:01, 12.04it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 1, 'Player 2': 3}
+Pass 2: Processing Frames:   7%|▋         | 56/789 [00:05<00:55, 13.26it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 7, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 7, 'Player 2': 3}
+Pass 2: Processing Frames:   7%|▋         | 58/789 [00:05<01:10, 10.32it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 3, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 3, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:   8%|▊         | 60/789 [00:05<01:01, 11.76it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 3, 'Player 2': 7}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 3, 'Player 2': 7}
+Pass 2: Processing Frames:   8%|▊         | 62/789 [00:05<01:11, 10.20it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 3, 'Player 2': 7}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 3, 'Player 2': 7}
+Pass 2: Processing Frames:   8%|▊         | 64/789 [00:05<01:01, 11.76it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 3, 'Player 2': 7}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 3, 'Player 2': 7}
+Pass 2: Processing Frames:   8%|▊         | 66/789 [00:05<00:55, 13.05it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+Pass 2: Processing Frames:   9%|▊         | 68/789 [00:06<01:06, 10.84it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:   9%|▉         | 70/789 [00:06<00:58, 12.30it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+Pass 2: Processing Frames:   9%|▉         | 72/789 [00:06<01:08, 10.48it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+Pass 2: Processing Frames:   9%|▉         | 74/789 [00:06<00:59, 11.96it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 7}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+Pass 2: Processing Frames:  10%|▉         | 76/789 [00:06<00:54, 13.09it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+Pass 2: Processing Frames:  10%|▉         | 78/789 [00:07<01:05, 10.94it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 7}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 7}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  10%|█         | 80/789 [00:07<00:57, 12.38it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 7}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+Pass 2: Processing Frames:  10%|█         | 82/789 [00:07<01:07, 10.47it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+Pass 2: Processing Frames:  11%|█         | 84/789 [00:07<00:59, 11.88it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 3}
+Pass 2: Processing Frames:  11%|█         | 86/789 [00:07<00:53, 13.16it/s][Frame 85] Re-ID SUCCESS: Player 2 (lost) re-identified as new TrackID 2 with similarity 0.68
+  Updated HSV model for Player 2 based on TrackID 2.
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  11%|█         | 88/789 [00:08<01:11,  9.87it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  11%|█▏        | 90/789 [00:08<01:00, 11.48it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  12%|█▏        | 92/789 [00:08<01:09, 10.06it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  12%|█▏        | 94/789 [00:08<00:59, 11.67it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  12%|█▏        | 96/789 [00:08<00:52, 13.14it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  12%|█▏        | 98/789 [00:08<01:03, 10.93it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  13%|█▎        | 100/789 [00:08<00:55, 12.46it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  13%|█▎        | 102/789 [00:09<01:04, 10.60it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  13%|█▎        | 104/789 [00:09<00:56, 12.23it/s]Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  13%|█▎        | 106/789 [00:09<00:49, 13.67it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  14%|█▎        | 108/789 [00:09<01:00, 11.21it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  14%|█▍        | 110/789 [00:09<00:53, 12.61it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  14%|█▍        | 112/789 [00:10<01:03, 10.72it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  14%|█▍        | 114/789 [00:10<00:54, 12.29it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  15%|█▍        | 116/789 [00:10<00:49, 13.46it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  15%|█▍        | 118/789 [00:10<01:00, 11.05it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  15%|█▌        | 120/789 [00:10<00:53, 12.54it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  15%|█▌        | 122/789 [00:10<01:03, 10.50it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  16%|█▌        | 124/789 [00:10<00:55, 12.03it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  16%|█▌        | 126/789 [00:11<00:49, 13.35it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  16%|█▌        | 128/789 [00:11<01:00, 10.97it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  16%|█▋        | 130/789 [00:11<00:52, 12.44it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  17%|█▋        | 132/789 [00:11<01:02, 10.52it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  17%|█▋        | 134/789 [00:11<00:54, 12.02it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  17%|█▋        | 136/789 [00:11<00:49, 13.25it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  17%|█▋        | 138/789 [00:12<00:59, 10.96it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  18%|█▊        | 140/789 [00:12<00:51, 12.52it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  18%|█▊        | 142/789 [00:12<01:01, 10.50it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  18%|█▊        | 144/789 [00:12<00:53, 12.02it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  19%|█▊        | 146/789 [00:12<00:48, 13.29it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  19%|█▉        | 148/789 [00:13<00:58, 10.96it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  19%|█▉        | 150/789 [00:13<00:51, 12.36it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  19%|█▉        | 152/789 [00:13<01:00, 10.47it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  20%|█▉        | 154/789 [00:13<00:52, 12.01it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  20%|█▉        | 156/789 [00:13<00:47, 13.38it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  20%|██        | 158/789 [00:13<00:57, 10.99it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  20%|██        | 160/789 [00:14<00:51, 12.13it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  21%|██        | 162/789 [00:14<01:00, 10.44it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  21%|██        | 164/789 [00:14<00:52, 11.93it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  21%|██        | 166/789 [00:14<00:47, 13.24it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  21%|██▏       | 168/789 [00:14<00:56, 10.96it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  22%|██▏       | 170/789 [00:14<00:51, 12.10it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  22%|██▏       | 172/789 [00:15<00:59, 10.40it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  22%|██▏       | 174/789 [00:15<00:51, 11.94it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  22%|██▏       | 176/789 [00:15<00:46, 13.26it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  23%|██▎       | 178/789 [00:15<00:56, 10.90it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  23%|██▎       | 180/789 [00:15<00:49, 12.34it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  23%|██▎       | 182/789 [00:16<00:58, 10.43it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  23%|██▎       | 184/789 [00:16<00:50, 11.91it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  24%|██▎       | 186/789 [00:16<00:45, 13.29it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  24%|██▍       | 188/789 [00:16<00:54, 11.08it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  24%|██▍       | 190/789 [00:16<00:48, 12.39it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  24%|██▍       | 192/789 [00:16<00:56, 10.52it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  25%|██▍       | 194/789 [00:16<00:49, 12.03it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  25%|██▍       | 196/789 [00:17<00:44, 13.40it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  25%|██▌       | 198/789 [00:17<00:53, 11.10it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  25%|██▌       | 200/789 [00:17<00:46, 12.65it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  26%|██▌       | 202/789 [00:17<00:55, 10.59it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  26%|██▌       | 204/789 [00:17<00:48, 12.06it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  26%|██▌       | 206/789 [00:17<00:43, 13.29it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  26%|██▋       | 208/789 [00:18<00:53, 10.90it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  27%|██▋       | 210/789 [00:18<00:46, 12.36it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  27%|██▋       | 212/789 [00:18<00:54, 10.53it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  27%|██▋       | 214/789 [00:18<00:48, 11.83it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  27%|██▋       | 216/789 [00:18<00:43, 13.24it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  28%|██▊       | 218/789 [00:19<00:51, 11.01it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  28%|██▊       | 220/789 [00:19<00:45, 12.52it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  28%|██▊       | 222/789 [00:19<00:53, 10.54it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  28%|██▊       | 224/789 [00:19<00:47, 11.97it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  29%|██▊       | 226/789 [00:19<00:42, 13.26it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  29%|██▉       | 228/789 [00:19<00:53, 10.50it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  29%|██▉       | 230/789 [00:20<00:46, 11.90it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  29%|██▉       | 232/789 [00:20<00:54, 10.22it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  30%|██▉       | 234/789 [00:20<00:47, 11.69it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  30%|██▉       | 236/789 [00:20<00:42, 12.95it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  30%|███       | 238/789 [00:20<00:51, 10.74it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  30%|███       | 240/789 [00:20<00:44, 12.24it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  31%|███       | 242/789 [00:21<00:52, 10.38it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  31%|███       | 244/789 [00:21<00:45, 11.90it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  31%|███       | 246/789 [00:21<00:41, 13.19it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  31%|███▏      | 248/789 [00:21<00:50, 10.72it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  32%|███▏      | 250/789 [00:21<00:44, 12.17it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  32%|███▏      | 252/789 [00:22<00:51, 10.33it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  32%|███▏      | 254/789 [00:22<00:47, 11.37it/s]Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  32%|███▏      | 256/789 [00:22<00:42, 12.68it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  33%|███▎      | 258/789 [00:22<00:51, 10.35it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  33%|███▎      | 260/789 [00:22<00:45, 11.59it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  33%|███▎      | 262/789 [00:22<00:52, 10.11it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  33%|███▎      | 264/789 [00:23<00:45, 11.64it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  34%|███▎      | 266/789 [00:23<00:40, 12.96it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  34%|███▍      | 268/789 [00:23<00:49, 10.56it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  34%|███▍      | 270/789 [00:23<00:43, 12.01it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  34%|███▍      | 272/789 [00:23<00:50, 10.24it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  35%|███▍      | 274/789 [00:23<00:43, 11.80it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  35%|███▍      | 276/789 [00:24<00:39, 13.14it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  35%|███▌      | 278/789 [00:24<00:46, 10.91it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  35%|███▌      | 280/789 [00:24<00:41, 12.40it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  36%|███▌      | 282/789 [00:24<00:48, 10.55it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  36%|███▌      | 284/789 [00:24<00:41, 12.14it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  36%|███▌      | 286/789 [00:24<00:37, 13.59it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  37%|███▋      | 288/789 [00:25<00:44, 11.21it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  37%|███▋      | 290/789 [00:25<00:39, 12.64it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  37%|███▋      | 292/789 [00:25<00:46, 10.70it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  37%|███▋      | 294/789 [00:25<00:40, 12.24it/s]Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  38%|███▊      | 296/789 [00:25<00:36, 13.34it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  38%|███▊      | 298/789 [00:25<00:44, 11.10it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  38%|███▊      | 300/789 [00:26<00:39, 12.43it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  38%|███▊      | 302/789 [00:26<00:46, 10.51it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  39%|███▊      | 304/789 [00:26<00:40, 11.86it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  39%|███▉      | 306/789 [00:26<00:36, 13.12it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  39%|███▉      | 308/789 [00:26<00:44, 10.76it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  39%|███▉      | 310/789 [00:26<00:39, 12.19it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  40%|███▉      | 312/789 [00:27<00:45, 10.52it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  40%|███▉      | 314/789 [00:27<00:40, 11.84it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  40%|████      | 316/789 [00:27<00:35, 13.15it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  40%|████      | 318/789 [00:27<00:43, 10.80it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  41%|████      | 320/789 [00:27<00:38, 12.26it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  41%|████      | 322/789 [00:28<00:44, 10.41it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  41%|████      | 324/789 [00:28<00:39, 11.86it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  41%|████▏     | 326/789 [00:28<00:35, 13.19it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  42%|████▏     | 328/789 [00:28<00:42, 10.94it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  42%|████▏     | 330/789 [00:28<00:36, 12.41it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  42%|████▏     | 332/789 [00:28<00:43, 10.40it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  42%|████▏     | 334/789 [00:29<00:38, 11.85it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  43%|████▎     | 336/789 [00:29<00:34, 13.24it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  43%|████▎     | 338/789 [00:29<00:41, 10.77it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  43%|████▎     | 340/789 [00:29<00:37, 12.12it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  43%|████▎     | 342/789 [00:29<00:43, 10.28it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  44%|████▎     | 344/789 [00:29<00:37, 11.76it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  44%|████▍     | 346/789 [00:29<00:33, 13.07it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Pass 2: Processing Frames:  44%|████▍     | 348/789 [00:30<00:41, 10.68it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  44%|████▍     | 350/789 [00:30<00:36, 12.13it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  45%|████▍     | 352/789 [00:30<00:42, 10.23it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  45%|████▍     | 354/789 [00:30<00:37, 11.57it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Pass 2: Processing Frames:  45%|████▌     | 356/789 [00:30<00:33, 12.86it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Pass 2: Processing Frames:  45%|████▌     | 358/789 [00:31<00:40, 10.64it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  46%|████▌     | 360/789 [00:31<00:35, 12.02it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  46%|████▌     | 362/789 [00:31<00:41, 10.19it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Pass 2: Processing Frames:  46%|████▌     | 364/789 [00:31<00:36, 11.62it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Pass 2: Processing Frames:  46%|████▋     | 366/789 [00:31<00:32, 12.82it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Pass 2: Processing Frames:  47%|████▋     | 368/789 [00:32<00:40, 10.29it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  47%|████▋     | 370/789 [00:32<00:36, 11.49it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  47%|████▋     | 372/789 [00:32<00:44,  9.39it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  47%|████▋     | 374/789 [00:32<00:38, 10.87it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  48%|████▊     | 376/789 [00:32<00:33, 12.32it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Pass 2: Processing Frames:  48%|████▊     | 378/789 [00:32<00:38, 10.60it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 18}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  48%|████▊     | 380/789 [00:33<00:34, 11.89it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  48%|████▊     | 382/789 [00:33<00:39, 10.36it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  49%|████▊     | 384/789 [00:33<00:33, 11.94it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  49%|████▉     | 386/789 [00:33<00:30, 13.34it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  49%|████▉     | 388/789 [00:33<00:35, 11.20it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  49%|████▉     | 390/789 [00:33<00:31, 12.77it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  50%|████▉     | 392/789 [00:34<00:36, 10.86it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  50%|████▉     | 394/789 [00:34<00:32, 12.26it/s]Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  50%|█████     | 396/789 [00:34<00:29, 13.47it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+Pass 2: Processing Frames:  50%|█████     | 398/789 [00:34<00:35, 11.02it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  51%|█████     | 400/789 [00:34<00:31, 12.42it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  51%|█████     | 402/789 [00:34<00:36, 10.69it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  51%|█████     | 404/789 [00:35<00:31, 12.24it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  51%|█████▏    | 406/789 [00:35<00:28, 13.52it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  52%|█████▏    | 408/789 [00:35<00:34, 11.08it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  52%|█████▏    | 410/789 [00:35<00:30, 12.50it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  52%|█████▏    | 412/789 [00:35<00:35, 10.53it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  52%|█████▏    | 414/789 [00:35<00:31, 11.99it/s]Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  53%|█████▎    | 416/789 [00:36<00:27, 13.45it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+Pass 2: Processing Frames:  53%|█████▎    | 418/789 [00:36<00:34, 10.80it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  53%|█████▎    | 420/789 [00:36<00:29, 12.35it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+[Frame 420] Re-ID SUCCESS: Player 1 (lost) re-identified as new TrackID 21 with similarity 0.76
+  Updated HSV model for Player 1 based on TrackID 21.
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 2}
+Pass 2: Processing Frames:  53%|█████▎    | 422/789 [00:36<00:37,  9.72it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 2}
+Pass 2: Processing Frames:  54%|█████▎    | 424/789 [00:36<00:32, 11.10it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 2}
+Pass 2: Processing Frames:  54%|█████▍    | 426/789 [00:36<00:29, 12.47it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 2}
+Pass 2: Processing Frames:  54%|█████▍    | 428/789 [00:37<00:34, 10.46it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  54%|█████▍    | 430/789 [00:37<00:30, 11.85it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 2}
+Pass 2: Processing Frames:  55%|█████▍    | 432/789 [00:37<00:35, 10.09it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 2}
+Pass 2: Processing Frames:  55%|█████▌    | 434/789 [00:37<00:30, 11.59it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 2}
+Pass 2: Processing Frames:  55%|█████▌    | 436/789 [00:37<00:27, 12.90it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+Pass 2: Processing Frames:  56%|█████▌    | 438/789 [00:38<00:33, 10.57it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  56%|█████▌    | 440/789 [00:38<00:29, 12.00it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+Pass 2: Processing Frames:  56%|█████▌    | 442/789 [00:38<00:33, 10.28it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+Pass 2: Processing Frames:  56%|█████▋    | 444/789 [00:38<00:29, 11.83it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+Pass 2: Processing Frames:  57%|█████▋    | 446/789 [00:38<00:26, 13.15it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+Pass 2: Processing Frames:  57%|█████▋    | 448/789 [00:38<00:31, 10.74it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  57%|█████▋    | 450/789 [00:39<00:27, 12.25it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 21, 'Player 2': 18}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 18, 'Player 2': 2}
+Pass 2: Processing Frames:  57%|█████▋    | 452/789 [00:39<00:32, 10.27it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 18, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 18, 'Player 2': 2}
+Pass 2: Processing Frames:  58%|█████▊    | 454/789 [00:39<00:28, 11.79it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 18, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 18, 'Player 2': 2}
+Pass 2: Processing Frames:  58%|█████▊    | 456/789 [00:39<00:25, 13.19it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 22, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 22, 'Player 2': 2}
+Pass 2: Processing Frames:  58%|█████▊    | 458/789 [00:39<00:30, 10.71it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 22, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 22, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  58%|█████▊    | 460/789 [00:39<00:27, 12.13it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 22, 'Player 2': 2}
+[Frame 460] Re-ID SUCCESS: Player 1 (lost) re-identified as new TrackID 11 with similarity 0.82
+  Updated HSV model for Player 1 based on TrackID 11.
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  59%|█████▊    | 462/789 [00:40<00:34,  9.58it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  59%|█████▉    | 464/789 [00:40<00:29, 11.15it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  59%|█████▉    | 466/789 [00:40<00:25, 12.62it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  59%|█████▉    | 468/789 [00:40<00:30, 10.46it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  60%|█████▉    | 470/789 [00:40<00:26, 11.98it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  60%|█████▉    | 472/789 [00:41<00:30, 10.25it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  60%|██████    | 474/789 [00:41<00:27, 11.64it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  60%|██████    | 476/789 [00:41<00:24, 12.93it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 14}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  61%|██████    | 478/789 [00:41<00:28, 10.76it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  61%|██████    | 480/789 [00:41<00:25, 12.25it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  61%|██████    | 482/789 [00:41<00:29, 10.32it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  61%|██████▏   | 484/789 [00:42<00:26, 11.60it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  62%|██████▏   | 486/789 [00:42<00:23, 12.94it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  62%|██████▏   | 488/789 [00:42<00:28, 10.54it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  62%|██████▏   | 490/789 [00:42<00:24, 12.01it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  62%|██████▏   | 492/789 [00:42<00:29, 10.10it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  63%|██████▎   | 494/789 [00:43<00:25, 11.58it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 11, 'Player 2': 2}
+Pass 2: Processing Frames:  63%|██████▎   | 496/789 [00:43<00:22, 12.84it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+Pass 2: Processing Frames:  63%|██████▎   | 498/789 [00:43<00:29,  9.98it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  63%|██████▎   | 500/789 [00:43<00:25, 11.51it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+Pass 2: Processing Frames:  64%|██████▎   | 502/789 [00:43<00:28,  9.96it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+Pass 2: Processing Frames:  64%|██████▍   | 504/789 [00:43<00:24, 11.53it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 14, 'Player 2': 2}
+Pass 2: Processing Frames:  64%|██████▍   | 506/789 [00:44<00:21, 12.88it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 7, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 18, 'Player 2': 2}
+Pass 2: Processing Frames:  64%|██████▍   | 508/789 [00:44<00:28,  9.91it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 7, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 7, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  65%|██████▍   | 510/789 [00:44<00:24, 11.30it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 7, 'Player 2': 2}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+Pass 2: Processing Frames:  65%|██████▍   | 512/789 [00:44<00:28,  9.75it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+Pass 2: Processing Frames:  65%|██████▌   | 514/789 [00:44<00:24, 11.21it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+Pass 2: Processing Frames:  65%|██████▌   | 516/789 [00:44<00:21, 12.53it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+Pass 2: Processing Frames:  66%|██████▌   | 518/789 [00:45<00:25, 10.56it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+Pass 2: Processing Frames:  66%|██████▌   | 520/789 [00:45<00:22, 12.02it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 18}
+Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+Pass 2: Processing Frames:  66%|██████▌   | 522/789 [00:45<00:25, 10.27it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+Pass 2: Processing Frames:  66%|██████▋   | 524/789 [00:45<00:22, 11.53it/s][PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+Pass 2: Processing Frames:  67%|██████▋   | 526/789 [00:45<00:20, 12.93it/s]Error in pose detection: 'Tensor' object has no attribute 'copy'
+Error details: 'Tensor' object has no attribute 'copy'
+[PlayerTracker] Reassigned roles after cut: {'Player 1': 26, 'Player 2': 2}
+Traceback (most recent call last):
+  File "<ipython-input-18-86b2a91db9b1>", line 3521, in <cell line: 0>
+    pose_extractor.draw_pose_on_frame(frame, player_boxes)
+  File "<ipython-input-18-86b2a91db9b1>", line 283, in draw_pose_on_frame
+    keypoints_offset = keypoints.copy()
+                       ^^^^^^^^^^^^^^
+AttributeError: 'Tensor' object has no attribute 'copy
