@@ -1,23 +1,20 @@
 import React from 'react';
 
-const Logo = () => {
-  const ballLogoUrl = "https://raw.githubusercontent.com/AggieSportsAnalytics/CourtCheck/cory/images/courtcheck_ball_logo.png";
+const Logo = ({ size = 'md', className = '' }) => {
+  const sizeClass = {
+    'sm': 'h-6 w-6',
+    'md': 'h-8 w-8',
+    'lg': 'h-12 w-12',
+    'xl': 'h-16 w-16',
+    '2xl': 'h-20 w-20'
+  }[size] || 'h-8 w-8';
   
   return (
-    <div className="flex items-center">
-      {/* Tennis Ball Logo */}
-      <div className="relative w-[48px] h-[48px] flex-shrink-0 mr-2">
-        <img 
-          src={ballLogoUrl} 
-          alt="Tennis Ball" 
-          className="w-full h-full object-contain"
-          style={{ filter: 'brightness(1.1)' }}
-        />
-      </div>
-      
-      {/* CourtCheck Text */}
-      <span className="text-2xl font-bold">CourtCheck</span>
-    </div>
+    <img 
+      src="/assets/courtcheck_ball_logo.png"
+      alt="CourtCheck" 
+      className={`${sizeClass} ${className}`}
+    />
   );
 };
 
