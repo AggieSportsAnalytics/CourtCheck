@@ -18,10 +18,7 @@ This notebook leverages Google Colab's online GPUs for CourtCheck's post process
 
 # Configuration Flags
 ENABLE_DRAWING = True  # Generate output video with visualizations
-FRAME_PROCESSING_INTERVAL = (
-    5  # Process every Nth frame (1 = process all) for court/player detection
-)
-BALL_TRACKING_INTERVAL = 1  # Process every Nth frame for ball tracking (1 = all frames, should be ≤ FRAME_PROCESSING_INTERVAL)
+FRAME_PROCESSING_INTERVAL = 5  # Process every Nth frame (1 = process all)
 DETECT_BOUNCES = True  # Run bounce detection post-processing
 GENERATE_HEATMAPS = True  # Generate bounce and player heatmaps post-processing
 
@@ -1310,23 +1307,13 @@ class PlayerTracker:
         self, frame, frame_num=None, current_homography=None, person_min_score=0.15
     ):
         """
-        Detects and tracks players with improved persistence.
-        Implements HSV for continuous tracking and Re-ID for recovery.
+        Detects and tracks players. Implements HSV for continuous tracking and Re-ID for recovery.
         """
-        # Store frame number in state for better debugging
-        self.current_frame_num = frame_num if frame_num is not None else -1
-
-        # Store the current homography for position tracking
-        if current_homography is not None:
-            self.last_homography = current_homography
-
         tracked_players_output = (
             []
         )  # List of (bbox, bottom_center_point, track_id) from YOLO/BoT-SORT
 
         # Run YOLO detection with tracking
-        # Note: tracker-specific parameters (max_age, min_hits) need to be set in a tracker config file
-        # rather than passed directly to the track method
         results = self.yolo_model.track(
             frame,
             persist=True,
@@ -1334,7 +1321,6 @@ class PlayerTracker:
             verbose=False,
             classes=[0],  # Person class
             conf=person_min_score,
-            iou=0.35,  # Lower IoU threshold to be more permissive in matching
         )
 
         current_track_ids_in_frame = set()
@@ -1836,241 +1822,90 @@ class PlayerTracker:
 
     def reassign_roles_after_cut(self, new_tracks, frame):
         """
-        Improved function to reassign player roles after scene cuts by combining:
-        1. HSV histogram matching (appearance)
-        2. Court position persistence (location)
-        3. ReID feature matching (if available)
-
-        This approach maintains player identity across cuts more reliably.
+        Reassigns player roles by matching new tracks to stored player appearances.
         """
-        print(
-            "[PlayerTracker] Scene cut detected. Attempting to maintain player identities..."
-        )
-
-        # If no players to track, nothing to do
-        if not new_tracks:
-            print("[PlayerTracker] No players detected after scene cut.")
-            return
-
-        # 1. Get candidate tracks with their histograms and court positions
         candidates = {}
         for bbox, center, tid in new_tracks:
             hist = self.extract_player_hsv_histogram(frame, bbox)
-
-            # Determine court side for this player
-            court_side = None
-            try:
-                if self.last_homography is not None and center is not None:
-                    pt = np.array(
-                        [[[float(center[0]), float(center[1])]]], dtype=np.float32
-                    )
-                    mapped = cv2.perspectiveTransform(pt, self.last_homography)
-                    court_side = (
-                        "top" if mapped[0, 0, 1] < self.center_line_y else "bottom"
-                    )
-            except Exception:
-                pass
-
-            # Get ReID features if the model is available
-            reid_features = None
-            if self.reid_model_instance and self.reid_model_instance.model:
-                patch = self._get_player_patch(frame, bbox)
-                if patch.size > 0:
-                    reid_features = self.reid_model_instance.extract_features(patch)
-
             if hist is not None:
-                candidates[tid] = {
-                    "hist": hist,
-                    "court_side": court_side,
-                    "reid_features": reid_features,
-                    "center": center,
-                    "bbox": bbox,
-                }
+                candidates[tid] = hist
 
-        # Don't proceed if no valid candidates
-        if not candidates:
-            print("[PlayerTracker] No valid candidates found after scene cut.")
-            return
-
-        # 2. Try to reassign roles using a scoring system combining multiple factors
         reassigned = {}
         used_tids = set()
-
-        # Iterate through roles (Player 1, Player 2)
-        for role, prev_tid in self.role_to_track_id.items():
-            # Skip if role was never assigned
-            if prev_tid is None:
+        for role, prev_hist_list in self.player_appearance.items():
+            if not prev_hist_list:  # No appearance model for this role
                 continue
 
-            # Skip if no appearance model for this role
-            prev_hist_list = self.player_appearance.get(role, [])
+            # Use the average of stored histograms, or the first one if only one
+            # For simplicity, let's use the first one for now, or average if multiple
+            # This part might need refinement depending on how HSV matching against a list is best done.
+            # For now, we'll match against the first stored HSV. A more robust way would be to average them
+            # or find max similarity against any of them.
+            # Let's assume for now we match against the first one, if available.
             if not prev_hist_list:
                 continue
 
-            # A) Get expected court side for this role based on history
-            expected_court_side = None
-            if prev_tid in self.track_history:
-                recent_sides = []
-                for _, center in list(self.track_history[prev_tid])[
-                    -20:
-                ]:  # Last 20 frames
-                    side = self.get_player_side(
-                        center, self.last_homography, self.center_line_y
-                    )
-                    if side:
-                        recent_sides.append(side)
+            # Simple approach: use the first available histogram as reference
+            # More complex: average histograms or find best match across all stored histograms
+            # For now, let's use the first one as a placeholder for more complex logic if needed.
+            # Or, if we want to be more robust, we should consider how to best use a list of HSV appearances.
+            # Perhaps averaging them is a good start if the list is not too diverse.
 
-                if recent_sides:
-                    # Use most common side as expected side
-                    top_count = recent_sides.count("top")
-                    bottom_count = recent_sides.count("bottom")
-                    if top_count > bottom_count:
-                        expected_court_side = "top"
-                    elif bottom_count > top_count:
-                        expected_court_side = "bottom"
-
-            # B) Get ReID features for this role if available
-            role_reid_features = self.initial_player_reid_features.get(role, [])
-
-            # C) Compute scores for each candidate
+            # Let's try matching against each stored histogram and take the best overall score.
             best_tid_for_role = None
-            best_score_for_role = float(
-                "inf"
-            )  # Lower is better for HSV (Bhattacharyya)
+            best_score_for_role = float("inf")
 
-            for tid, candidate_data in candidates.items():
-                if tid in used_tids:  # Skip if already assigned
-                    continue
-
-                # Skip if this candidate is on wrong side of court (strong constraint)
-                if (
-                    expected_court_side
-                    and candidate_data["court_side"]
-                    and expected_court_side != candidate_data["court_side"]
-                ):
-                    continue
-
-                # 1. HSV score (appearance) - weighted average against all stored histograms
-                hsv_scores = []
-                for prev_hist in prev_hist_list:
-                    score = cv2.compareHist(
-                        prev_hist, candidate_data["hist"], cv2.HISTCMP_BHATTACHARYYA
-                    )
-                    hsv_scores.append(score)
-
-                # Take average of best 3 scores if we have many reference histograms
-                if len(hsv_scores) > 3:
-                    hsv_scores.sort()  # Sort from best (lowest) to worst
-                    hsv_score = sum(hsv_scores[:3]) / 3.0
-                else:
-                    hsv_score = sum(hsv_scores) / len(hsv_scores) if hsv_scores else 1.0
-
-                # 2. ReID score if available (ranges from -1 to 1, higher is better)
-                reid_score = 0
-                if role_reid_features and candidate_data["reid_features"] is not None:
-                    reid_score_list = []
-                    for ref_feature in role_reid_features:
-                        if isinstance(ref_feature, np.ndarray):
-                            try:
-                                similarity = F.cosine_similarity(
-                                    torch.from_numpy(ref_feature).unsqueeze(0),
-                                    torch.from_numpy(
-                                        candidate_data["reid_features"]
-                                    ).unsqueeze(0),
-                                ).item()
-                                reid_score_list.append(similarity)
-                            except Exception:
-                                pass
-
-                    # Take best ReID score
-                    reid_score = max(reid_score_list) if reid_score_list else 0
-
-                # 3. Compute final combined score (lower is better)
-                # HSV score is 0-1 (lower is better), ReID score is -1 to 1 (higher is better)
-                combined_score = hsv_score - (
-                    reid_score * 0.5
-                )  # Weight ReID less than HSV
-
-                if combined_score < best_score_for_role:
-                    best_score_for_role = combined_score
-                    best_tid_for_role = tid
-
-            # Assign the best matching track ID to this role if good enough
-            if (
-                best_tid_for_role is not None and best_score_for_role < 0.6
-            ):  # Threshold for acceptable match
-                reassigned[role] = best_tid_for_role
-                used_tids.add(best_tid_for_role)
-
-                # Update appearance model with this new example
-                bbox = candidates[best_tid_for_role]["bbox"]
-                new_hist = self.extract_player_hsv_histogram(frame, bbox)
-                if new_hist is not None:
-                    self.player_appearance[role].append(new_hist)
-
-                # If using ReID, also update ReID features
-                if self.reid_model_instance and self.reid_model_instance.model:
-                    patch = self._get_player_patch(frame, bbox)
-                    if patch.size > 0:
-                        reid_features = self.reid_model_instance.extract_features(patch)
-                        if isinstance(reid_features, np.ndarray):
-                            self.initial_player_reid_features[role].append(
-                                reid_features
-                            )
-
-        # 4. Update role assignments
-        if len(reassigned) == 2:  # Both roles reassigned successfully
-            self.role_to_track_id.update(reassigned)
-            print(
-                f"[PlayerTracker] Successfully reassigned both players after scene cut: {self.role_to_track_id}"
-            )
-        elif len(reassigned) == 1:  # Only one role reassigned
-            # Update the one we found
-            self.role_to_track_id.update(reassigned)
-            print(
-                f"[PlayerTracker] Partially reassigned roles after scene cut: {self.role_to_track_id}"
-            )
-
-            # Try to use court position to infer the other player
-            reassigned_role = list(reassigned.keys())[0]
-            other_role = "Player 2" if reassigned_role == "Player 1" else "Player 1"
-            reassigned_tid = reassigned[reassigned_role]
-            reassigned_court_side = None
-
-            # Find the court side of the reassigned player
-            for tid, data in candidates.items():
-                if tid == reassigned_tid and data["court_side"]:
-                    reassigned_court_side = data["court_side"]
-                    break
-
-            # If we know the court side of one player, try to find the other on the opposite side
-            if reassigned_court_side:
-                expected_other_side = (
-                    "bottom" if reassigned_court_side == "top" else "top"
-                )
-
-                # Look for a player on the opposite side
-                for tid, data in candidates.items():
+            for (
+                prev_hist_single
+            ) in prev_hist_list:  # Iterate through stored HSV for this role
+                current_best_tid_for_hist = None
+                current_best_score_for_hist = float("inf")
+                for tid, cand_hist in candidates.items():
                     if (
-                        tid != reassigned_tid
-                        and tid not in used_tids
-                        and data["court_side"] == expected_other_side
-                    ):
-                        self.role_to_track_id[other_role] = tid
-                        print(
-                            f"[PlayerTracker] Inferred {other_role} based on court position: TrackID {tid}"
-                        )
+                        tid in used_tids
+                    ):  # If this track ID is already assigned to another role
+                        continue
+                    score = cv2.compareHist(
+                        prev_hist_single, cand_hist, cv2.HISTCMP_BHATTACHARYYA
+                    )
+                    if score < current_best_score_for_hist:
+                        current_best_score_for_hist = score
+                        current_best_tid_for_hist = tid
 
-                        # Update appearance model
-                        bbox = data["bbox"]
-                        new_hist = self.extract_player_hsv_histogram(frame, bbox)
-                        if new_hist is not None:
-                            self.player_appearance[other_role].append(new_hist)
-                        break
+                # If this histogram provided a better match for the role than previous histograms for the same role
+                if (
+                    current_best_tid_for_hist is not None
+                    and current_best_score_for_hist < best_score_for_role
+                ):
+                    best_score_for_role = current_best_score_for_hist
+                    best_tid_for_role = current_best_tid_for_hist
+
+            if best_tid_for_role is not None:
+                reassigned[role] = best_tid_for_role
+                used_tids.add(
+                    best_tid_for_role
+                )  # Mark this track ID as used for this frame's reassignment
+
+        if len(reassigned) == 2:  # If both P1 and P2 were successfully reassigned
+            self.role_to_track_id = reassigned
+            print(
+                f"[PlayerTracker] Reassigned roles after cut: {self.role_to_track_id}"
+            )
+        elif len(reassigned) == 1:  # If only one player was reassigned
+            # This case is tricky. Do we update one and leave the other? Or clear the other?
+            # For now, let's update the one that was found.
+            for role, tid in reassigned.items():
+                self.role_to_track_id[role] = tid
+            print(
+                f"[PlayerTracker] Partially reassigned roles after cut: {self.role_to_track_id}. Other role might be lost or unclear."
+            )
         else:
             print(
-                "[PlayerTracker] Failed to reassign roles after scene cut. Will try again in subsequent frames."
+                "[PlayerTracker] Failed to reassign roles after cut (0 players matched). Roles might be lost or appearances changed too much."
             )
+            # Potentially clear self.role_to_track_id for P1 and P2 if reassign consistently fails
+            # self.role_to_track_id["Player 1"] = None
+            # self.role_to_track_id["Player 2"] = None
 
     def get_player_display_name(self, track_id):
         # This method primarily relies on self.role_to_track_id,
@@ -2096,61 +1931,25 @@ class PlayerTracker:
 
     def detect_role_switch(self):
         """
-        Only swap player labels during formal changeovers when both players have consistently
-        switched sides for many frames. More conservative than the original implementation
-        to prevent random switching.
+        If both tracked player roles have switched sides consistently for a few frames, swap their labels.
         """
-        # Need more frames to confirm a real changeover
-        HISTORY_LENGTH = (
-            30  # Use 30 frames (about 1 second at 30fps) for better consistency
-        )
-        THRESHOLD_PERCENT = 0.8  # 80% of frames must show players on switched sides
-
         recent_sides = {role: [] for role in ["Player 1", "Player 2"]}
-
-        # Skip if either player isn't currently tracked
-        if not (
-            self.role_to_track_id.get("Player 1")
-            and self.role_to_track_id.get("Player 2")
-        ):
-            return
-
-        # Get recent position history for both players
         for role, tid in self.role_to_track_id.items():
             if tid in self.track_history:
-                # Use more frames for a more reliable decision
-                for _, center in list(self.track_history[tid])[-HISTORY_LENGTH:]:
+                for _, center in list(self.track_history[tid])[-10:]:  # Last 10 frames
                     side = self.get_player_side(
                         center, self.last_homography, self.center_line_y
                     )
                     if side:
                         recent_sides[role].append(side)
 
-        # Ensure we have enough position data for both players
-        p1_sides = recent_sides["Player 1"]
-        p2_sides = recent_sides["Player 2"]
-
-        # Only proceed if we have sufficient position data
-        if (
-            len(p1_sides) >= HISTORY_LENGTH * 0.5
-            and len(p2_sides) >= HISTORY_LENGTH * 0.5
-        ):
-            threshold_count = int(len(p1_sides) * THRESHOLD_PERCENT)
-
-            # Check for consistent side switching (P1 on bottom, P2 on top)
-            p1_bottom_count = p1_sides.count("bottom")
-            p2_top_count = p2_sides.count("top")
-
+        if all(sides for sides in recent_sides.values()):
             roles_flipped = (
-                p1_bottom_count >= threshold_count and p2_top_count >= threshold_count
+                recent_sides["Player 1"].count("bottom") > 7
+                and recent_sides["Player 2"].count("top") > 7
             )
-
-            # Only swap roles if there's very strong evidence of a changeover
             if roles_flipped:
-                print(
-                    f"[PlayerTracker] Detected court side changeover. P1 bottom: {p1_bottom_count}/{len(p1_sides)}, P2 top: {p2_top_count}/{len(p2_sides)}"
-                )
-                print("[PlayerTracker] Swapping Player 1 and Player 2 roles.")
+                print("[PlayerTracker] Detected side switch. Swapping roles.")
                 self.role_to_track_id["Player 1"], self.role_to_track_id["Player 2"] = (
                     self.role_to_track_id["Player 2"],
                     self.role_to_track_id["Player 1"],
@@ -2252,16 +2051,9 @@ class BounceDetector:
         return set(frames_bounce)
 
     def smooth_predictions(self, x_ball, y_ball):
-        """
-        Enhanced smoothing logic from original script for better trajectory consistency.
-        This is especially important for far-side court bounce detection.
-        """
-        # Create a proper array indicating which positions are None
         is_none = [int(x is None) for x in x_ball]
-        interp = 5  # Window size for interpolation
+        interp = 5
         counter = 0
-
-        # First pass: Fill small gaps in detection
         for num in range(interp, len(x_ball) - 1):
             if (
                 not x_ball[num]
@@ -2278,7 +2070,7 @@ class BounceDetector:
                     dist = distance.euclidean(
                         (x_ext, y_ext), (x_ball[num + 1], y_ball[num + 1])
                     )
-                    if dist > 80:  # Filter out unlikely jumps
+                    if dist > 80:
                         x_ball[num + 1], y_ball[num + 1], is_none[num + 1] = (
                             None,
                             None,
@@ -2287,33 +2079,6 @@ class BounceDetector:
                 counter += 1
             else:
                 counter = 0
-
-        # Second pass: Additional smoothing for detected trajectories
-        # This helps with better bounce detection especially on the far side
-        window_size = 3
-        for i in range(window_size, len(x_ball) - window_size):
-            # Only smooth valid detections, not interpolated ones
-            if x_ball[i] is not None and not any(
-                x_ball[j] is None for j in range(i - window_size, i + window_size + 1)
-            ):
-                # Get points in the window
-                x_window = [
-                    x_ball[j] for j in range(i - window_size, i + window_size + 1)
-                ]
-                y_window = [
-                    y_ball[j] for j in range(i - window_size, i + window_size + 1)
-                ]
-
-                # Simple weighted average for smoothing (5-point moving average)
-                # Center point has higher weight
-                weights = [0.1, 0.2, 0.4, 0.2, 0.1]  # 5-point weighted moving average
-                x_smooth = sum(w * x for w, x in zip(weights, x_window))
-                y_smooth = sum(w * y for w, y in zip(weights, y_window))
-
-                # Update with smoothed values
-                x_ball[i] = x_smooth
-                y_ball[i] = y_smooth
-
         return x_ball, y_ball
 
     def extrapolate(self, x_coords, y_coords):
@@ -2472,10 +2237,10 @@ if __name__ == "__main__":
     path_bounce_model = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/models/bounce_detection_weights/bounce_detection_weights.cbm"
 
     path_input_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/UCDwten/2/hawaii_2_edited.mp4"
-    path_intermediate_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/hawaii_2_video.mp4"  # Intermediate file if resizing needed
-    path_output_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/hawaii_2.mp4"
-    path_output_bounce_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/hawaii_2_bounce.png"
-    path_output_player_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/hawaii_2_player.png"
+    path_intermediate_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/input_video/hawaii_2_2_video.mp4"  # Intermediate file if resizing needed
+    path_output_video = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/video/hawaii_2_2.mp4"
+    path_output_bounce_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/hawaii_2_2_bounce.png"
+    path_output_player_heatmap = "/content/drive/MyDrive/ASA Tennis Bounds Project/models/court_detection_model/detectron2/end-of-year-showcase-2025/output/heatmaps/hawaii_2_2_player.png"
 
     # Get reference court dimensions for minimap scaling (keep this here as it uses get_court_img())
     _temp_court_ref_img_for_dims = (
@@ -2489,7 +2254,7 @@ if __name__ == "__main__":
     # bounce_color = (0, 255, 255) # Now handled by add_bounces_to_minimap_video defaults
     box_color = (255, 0, 0)
     player_minimap_color = (255, 0, 0)
-    player_minimap_radius = 35  # Increased radius for players on minimap
+    player_minimap_radius = 20  # Smaller radius for players on minimap
 
     # --- Initialization ---
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -2697,7 +2462,7 @@ if __name__ == "__main__":
                 print("Invalid input. Please enter 'yes', 'skip', or 'redo'.")
 
     # --- New User-assisted Player Designation System ---
-    MIN_CONFIRMATIONS = 15  # Increased from 10 for more robust identification
+    MIN_CONFIRMATIONS = 15
     user_skipped_designation_entirely = (
         False  # Global skip for the whole priming process
     )
@@ -3033,10 +2798,8 @@ if __name__ == "__main__":
         user_did_select_players = False
     # --- End of New User-assisted Player Designation System ---
 
-    # --- Pass 1: Enhanced Ball tracking ---
-    print(
-        f"Starting Pass 1: Enhanced Ball tracking (interval={BALL_TRACKING_INTERVAL})..."
-    )
+    # --- Pass 1: Ball tracking ---
+    print("Starting Pass 1: Ball tracking...")
     time_pass1_start = time.time()  # Start of Pass 1 timing
     ball_track_all = []  # Initialize ball_track_all for Pass 1
 
@@ -3075,188 +2838,51 @@ if __name__ == "__main__":
         f"Input video for processing: {frame_width}x{frame_height} @ {float(fps):.2f} FPS, Total Frames: {total_frames}"
     )
 
-    # Enhanced ball tracking based on the original script's approach
-    # 1. Collect frames at BALL_TRACKING_INTERVAL for tracking
-    # 2. Apply frame buffer approach for consistency
-    frames_for_ball_tracking = []
-    frame_indices = []
-
+    temp_frame_count_pass1 = 0
     try:
         pbar_pass1 = tqdm(
             total=total_frames,
-            desc="Pass 1: Collecting frames for ball tracking",
+            desc="Pass 1: Ball Tracking",
             file=sys.stdout,
             dynamic_ncols=True,
             leave=False,
         )
     except NameError:
         pbar_pass1 = None
-        print(
-            "tqdm not found, proceeding without progress bar for Pass 1 frame collection."
-        )
+        print("tqdm not found, proceeding without progress bar for Pass 1.")
 
-    # First collect frames at specified interval
-    frame_count = 0
     while True:
-        ret, frame_pass1 = cap.read()
+        ret, frame_pass1 = cap.read()  # Use distinct frame variable for clarity
         if not ret:
             break
-
-        if frame_count % BALL_TRACKING_INTERVAL == 0:
-            frames_for_ball_tracking.append(frame_pass1)
-            frame_indices.append(frame_count)
-
+        current_ball_pos_pass1 = ball_detector.infer_single(frame_pass1)
+        ball_track_all.append(current_ball_pos_pass1)
         if pbar_pass1:
             pbar_pass1.update(1)
-        frame_count += 1
+        temp_frame_count_pass1 += 1
 
     if pbar_pass1:
         pbar_pass1.close()
-    cap.release()
-
-    print(
-        f"Collected {len(frames_for_ball_tracking)} frames for enhanced ball tracking"
-    )
-
-    # Initialize ball positions for all frames
-    ball_track_all = [(None, None)] * total_frames
-
-    # Process ball detection using a hybrid approach:
-    # 1. Process the collected frames in sequence like the original script
-    # 2. Use a sliding window of 3 frames for context (like infer_single)
-    # 3. Apply smoothing to improve trajectory consistency
-
-    try:
-        pbar_tracking = tqdm(
-            total=len(frames_for_ball_tracking),
-            desc="Pass 1: Enhanced Ball Tracking",
-            file=sys.stdout,
-            dynamic_ncols=True,
-            leave=False,
-        )
-    except NameError:
-        pbar_tracking = None
-        print("tqdm not found, proceeding without progress bar for enhanced tracking.")
-
-    # Need at least 3 frames for proper tracking
-    if len(frames_for_ball_tracking) >= 3:
-        # Start with None for the first two positions
-        ball_track_sequence = [(None, None), (None, None)]
-
-        # Process frames in sequence (starting from the 3rd frame)
-        prev_pred = [None, None]
-        for i in range(2, len(frames_for_ball_tracking)):
-            # Get three consecutive frames
-            current_frame = cv2.resize(
-                frames_for_ball_tracking[i], (ball_detector.width, ball_detector.height)
-            )
-            prev_frame = cv2.resize(
-                frames_for_ball_tracking[i - 1],
-                (ball_detector.width, ball_detector.height),
-            )
-            prev_prev_frame = cv2.resize(
-                frames_for_ball_tracking[i - 2],
-                (ball_detector.width, ball_detector.height),
-            )
-
-            # Prepare input similar to the original script's approach
-            imgs = np.concatenate((current_frame, prev_frame, prev_prev_frame), axis=2)
-            imgs = imgs.astype(np.float32) / 255.0
-            imgs = np.rollaxis(imgs, 2, 0)
-            inp = np.expand_dims(imgs, axis=0)
-
-            # Model inference
-            with torch.no_grad():
-                out = ball_detector.model(
-                    torch.from_numpy(inp).float().to(ball_detector.device)
-                )
-                output = out.argmax(dim=1).detach().cpu().numpy()
-
-            # Use the PostProcess function from the detector
-            x_pred, y_pred = ball_detector.postprocess(output, prev_pred)
-            prev_pred = [x_pred, y_pred]
-            ball_track_sequence.append((x_pred, y_pred))
-
-            # Store at the appropriate index in the full ball track
-            orig_frame_idx = frame_indices[i]
-            ball_track_all[orig_frame_idx] = (x_pred, y_pred)
-
-            if pbar_tracking:
-                pbar_tracking.update(1)
-
-    if pbar_tracking:
-        pbar_tracking.close()
-
-    # For any missing frames (due to BALL_TRACKING_INTERVAL > 1), use interpolation
-    # This ensures we have ball positions for every frame, important for bounce detection
-    if BALL_TRACKING_INTERVAL > 1:
-        print("Interpolating ball positions for skipped frames...")
-        for i in range(total_frames):
-            if ball_track_all[i] == (None, None):
-                # Find closest previous and next valid positions
-                prev_idx, prev_pos = i, (None, None)
-                next_idx, next_pos = i, (None, None)
-
-                # Look backward
-                for j in range(i - 1, -1, -1):
-                    if j < len(ball_track_all) and ball_track_all[j][0] is not None:
-                        prev_idx, prev_pos = j, ball_track_all[j]
-                        break
-
-                # Look forward
-                for j in range(i + 1, total_frames):
-                    if j < len(ball_track_all) and ball_track_all[j][0] is not None:
-                        next_idx, next_pos = j, ball_track_all[j]
-                        break
-
-                # Interpolate if we have valid positions on both sides
-                if prev_pos[0] is not None and next_pos[0] is not None:
-                    total_dist = next_idx - prev_idx
-                    if total_dist > 0:
-                        ratio = (i - prev_idx) / total_dist
-                        x = prev_pos[0] + ratio * (next_pos[0] - prev_pos[0])
-                        y = prev_pos[1] + ratio * (next_pos[1] - prev_pos[1])
-                        ball_track_all[i] = (x, y)
-
     time_pass1_end = time.time()  # End of Pass 1
     print(
-        f"Pass 1: Enhanced ball tracking complete. Total execution time: {time_pass1_end - time_pass1_start:.2f}s"
+        f"Pass 1: Ball tracking complete. Processed {len(ball_track_all)} frames for ball_track_all."
     )
 
-    # Enhanced bounce detection after Pass 1, using improved ball_track_all
+    # Calculate bounces_all immediately after Pass 1, using ball_track_all
     bounces_all = set()
     time_bounce_detection_start = time.time()
     if DETECT_BOUNCES and bounce_detector.model is not None:
-        print("Running enhanced bounce detection (after Pass 1)...")
-
-        # Extract x, y coordinates and apply additional smoothing
-        x_ball_for_bounce = []
-        y_ball_for_bounce = []
-
-        for bp in ball_track_all:
-            x_val = bp[0] if bp is not None else None
-            y_val = bp[1] if bp is not None else None
-            x_ball_for_bounce.append(x_val)
-            y_ball_for_bounce.append(y_val)
-
-        # Let the bounce detector apply its own smoothing (like in the original script)
+        print("Running bounce detection (after Pass 1)...")
+        x_ball_for_bounce = [bp[0] if bp is not None else None for bp in ball_track_all]
+        y_ball_for_bounce = [bp[1] if bp is not None else None for bp in ball_track_all]
         try:
-            print("Analyzing ball trajectories for bounces...")
             bounces_all = bounce_detector.predict(
                 x_ball_for_bounce, y_ball_for_bounce, smooth=True
             )
-            print(f"Detected {len(bounces_all)} potential bounces")
         except Exception as e:
             print(f"Error during bounce detection: {e}")
-            print(f"Exception details: {type(e).__name__}")
-            import traceback
-
-            traceback.print_exc()
             # bounces_all is already an empty set if an error occurs
     time_bounce_detection_end = time.time()
-    print(
-        f"Bounce detection completed in {time_bounce_detection_end - time_bounce_detection_start:.2f}s"
-    )
 
     cap.release()  # Release video capture after Pass 1
     # --- End of Pass 1 ---
@@ -3692,83 +3318,75 @@ if __name__ == "__main__":
                     center_pt_player_frame,
                     display_name,
                 ) in current_frame_persons_top_with_ids:
-                    # Only draw Player 1 and Player 2 on minimap
-                    if display_name in ["Player 1", "Player 2"]:
-                        pt_player_to_transform = np.array(
+                    pt_player_to_transform = np.array(
+                        [
                             [
                                 [
-                                    [
-                                        float(center_pt_player_frame[0]),
-                                        float(center_pt_player_frame[1]),
-                                    ]
+                                    float(center_pt_player_frame[0]),
+                                    float(center_pt_player_frame[1]),
                                 ]
-                            ],
-                            dtype=np.float32,
+                            ]
+                        ],
+                        dtype=np.float32,
+                    )
+                    try:
+                        mapped_player_on_ref_court = cv2.perspectiveTransform(
+                            pt_player_to_transform, draw_homography_for_minimap
                         )
-                        try:
-                            mapped_player_on_ref_court = cv2.perspectiveTransform(
-                                pt_player_to_transform, draw_homography_for_minimap
-                            )
-                            if mapped_player_on_ref_court is not None:
-                                mx_player_ref, my_player_ref = int(
-                                    mapped_player_on_ref_court[0, 0, 0]
-                                ), int(mapped_player_on_ref_court[0, 0, 1])
-                                if (
-                                    0 <= mx_player_ref < minimap_frame_current.shape[1]
-                                    and 0
-                                    <= my_player_ref
-                                    < minimap_frame_current.shape[0]
-                                ):
-                                    cv2.circle(
-                                        minimap_frame_current,
-                                        (mx_player_ref, my_player_ref),
-                                        player_minimap_radius,
-                                        player_minimap_color,
-                                        -1,
-                                    )
-                        except cv2.error:
-                            pass
+                        if mapped_player_on_ref_court is not None:
+                            mx_player_ref, my_player_ref = int(
+                                mapped_player_on_ref_court[0, 0, 0]
+                            ), int(mapped_player_on_ref_court[0, 0, 1])
+                            if (
+                                0 <= mx_player_ref < minimap_frame_current.shape[1]
+                                and 0 <= my_player_ref < minimap_frame_current.shape[0]
+                            ):
+                                cv2.circle(
+                                    minimap_frame_current,
+                                    (mx_player_ref, my_player_ref),
+                                    player_minimap_radius,
+                                    player_minimap_color,
+                                    -1,
+                                )
+                    except cv2.error:
+                        pass
                 for (
                     bbox,
                     center_pt_player_frame,
                     display_name,
                 ) in current_frame_persons_bottom_with_ids:
-                    # Only draw Player 1 and Player 2 on minimap
-                    if display_name in ["Player 1", "Player 2"]:
-                        pt_player_to_transform = np.array(
+                    pt_player_to_transform = np.array(
+                        [
                             [
                                 [
-                                    [
-                                        float(center_pt_player_frame[0]),
-                                        float(center_pt_player_frame[1]),
-                                    ]
+                                    float(center_pt_player_frame[0]),
+                                    float(center_pt_player_frame[1]),
                                 ]
-                            ],
-                            dtype=np.float32,
+                            ]
+                        ],
+                        dtype=np.float32,
+                    )
+                    try:
+                        mapped_player_on_ref_court = cv2.perspectiveTransform(
+                            pt_player_to_transform, draw_homography_for_minimap
                         )
-                        try:
-                            mapped_player_on_ref_court = cv2.perspectiveTransform(
-                                pt_player_to_transform, draw_homography_for_minimap
-                            )
-                            if mapped_player_on_ref_court is not None:
-                                mx_player_ref, my_player_ref = int(
-                                    mapped_player_on_ref_court[0, 0, 0]
-                                ), int(mapped_player_on_ref_court[0, 0, 1])
-                                if (
-                                    0 <= mx_player_ref < minimap_frame_current.shape[1]
-                                    and 0
-                                    <= my_player_ref
-                                    < minimap_frame_current.shape[0]
-                                ):
-                                    cv2.circle(
-                                        minimap_frame_current,
-                                        (mx_player_ref, my_player_ref),
-                                        player_minimap_radius,
-                                        player_minimap_color,
-                                        -1,
-                                    )
-                        except cv2.error:
-                            pass
+                        if mapped_player_on_ref_court is not None:
+                            mx_player_ref, my_player_ref = int(
+                                mapped_player_on_ref_court[0, 0, 0]
+                            ), int(mapped_player_on_ref_court[0, 0, 1])
+                            if (
+                                0 <= mx_player_ref < minimap_frame_current.shape[1]
+                                and 0 <= my_player_ref < minimap_frame_current.shape[0]
+                            ):
+                                cv2.circle(
+                                    minimap_frame_current,
+                                    (mx_player_ref, my_player_ref),
+                                    player_minimap_radius,
+                                    player_minimap_color,
+                                    -1,
+                                )
+                    except cv2.error:
+                        pass
 
             # Resize minimap_frame_current (which now has trace, accumulated bounces, players)
             minimap_resized = cv2.resize(
