@@ -388,8 +388,13 @@ def generate_minimap_heatmaps(
             continue
 
         # top
-        for bbox, center_pt, *_ in persons_top[i]:
-            if bbox is not None and len(bbox) == 4:
+        for bbox, center_pt, display_name in persons_top[i]:
+            # Only include in heatmap if player is identified as Player 1 or Player 2
+            if (
+                bbox is not None
+                and len(bbox) == 4
+                and display_name in ["Player 1", "Player 2"]
+            ):
                 cx, cy = center_pt
                 pt = np.array([[[cx, cy]]], dtype=np.float32)
                 mapped = cv2.perspectiveTransform(pt, inv_mat)
@@ -398,8 +403,13 @@ def generate_minimap_heatmaps(
                     cv2.circle(player_acc, (xx, yy), 10, 1.0, -1)
 
         # bottom
-        for bbox, center_pt, *_ in persons_bottom[i]:
-            if bbox is not None and len(bbox) == 4:
+        for bbox, center_pt, display_name in persons_bottom[i]:
+            # Only include in heatmap if player is identified as Player 1 or Player 2
+            if (
+                bbox is not None
+                and len(bbox) == 4
+                and display_name in ["Player 1", "Player 2"]
+            ):
                 cx, cy = center_pt
                 pt = np.array([[[cx, cy]]], dtype=np.float32)
                 mapped = cv2.perspectiveTransform(pt, inv_mat)
@@ -2254,7 +2264,7 @@ if __name__ == "__main__":
     # bounce_color = (0, 255, 255) # Now handled by add_bounces_to_minimap_video defaults
     box_color = (255, 0, 0)
     player_minimap_color = (255, 0, 0)
-    player_minimap_radius = 20  # Smaller radius for players on minimap
+    player_minimap_radius = 30  # Larger radius for players on minimap
 
     # --- Initialization ---
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -3318,75 +3328,83 @@ if __name__ == "__main__":
                     center_pt_player_frame,
                     display_name,
                 ) in current_frame_persons_top_with_ids:
-                    pt_player_to_transform = np.array(
-                        [
+                    # Only draw on minimap if player is identified as Player 1 or Player 2
+                    if display_name in ["Player 1", "Player 2"]:
+                        pt_player_to_transform = np.array(
                             [
                                 [
-                                    float(center_pt_player_frame[0]),
-                                    float(center_pt_player_frame[1]),
+                                    [
+                                        float(center_pt_player_frame[0]),
+                                        float(center_pt_player_frame[1]),
+                                    ]
                                 ]
-                            ]
-                        ],
-                        dtype=np.float32,
-                    )
-                    try:
-                        mapped_player_on_ref_court = cv2.perspectiveTransform(
-                            pt_player_to_transform, draw_homography_for_minimap
+                            ],
+                            dtype=np.float32,
                         )
-                        if mapped_player_on_ref_court is not None:
-                            mx_player_ref, my_player_ref = int(
-                                mapped_player_on_ref_court[0, 0, 0]
-                            ), int(mapped_player_on_ref_court[0, 0, 1])
-                            if (
-                                0 <= mx_player_ref < minimap_frame_current.shape[1]
-                                and 0 <= my_player_ref < minimap_frame_current.shape[0]
-                            ):
-                                cv2.circle(
-                                    minimap_frame_current,
-                                    (mx_player_ref, my_player_ref),
-                                    player_minimap_radius,
-                                    player_minimap_color,
-                                    -1,
-                                )
-                    except cv2.error:
-                        pass
+                        try:
+                            mapped_player_on_ref_court = cv2.perspectiveTransform(
+                                pt_player_to_transform, draw_homography_for_minimap
+                            )
+                            if mapped_player_on_ref_court is not None:
+                                mx_player_ref, my_player_ref = int(
+                                    mapped_player_on_ref_court[0, 0, 0]
+                                ), int(mapped_player_on_ref_court[0, 0, 1])
+                                if (
+                                    0 <= mx_player_ref < minimap_frame_current.shape[1]
+                                    and 0
+                                    <= my_player_ref
+                                    < minimap_frame_current.shape[0]
+                                ):
+                                    cv2.circle(
+                                        minimap_frame_current,
+                                        (mx_player_ref, my_player_ref),
+                                        player_minimap_radius,
+                                        player_minimap_color,
+                                        -1,
+                                    )
+                        except cv2.error:
+                            pass
                 for (
                     bbox,
                     center_pt_player_frame,
                     display_name,
                 ) in current_frame_persons_bottom_with_ids:
-                    pt_player_to_transform = np.array(
-                        [
+                    # Only draw on minimap if player is identified as Player 1 or Player 2
+                    if display_name in ["Player 1", "Player 2"]:
+                        pt_player_to_transform = np.array(
                             [
                                 [
-                                    float(center_pt_player_frame[0]),
-                                    float(center_pt_player_frame[1]),
+                                    [
+                                        float(center_pt_player_frame[0]),
+                                        float(center_pt_player_frame[1]),
+                                    ]
                                 ]
-                            ]
-                        ],
-                        dtype=np.float32,
-                    )
-                    try:
-                        mapped_player_on_ref_court = cv2.perspectiveTransform(
-                            pt_player_to_transform, draw_homography_for_minimap
+                            ],
+                            dtype=np.float32,
                         )
-                        if mapped_player_on_ref_court is not None:
-                            mx_player_ref, my_player_ref = int(
-                                mapped_player_on_ref_court[0, 0, 0]
-                            ), int(mapped_player_on_ref_court[0, 0, 1])
-                            if (
-                                0 <= mx_player_ref < minimap_frame_current.shape[1]
-                                and 0 <= my_player_ref < minimap_frame_current.shape[0]
-                            ):
-                                cv2.circle(
-                                    minimap_frame_current,
-                                    (mx_player_ref, my_player_ref),
-                                    player_minimap_radius,
-                                    player_minimap_color,
-                                    -1,
-                                )
-                    except cv2.error:
-                        pass
+                        try:
+                            mapped_player_on_ref_court = cv2.perspectiveTransform(
+                                pt_player_to_transform, draw_homography_for_minimap
+                            )
+                            if mapped_player_on_ref_court is not None:
+                                mx_player_ref, my_player_ref = int(
+                                    mapped_player_on_ref_court[0, 0, 0]
+                                ), int(mapped_player_on_ref_court[0, 0, 1])
+                                if (
+                                    0 <= mx_player_ref < minimap_frame_current.shape[1]
+                                    and 0
+                                    <= my_player_ref
+                                    < minimap_frame_current.shape[0]
+                                ):
+                                    cv2.circle(
+                                        minimap_frame_current,
+                                        (mx_player_ref, my_player_ref),
+                                        player_minimap_radius,
+                                        player_minimap_color,
+                                        -1,
+                                    )
+                        except cv2.error:
+                            pass
 
             # Resize minimap_frame_current (which now has trace, accumulated bounces, players)
             minimap_resized = cv2.resize(
