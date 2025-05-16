@@ -7,7 +7,7 @@ export const matchData = [
     location: 'UC Davis Tennis Courts',
     players: {
       team1: {
-        name: 'Cory Pham',
+        name: 'Me',
         team: 'UC Davis',
         tempId: 3
       },
@@ -26,6 +26,8 @@ export const matchData = [
       rallies: 42,
       avgRallyLength: 6.3, // hits
       longestRally: 21, // hits
+      player1Score: 86.5, // New metric for player 1
+      player2Score: 78.3, // New metric for player 2
       playerMovement: {
         team1: {
           totalDistance: 1872, // meters
@@ -42,9 +44,9 @@ export const matchData = [
     analysis: {
       // Generated insights mentioned in README
       heatmaps: {
-        bounces: '/assets/heatmaps/match_001_bounces.png',
-        team1Movement: '/assets/heatmaps/match_001_player1_movement.png',
-        team2Movement: '/assets/heatmaps/match_001_player2_movement.png'
+        bounces: `./assets/tennis_heatmap_bounces.jpg`,
+        team1Movement: `./assets/tennis_heatmap_player1.jpg`,
+        team2Movement: `./assets/tennis_heatmap_player2.jpg`
       },
       videos: {
         withOverlay: '/assets/videos/match_001_overlay.mp4',
@@ -65,7 +67,7 @@ export const matchData = [
     location: 'Stanford Tennis Center',
     players: {
       team1: {
-        name: 'Cory Pham',
+        name: 'Me',
         team: 'UC Davis',
         tempId: 2
       },
@@ -83,6 +85,8 @@ export const matchData = [
       rallies: 38,
       avgRallyLength: 5.7,
       longestRally: 18,
+      player1Score: 82.7, // New metric for player 1
+      player2Score: 74.9, // New metric for player 2
       playerMovement: {
         team1: {
           totalDistance: 1654,
@@ -98,9 +102,9 @@ export const matchData = [
     },
     analysis: {
       heatmaps: {
-        bounces: '/assets/heatmaps/match_002_bounces.png',
-        team1Movement: '/assets/heatmaps/match_002_player1_movement.png',
-        team2Movement: '/assets/heatmaps/match_002_player2_movement.png'
+        bounces: `./assets/tennis_heatmap_bounces.jpg`,
+        team1Movement: `./assets/tennis_heatmap_player1.jpg`,
+        team2Movement: `./assets/tennis_heatmap_player2.jpg`
       },
       videos: {
         withOverlay: '/assets/videos/match_002_overlay.mp4',
@@ -121,7 +125,7 @@ export const matchData = [
     location: 'UC Davis Tennis Courts',
     players: {
       team1: {
-        name: 'Cory Pham',
+        name: 'Me',
         team: 'UC Davis',
         tempId: 3
       },
@@ -139,6 +143,8 @@ export const matchData = [
       rallies: 41,
       avgRallyLength: 6.8,
       longestRally: 23,
+      player1Score: 89.2, // New metric for player 1
+      player2Score: 81.5, // New metric for player 2
       playerMovement: {
         team1: {
           totalDistance: 1742,
@@ -154,9 +160,9 @@ export const matchData = [
     },
     analysis: {
       heatmaps: {
-        bounces: '/assets/heatmaps/match_003_bounces.png',
-        team1Movement: '/assets/heatmaps/match_003_player1_movement.png',
-        team2Movement: '/assets/heatmaps/match_003_player2_movement.png'
+        bounces: `./assets/tennis_heatmap_bounces.jpg`,
+        team1Movement: `./assets/tennis_heatmap_player1.jpg`,
+        team2Movement: `./assets/tennis_heatmap_player2.jpg`
       },
       videos: {
         withOverlay: '/assets/videos/match_003_overlay.mp4',
