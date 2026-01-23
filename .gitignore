@@ -22,4 +22,4 @@ data/.DS_Store
 # Ignore Python cache directories inside specific folders
 CourtCheck/__pycache__/
 CourtCheck/models/court_detection/__pycache__
-models/court_detection/__pycache__
+models/court_detection/__pycache__node_modules/
