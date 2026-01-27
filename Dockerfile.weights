@@ -1,0 +1,4 @@
+FROM ubuntu:22.04
+WORKDIR /opt/models
+COPY models/weights/tracknet_weights.pt /opt/models/tracknet_weights.pt
+RUN ls -lah /opt/models
