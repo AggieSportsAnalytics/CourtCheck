@@ -81,7 +81,6 @@ app = modal.App("courtcheck")
     image=image,
     gpu="A10G",  # Use A10G GPU for inference
     volumes={
-        "/models": models_volume,
         "/videos": videos_volume,
     },
     timeout=3600,  # 1 hour timeout
@@ -90,7 +89,7 @@ app = modal.App("courtcheck")
 def process_video(
     video_path: str,
     output_path: str,
-    model_weights_path: str = "/models/weights",
+    model_weights_path: str = "/models/weights",  # Models are in the image, not a volume
 ):
     """
     Process a tennis video and generate analysis output.

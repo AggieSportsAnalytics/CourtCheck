@@ -87,7 +87,9 @@ class BallDetector:
         if not os.path.exists(model_path):
             raise FileNotFoundError(f"Model weights not found at: {model_path}")
         
-        self.model = BallTrackerNet(input_channels=9, out_channels=256)
+        # Initialize model with same parameters as the trained checkpoint
+        # The checkpoint was trained with 3 input channels (single frame) and 15 output channels
+        self.model = BallTrackerNet(input_channels=3, out_channels=15)
         self.model.load_state_dict(torch.load(model_path, map_location=self.device))
         self.model = self.model.to(self.device)
         self.model.eval()
@@ -114,23 +116,11 @@ class BallDetector:
         if self.model is None:
             return (None, None)
         
-        # Use frame buffer if frames not provided
-        if prev_frame is None or prev_prev_frame is None:
-            self.frame_buffer.append(current_frame)
-            if len(self.frame_buffer) < 3:
-                return (None, None)
-            prev_prev_frame, prev_frame, current_frame = list(self.frame_buffer)
-        
-        # Preprocess frames
+        # Preprocess frame (single frame input for this model)
         img = cv2.resize(current_frame, (self.width, self.height))
-        img_prev = cv2.resize(prev_frame, (self.width, self.height))
-        img_preprev = cv2.resize(prev_prev_frame, (self.width, self.height))
-        
-        # Concatenate frames
-        imgs = np.concatenate((img, img_prev, img_preprev), axis=2)
-        imgs = imgs.astype(np.float32) / 255.0
-        imgs = np.rollaxis(imgs, 2, 0)
-        inp = np.expand_dims(imgs, axis=0)
+        img = img.astype(np.float32) / 255.0
+        img = np.rollaxis(img, 2, 0)  # HWC to CHW
+        inp = np.expand_dims(img, axis=0)  # Add batch dimension
         
         # Model inference
         with torch.no_grad():

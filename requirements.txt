@@ -1,0 +1,38 @@
+# CourtCheck - Python Dependencies
+
+# Modal (serverless compute)
+modal>=0.63.0
+
+# Deep Learning
+torch==2.1.0
+torchvision==0.16.0
+torchaudio==2.1.0
+
+# Computer Vision
+opencv-python==4.8.1.78
+detectron2 @ git+https://github.com/facebookresearch/detectron2.git
+
+# Scientific Computing
+numpy==1.24.3
+scipy==1.11.2
+pandas==2.0.3
+
+# Image Processing
+Pillow==10.0.0
+matplotlib==3.7.2
+
+# Video Processing
+scenedetect[opencv]
+
+# Utilities
+tqdm==4.66.1
+
+# Web API (for Modal)
+fastapi>=0.104.0
+python-multipart>=0.0.6
+uvicorn>=0.24.0
+
+# Development (optional)
+pytest>=7.4.0
+black>=23.7.0
+flake8>=6.1.0
