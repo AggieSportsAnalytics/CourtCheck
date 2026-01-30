@@ -46,3 +46,16 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Local processing directories
+uploads/
+outputs/
+
+# Video files
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# Temp files
+*.tmp

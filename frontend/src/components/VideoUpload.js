@@ -8,8 +8,8 @@ const VideoUpload = ({ onUploadComplete, apiUrl }) => {
   const [videoId, setVideoId] = useState(null);
   const [error, setError] = useState(null);
 
-  // Use environment variable or prop for API URL
-  const API_BASE_URL = apiUrl || process.env.REACT_APP_API_URL || 'https://your-modal-app-url.modal.run';
+  // Local backend API URL
+  const API_BASE_URL = apiUrl || 'http://localhost:8000';
 
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
@@ -97,7 +97,8 @@ const VideoUpload = ({ onUploadComplete, apiUrl }) => {
             setIsUploading(false);
             onUploadComplete && onUploadComplete({
               videoId: videoId,
-              downloadUrl: `${API_BASE_URL}/api/download/${videoId}`
+              downloadUrl: `${API_BASE_URL}/api/download/${videoId}`,
+              analytics: statusData.result || {}
             });
           }, 1000);
         } else if (statusData.status === 'processing') {
@@ -123,57 +124,91 @@ const VideoUpload = ({ onUploadComplete, apiUrl }) => {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto p-6">
+    <div style={{ width: '100%', maxWidth: '672px', margin: '0 auto', padding: '24px' }}>
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
-          ${isUploading ? 'border-gray-300 bg-gray-50' : 'border-gray-300 hover:border-blue-400'}`}
+        style={{
+          border: '2px dashed #d1d5db',
+          borderRadius: '8px',
+          padding: '32px',
+          textAlign: 'center',
+          cursor: isUploading ? 'default' : 'pointer',
+          backgroundColor: isUploading ? '#f9fafb' : 'white',
+          transition: 'all 0.3s'
+        }}
       >
         <input
           type="file"
           id="video-upload"
           accept="video/*"
           onChange={handleFileSelect}
-          className="hidden"
+          style={{ display: 'none' }}
           disabled={isUploading}
         />
         
         {!isUploading ? (
-          <label htmlFor="video-upload" className="cursor-pointer block space-y-4">
-            <div className="text-6xl mb-4">🎾</div>
-            <h3 className="text-xl font-semibold text-gray-700">
+          <label htmlFor="video-upload" style={{ cursor: 'pointer', display: 'block' }}>
+            <div style={{ fontSize: '60px', marginBottom: '16px' }}>🎾</div>
+            <h3 style={{ fontSize: '20px', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>
               Drag & drop your tennis match video
             </h3>
-            <p className="text-gray-500">or click to select a file</p>
-            <p className="text-sm text-gray-400">Supported formats: MP4, MOV, AVI</p>
+            <p style={{ color: '#6b7280', marginBottom: '8px' }}>or click to select a file</p>
+            <p style={{ fontSize: '14px', color: '#9ca3af' }}>Supported formats: MP4, MOV, AVI</p>
             
             {error && (
-              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-sm text-red-600">{error}</p>
+              <div style={{ 
+                marginTop: '16px', 
+                padding: '16px', 
+                backgroundColor: '#fef2f2', 
+                border: '1px solid #fecaca', 
+                borderRadius: '8px' 
+              }}>
+                <p style={{ fontSize: '14px', color: '#dc2626' }}>{error}</p>
               </div>
             )}
           </label>
         ) : (
-          <div className="space-y-4">
-            <div className="text-2xl font-semibold text-gray-700">{processingStage}</div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div>
+            <div style={{ fontSize: '24px', fontWeight: '600', color: '#374151', marginBottom: '16px' }}>
+              {processingStage}
+            </div>
+            <div style={{ 
+              width: '100%', 
+              backgroundColor: '#e5e7eb', 
+              borderRadius: '9999px', 
+              height: '10px',
+              marginBottom: '16px'
+            }}>
               <div
-                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-                style={{ width: `${uploadProgress}%` }}
+                style={{ 
+                  backgroundColor: '#2563eb', 
+                  height: '10px', 
+                  borderRadius: '9999px', 
+                  transition: 'width 0.3s',
+                  width: `${uploadProgress}%`
+                }}
               ></div>
             </div>
-            <p className="text-sm text-gray-500">
+            <p style={{ fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>
               {selectedFile && `Processing ${selectedFile.name}...`}
             </p>
-            <p className="text-xs text-gray-400">This may take several minutes depending on video length.</p>
+            <p style={{ fontSize: '12px', color: '#9ca3af' }}>
+              This may take several minutes depending on video length.
+            </p>
           </div>
         )}
       </div>
 
       {videoId && !isUploading && (
-        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-sm text-green-700">
+        <div style={{ 
+          marginTop: '16px', 
+          padding: '16px', 
+          backgroundColor: '#f0fdf4', 
+          border: '1px solid #bbf7d0', 
+          borderRadius: '8px' 
+        }}>
+          <p style={{ fontSize: '14px', color: '#15803d' }}>
             Video processed successfully! Video ID: {videoId}
           </p>
         </div>

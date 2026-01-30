@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #11052C;
+        }
+        .success {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .test-item {
+            margin: 15px 0;
+            padding: 10px;
+            background: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>🎾 CourtCheck - Browser Test</h1>
+        <p class="success">✅ If you can see this, your browser is working!</p>
+        
+        <div class="test-item">
+            <strong>Test 1:</strong> HTML rendering - ✅ PASS
+        </div>
+        
+        <div class="test-item">
+            <strong>Test 2:</strong> CSS styling - ✅ PASS
+        </div>
+        
+        <div class="test-item">
+            <strong>Test 3:</strong> JavaScript
+            <div id="js-test">⏳ Testing...</div>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 20px; background: #e3f2fd; border-radius: 5px;">
+            <h3>What This Means:</h3>
+            <p>If you see this page with green checkmarks:</p>
+            <ul>
+                <li>✅ Your browser works fine</li>
+                <li>✅ HTML/CSS/JS all work</li>
+                <li>⚠️ The issue is with the React app specifically</li>
+            </ul>
+            
+            <p><strong>Next: Check http://localhost:3000 and press F12 to see console errors</strong></p>
+        </div>
+    </div>
+    
+    <script>
+        // Test JavaScript
+        setTimeout(() => {
+            document.getElementById('js-test').innerHTML = '✅ PASS';
+            console.log('✅ JavaScript is working!');
+            console.log('Now check http://localhost:3000 and look for React errors');
+        }, 100);
+    </script>
+</body>
+</html>

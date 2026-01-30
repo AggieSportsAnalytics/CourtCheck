@@ -1,0 +1,356 @@
+"""
+Local FastAPI Backend for CourtCheck - No Modal Required
+Run with: python local_backend.py
+"""
+
+import os
+import uuid
+import shutil
+from pathlib import Path
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+import uvicorn
+import torch
+import cv2
+import numpy as np
+
+def convert_to_serializable(obj):
+    """Convert numpy types to JSON serializable Python types."""
+    if isinstance(obj, dict):
+        return {k: convert_to_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_to_serializable(item) for item in obj]
+    elif isinstance(obj, (np.integer,)):
+        return int(obj)
+    elif isinstance(obj, (np.floating,)):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    else:
+        return obj
+
+# Import processing modules
+from ball_detection import BallDetector
+from court_detection_module import CourtDetectionProcessor
+from stroke_classifier import StrokeClassifier
+from bounce_detection import BounceDetector
+from video_processor import VideoProcessor
+
+# Configuration
+UPLOAD_DIR = Path("./uploads")
+OUTPUT_DIR = Path("./outputs")
+MODELS_DIR = Path("./models/weights")
+
+# Create directories
+UPLOAD_DIR.mkdir(exist_ok=True)
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+# Global dictionary to track job status
+job_status = {}
+
+# Initialize FastAPI
+app = FastAPI(title="CourtCheck Local API")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for local development
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize models globally (load once at startup)
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"[TENNIS] Using device: {device}")
+
+# Load models
+print("[MODELS] Loading models...")
+
+# 1. Ball detector (TrackNet)
+tracknet_path = "tracknet_weights.pt"
+ball_detector = None
+if os.path.exists(tracknet_path):
+    try:
+        ball_detector = BallDetector(model_path=tracknet_path, device=device)
+        print("[OK] TrackNet (Ball Detection) loaded")
+    except Exception as e:
+        print(f"[WARNING] TrackNet failed to load: {e}")
+else:
+    print("[WARNING] TrackNet weights not found: tracknet_weights.pt")
+
+# 2. Court detector (using new model)
+court_model_path = "model_tennis_court_det.pt"
+court_detector = None
+if os.path.exists(court_model_path):
+    try:
+        court_detector = CourtDetectionProcessor(
+            model_path=court_model_path,
+            device=device
+        )
+        print("[OK] Court Detection loaded")
+    except Exception as e:
+        print(f"[WARNING] Court detector failed to load: {e}")
+else:
+    print("[WARNING] Court detection weights not found: model_tennis_court_det.pt")
+
+# 3. Stroke classifier
+stroke_model_path = "stroke_classifier_weights.pth"
+stroke_classifier = None
+if os.path.exists(stroke_model_path):
+    try:
+        stroke_classifier = StrokeClassifier(
+            model_path=stroke_model_path,
+            device=device
+        )
+        print("[OK] Stroke Classifier loaded")
+    except Exception as e:
+        print(f"[WARNING] Stroke classifier failed to load: {e}")
+else:
+    print("[WARNING] Stroke classifier weights not found: stroke_classifier_weights.pth")
+
+# 4. Bounce detector
+bounce_model_path = "bounce_detection_weights.cbm"
+bounce_detector = None
+if os.path.exists(bounce_model_path):
+    try:
+        bounce_detector = BounceDetector(model_path=bounce_model_path)
+        print("[OK] Bounce Detector loaded")
+    except Exception as e:
+        print(f"[WARNING] Bounce detector failed to load: {e}")
+else:
+    print("[WARNING] Bounce detector weights not found: bounce_detection_weights.cbm")
+
+# 5. COCO instances (for reference/metadata)
+coco_path = "coco_instances_results.json"
+if os.path.exists(coco_path):
+    print("[OK] COCO instances results available")
+else:
+    print("[WARNING] COCO results not found: coco_instances_results.json")
+
+print("\n[STARTUP] Backend initialization complete!")
+print(f"[MODELS] Models loaded: {sum([ball_detector is not None, court_detector is not None, stroke_classifier is not None, bounce_detector is not None])} / 4")
+
+
+def process_video_task(video_id: str, video_path: str, output_path: str):
+    """Background task to process video."""
+    try:
+        job_status[video_id] = {"status": "processing", "progress": 0}
+        
+        # Initialize processor with all models
+        processor = VideoProcessor(
+            court_processor=court_detector,
+            ball_detector=ball_detector,
+            stroke_classifier=stroke_classifier,
+            bounce_detector=bounce_detector
+        )
+        
+        # Process video
+        result = processor.process(
+            input_path=video_path,
+            output_path=output_path,
+            draw_court=True,
+            draw_ball=True,
+            draw_trace=True
+        )
+        
+        # Update status
+        job_status[video_id] = {
+            "status": "completed",
+            "progress": 100,
+            "result": result,
+            "output_path": output_path
+        }
+        
+    except Exception as e:
+        job_status[video_id] = {
+            "status": "error",
+            "progress": 0,
+            "error": str(e)
+        }
+        print(f"❌ Processing error: {e}")
+
+
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {
+        "service": "CourtCheck Local API",
+        "status": "running",
+        "device": device,
+        "models": {
+            "ball_detector": ball_detector is not None,
+            "court_detector": court_detector is not None
+        }
+    }
+
+
+@app.get("/api/health")
+async def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "service": "CourtCheck Local API",
+        "device": device
+    }
+
+
+@app.post("/api/upload")
+async def upload_video(file: UploadFile = File(...)):
+    """Upload a video file."""
+    try:
+        # Generate unique video ID
+        video_id = str(uuid.uuid4())
+        
+        # Save video
+        file_extension = Path(file.filename).suffix
+        video_filename = f"{video_id}{file_extension}"
+        video_path = UPLOAD_DIR / video_filename
+        
+        # Write file
+        with open(video_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        
+        file_size = os.path.getsize(video_path)
+        
+        return JSONResponse({
+            "video_id": video_id,
+            "filename": file.filename,
+            "size": file_size,
+            "status": "uploaded",
+            "message": "Video uploaded successfully"
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/process/{video_id}")
+async def process_video_endpoint(
+    video_id: str,
+    filename: str,
+    background_tasks: BackgroundTasks
+):
+    """Start processing a video."""
+    try:
+        # Find video file
+        video_files = list(UPLOAD_DIR.glob(f"{video_id}.*"))
+        if not video_files:
+            raise HTTPException(status_code=404, detail="Video not found")
+        
+        video_path = str(video_files[0])
+        output_path = str(OUTPUT_DIR / f"{video_id}_output.mp4")
+        
+        # Initialize job status
+        job_status[video_id] = {"status": "queued", "progress": 0}
+        
+        # Start background processing
+        background_tasks.add_task(process_video_task, video_id, video_path, output_path)
+        
+        return JSONResponse({
+            "video_id": video_id,
+            "status": "processing",
+            "message": "Video processing started"
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/status/{video_id}")
+async def get_status(video_id: str):
+    """Get processing status."""
+    if video_id not in job_status:
+        return JSONResponse({
+            "video_id": video_id,
+            "status": "not_found",
+            "message": "Video not found or not processed yet"
+        })
+    
+    status = job_status[video_id]
+    
+    if status["status"] == "completed":
+        result = convert_to_serializable(status.get("result", {}))
+        return JSONResponse({
+            "video_id": video_id,
+            "status": "completed",
+            "progress": 100,
+            "download_url": f"/api/download/{video_id}",
+            "result": result
+        })
+    elif status["status"] == "error":
+        return JSONResponse({
+            "video_id": video_id,
+            "status": "error",
+            "error": status.get("error", "Unknown error")
+        })
+    else:
+        return JSONResponse({
+            "video_id": video_id,
+            "status": status["status"],
+            "progress": status.get("progress", 0),
+            "message": "Video is being processed"
+        })
+
+
+@app.get("/api/download/{video_id}")
+async def download_video(video_id: str):
+    """Download processed video."""
+    output_path = OUTPUT_DIR / f"{video_id}_output.mp4"
+    
+    if not output_path.exists():
+        raise HTTPException(status_code=404, detail="Processed video not found")
+    
+    return FileResponse(
+        path=str(output_path),
+        media_type="video/mp4",
+        filename=f"{video_id}_output.mp4"
+    )
+
+
+@app.delete("/api/cleanup/{video_id}")
+async def cleanup_video(video_id: str):
+    """Cleanup uploaded and processed videos."""
+    try:
+        # Delete uploaded video
+        for video_file in UPLOAD_DIR.glob(f"{video_id}.*"):
+            video_file.unlink()
+        
+        # Delete output video
+        output_file = OUTPUT_DIR / f"{video_id}_output.mp4"
+        if output_file.exists():
+            output_file.unlink()
+        
+        # Remove from status
+        if video_id in job_status:
+            del job_status[video_id]
+        
+        return JSONResponse({
+            "video_id": video_id,
+            "status": "deleted",
+            "message": "Video files cleaned up"
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+if __name__ == "__main__":
+    print("=" * 60)
+    print("COURTCHECK LOCAL BACKEND")
+    print("=" * 60)
+    print(f"Upload directory: {UPLOAD_DIR.absolute()}")
+    print(f"Output directory: {OUTPUT_DIR.absolute()}")
+    print(f"Device: {device}")
+    print("\nAPI URL: http://localhost:8000")
+    print("API docs: http://localhost:8000/docs")
+    print("\nPress CTRL+C to stop\n")
+    
+    uvicorn.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        log_level="info"
+    )
