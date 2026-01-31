@@ -15,23 +15,6 @@ import uvicorn
 import torch
 import cv2
 import numpy as np
-import json
-
-class NumpyEncoder(json.JSONEncoder):
-    """Custom JSON encoder that handles numpy types."""
-    def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        elif isinstance(obj, (np.integer, np.int8, np.int16, np.int32, np.int64,
-                             np.uint8, np.uint16, np.uint32, np.uint64)):
-            return int(obj)
-        elif isinstance(obj, (np.floating, np.float16, np.float32, np.float64)):
-            return float(obj)
-        elif isinstance(obj, np.bool_):
-            return bool(obj)
-        elif hasattr(obj, 'item'):  # Catch any remaining numpy scalar types
-            return obj.item()
-        return super().default(obj)
 
 def convert_to_serializable(obj):
     """Convert numpy types to JSON serializable Python types."""
@@ -39,17 +22,12 @@ def convert_to_serializable(obj):
         return {k: convert_to_serializable(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [convert_to_serializable(item) for item in obj]
+    elif isinstance(obj, (np.integer,)):
+        return int(obj)
+    elif isinstance(obj, (np.floating,)):
+        return float(obj)
     elif isinstance(obj, np.ndarray):
         return obj.tolist()
-    elif isinstance(obj, (np.integer, np.int8, np.int16, np.int32, np.int64,
-                         np.uint8, np.uint16, np.uint32, np.uint64)):
-        return int(obj)
-    elif isinstance(obj, (np.floating, np.float16, np.float32, np.float64)):
-        return float(obj)
-    elif isinstance(obj, np.bool_):
-        return bool(obj)
-    elif hasattr(obj, 'item'):  # Catch any remaining numpy scalar types
-        return obj.item()
     else:
         return obj
 
@@ -170,7 +148,6 @@ def process_video_task(video_id: str, video_path: str, output_path: str):
         )
         
         # Process video
-        print(f"[PROCESS] Starting video processing for {video_id}")
         result = processor.process(
             input_path=video_path,
             output_path=output_path,
@@ -178,9 +155,6 @@ def process_video_task(video_id: str, video_path: str, output_path: str):
             draw_ball=True,
             draw_trace=True
         )
-        
-        print(f"[PROCESS] Completed. Results: {result.get('ball_detected_frames', 0)}/{result.get('total_frames', 0)} frames with ball")
-        print(f"[PROCESS] Bounces detected: {result.get('total_bounces', 0)}")
         
         # Update status
         job_status[video_id] = {
@@ -289,39 +263,36 @@ async def process_video_endpoint(
 async def get_status(video_id: str):
     """Get processing status."""
     if video_id not in job_status:
-        data = {
+        return JSONResponse({
             "video_id": video_id,
             "status": "not_found",
             "message": "Video not found or not processed yet"
-        }
-        return JSONResponse(content=json.loads(json.dumps(data, cls=NumpyEncoder)))
+        })
     
     status = job_status[video_id]
     
     if status["status"] == "completed":
-        data = {
+        result = convert_to_serializable(status.get("result", {}))
+        return JSONResponse({
             "video_id": video_id,
             "status": "completed",
             "progress": 100,
             "download_url": f"/api/download/{video_id}",
-            "result": status.get("result", {})
-        }
-        return JSONResponse(content=json.loads(json.dumps(data, cls=NumpyEncoder)))
+            "result": result
+        })
     elif status["status"] == "error":
-        data = {
+        return JSONResponse({
             "video_id": video_id,
             "status": "error",
             "error": status.get("error", "Unknown error")
-        }
-        return JSONResponse(content=json.loads(json.dumps(data, cls=NumpyEncoder)))
+        })
     else:
-        data = {
+        return JSONResponse({
             "video_id": video_id,
             "status": status["status"],
             "progress": status.get("progress", 0),
             "message": "Video is being processed"
-        }
-        return JSONResponse(content=json.loads(json.dumps(data, cls=NumpyEncoder)))
+        })
 
 
 @app.get("/api/download/{video_id}")

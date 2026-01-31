@@ -90,15 +90,7 @@ class BallDetector:
         # Initialize model with same parameters as the trained checkpoint
         # The checkpoint was trained with 9 input channels (3 frames) and 256 output channels
         self.model = BallTrackerNet(input_channels=9, out_channels=256)
-        try:
-
-            self.model.load_state_dict(torch.load(model_path, map_location=self.device))
-
-        except RuntimeError as e:
-
-            print(f"Warning: Loading model with strict=False: {e}")
-
-            self.model.load_state_dict(torch.load(model_path, map_location=self.device, strict=False), strict=False)
+        self.model.load_state_dict(torch.load(model_path, map_location=self.device))
         self.model = self.model.to(self.device)
         self.model.eval()
         
