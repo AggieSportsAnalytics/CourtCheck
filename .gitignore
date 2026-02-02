@@ -1,48 +1,58 @@
-# Ignore raw images
-/data/raw
+# =====================
+# Data
+# =====================
+data/raw/
+data/processed/
 
-# Ignore processed images
-/data/processed
-
-# Ignore model files
+# =====================
+# Model weights
+# =====================
 models/model_weights/tracknet_weights.pt
 models/model_weights/court_detection_weights.pth
+*.pt
+*.pth
 
-# Ignore Python cache directories
-*.py[cod]
+# =====================
+# Generated outputs
+# =====================
+*.avi
+output_videos/
+runs/
+tracker_stubs/
+
+# =====================
+# Python
+# =====================
 __pycache__/
-**/__pycache__/
+*.pyc
+.venv/
+venv/
 
-# Ignore macOS .DS_Store files
-.DS_Store
-
-# Ignore data directory .DS_Store files
-data/.DS_Store
-
-# Ignore Python cache directories inside specific folders
-CourtCheck/__pycache__/
-CourtCheck/models/court_detection/__pycache__
-models/court_detection/__pycache__node_modules/
-# Node
+# =====================
+# Node / frontend
+# =====================
 node_modules/
 .next/
 dist/
 build/
 out/
 
-# Env
+# =====================
+# Environment
+# =====================
 .env
 .env.*
 *.local
 
+# =====================
 # Logs
+# =====================
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Python
-__pycache__/
-*.pyc
-.venv/
-venv/
+# =====================
+# OS
+# =====================
+.DS_Store
