@@ -1,24 +1,39 @@
 # =====================
-# Data
-# =====================
-data/raw/
-data/processed/
-
-# =====================
 # Model weights
 # =====================
-models/model_weights/tracknet_weights.pt
-models/model_weights/court_detection_weights.pth
 *.pt
 *.pth
 
 # =====================
+# Videos
+# =====================
+*.mp4
+*.avi
+
+# =====================
+# Images
+# =====================
+*.jpg
+*.jpeg
+*.png
+
+# =====================
 # Generated outputs
 # =====================
-*.avi
 output_videos/
 runs/
 tracker_stubs/
+analysis/
+
+# =====================
+# Input data (local only)
+# =====================
+input_videos/
+
+# =====================
+# Training datasets (local only)
+# =====================
+training/
 
 # =====================
 # Python
