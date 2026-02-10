@@ -19,7 +19,7 @@ class MiniCourt():
         self.drawing_rectangle_width = 250
         self.drawing_rectangle_height = 500
         self.buffer = 50
-        self.padding_court=20
+        self.padding_court=40
 
         self.set_canvas_background_box_position(frame)
         self.set_mini_court_position()
@@ -93,12 +93,39 @@ class MiniCourt():
             (2,3)
         ]
 
+    # def set_mini_court_position(self):
+    #     self.court_start_x = self.start_x + self.padding_court
+    #     self.court_start_y = self.start_y + self.padding_court
+    #     self.court_end_x = self.end_x - self.padding_court
+    #     self.court_end_y = self.end_y - self.padding_court
+    #     self.court_drawing_width = self.court_end_x - self.court_start_x
     def set_mini_court_position(self):
-        self.court_start_x = self.start_x + self.padding_court
-        self.court_start_y = self.start_y + self.padding_court
-        self.court_end_x = self.end_x - self.padding_court
-        self.court_end_y = self.end_y - self.padding_court
-        self.court_drawing_width = self.court_end_x - self.court_start_x
+        # Inner drawable box after padding
+        inner_x1 = self.start_x + self.padding_court
+        inner_y1 = self.start_y + self.padding_court
+        inner_x2 = self.end_x   - self.padding_court
+        inner_y2 = self.end_y   - self.padding_court
+
+        inner_w = inner_x2 - inner_x1
+        inner_h = inner_y2 - inner_y1
+
+        # Court width uses full inner width (your existing behavior)
+        self.court_drawing_width = inner_w
+
+        # Court height derived from width scale (since convert_meters_to_pixels uses width)
+        court_h_pixels = int(self.convert_meters_to_pixels(constants.HALF_COURT_LINE_HEIGHT * 2))
+
+        # Center vertically inside inner box
+        if court_h_pixels < inner_h:
+            y_offset = (inner_h - court_h_pixels) // 2
+        else:
+            y_offset = 0  # if it doesn't fit, it will clip (or you can shrink width)
+
+        self.court_start_x = inner_x1
+        self.court_end_x   = inner_x2
+
+        self.court_start_y = inner_y1 + y_offset
+        self.court_end_y   = self.court_start_y + court_h_pixels
 
     def set_canvas_background_box_position(self,frame):
         frame= frame.copy()

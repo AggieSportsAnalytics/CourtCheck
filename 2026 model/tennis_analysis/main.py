@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from utils import (read_video, 
                    save_video,
                    measure_distance,
@@ -12,29 +14,38 @@ import cv2
 import pandas as pd
 from copy import deepcopy
 
+import numpy as np
+from heatmap import (
+    get_rally_frame_mask,
+    build_heatmap_from_minicourt_positions,
+    save_static_heatmap_png_with_panel,
+)
+
 
 def main():
+    base_dir = Path(__file__).resolve().parent
+
     # Read Video
-    input_video_path = "input_videos/input_video.mp4"
+    input_video_path = base_dir / "input_videos" / "input_video.mp4"
     video_frames = read_video(input_video_path)
 
     # Detect Players and Ball
     player_tracker = PlayerTracker(model_path='yolov8x')
-    ball_tracker = BallTracker(model_path='models/yolo5_last.pt')
+    ball_tracker = BallTracker(model_path=base_dir / "models" / "yolo5_last.pt")
 
     player_detections = player_tracker.detect_frames(video_frames,
                                                      read_from_stub=True,
-                                                     stub_path="tracker_stubs/player_detections.pkl"
+                                                     stub_path=base_dir / "tracker_stubs" / "player_detections.pkl"
                                                      )
     ball_detections = ball_tracker.detect_frames(video_frames,
                                                      read_from_stub=True,
-                                                     stub_path="tracker_stubs/ball_detections.pkl"
+                                                     stub_path=base_dir / "tracker_stubs" / "ball_detections.pkl"
                                                      )
     ball_detections = ball_tracker.interpolate_ball_positions(ball_detections)
     
     
     # Court Line Detector model
-    court_model_path = "models/keypoints_model.pth"
+    court_model_path = base_dir / "models" / "keypoints_model.pth"
     court_line_detector = CourtLineDetector(court_model_path)
     court_keypoints = court_line_detector.predict(video_frames[0])
 
@@ -51,6 +62,50 @@ def main():
     player_mini_court_detections, ball_mini_court_detections = mini_court.convert_bounding_boxes_to_mini_court_coordinates(player_detections, 
                                                                                                           ball_detections,
                                                                                                           court_keypoints)
+    
+    # ---- HEATMAPS (NEW) ----
+    num_frames = len(video_frames)
+    rally_mask = get_rally_frame_mask(num_frames, ball_shot_frames)
+
+    bins = (180, 90)
+
+    hm_p1, roi1 = build_heatmap_from_minicourt_positions(
+        player_mini_court_detections, 1, mini_court,
+        rally_mask=rally_mask, bins=bins, margin_px=40
+    )
+
+    hm_p2, roi2 = build_heatmap_from_minicourt_positions(
+        player_mini_court_detections,
+        2,
+        mini_court,
+        rally_mask=rally_mask,
+        bins=bins,
+        margin_px=40
+    )
+
+    out_dir = base_dir / "output_videos"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    if hm_p1 is not None:
+        save_static_heatmap_png_with_panel(
+            out_dir / "heatmap_player_1.png",
+            mini_court,
+            video_frames[0].shape,
+            hm_p1,
+            roi1,
+            alpha=0.72,
+        )
+
+    if hm_p2 is not None:
+        save_static_heatmap_png_with_panel(
+            out_dir / "heatmap_player_2.png",
+            mini_court,
+            video_frames[0].shape,
+            hm_p2,
+            roi2,
+            alpha=0.72,
+        )
+
 
     player_stats_data = [{
         'frame_num':0,
@@ -142,7 +197,7 @@ def main():
     for i, frame in enumerate(output_video_frames):
         cv2.putText(frame, f"Frame: {i}",(10,30),cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
-    save_video(output_video_frames, "output_videos/output_video.avi")
+    save_video(output_video_frames, base_dir / "output_videos" / "output_video.avi")
 
 if __name__ == "__main__":
     main()
