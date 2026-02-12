@@ -47,7 +47,16 @@ def main():
     # Court Line Detector model
     court_model_path = base_dir / "models" / "keypoints_model.pth"
     court_line_detector = CourtLineDetector(court_model_path)
-    court_keypoints = court_line_detector.predict(video_frames[0])
+    kps = []
+    for i in range(10):
+        kps.append(court_line_detector.predict(video_frames[i]))
+
+    kps = np.asarray(kps, dtype=np.float32)           # shape (10, 28)
+    court_keypoints = np.median(kps, axis=0).tolist() # shape (28,)
+
+    #print("court_keypoints type:", type(court_keypoints))
+    #print("court_keypoints length:", len(court_keypoints))
+    #print("court_keypoints:", court_keypoints)
 
     # choose players
     player_detections = player_tracker.choose_and_filter_players(court_keypoints, player_detections)
@@ -57,6 +66,7 @@ def main():
 
     # Detect ball shots
     ball_shot_frames= ball_tracker.get_ball_shot_frames(ball_detections)
+
 
     # Convert positions to mini court positions
     player_mini_court_detections, ball_mini_court_detections = mini_court.convert_bounding_boxes_to_mini_court_coordinates(player_detections, 
@@ -172,9 +182,10 @@ def main():
 
     player_stats_data_df['player_1_average_shot_speed'] = player_stats_data_df['player_1_total_shot_speed']/player_stats_data_df['player_1_number_of_shots']
     player_stats_data_df['player_2_average_shot_speed'] = player_stats_data_df['player_2_total_shot_speed']/player_stats_data_df['player_2_number_of_shots']
-    player_stats_data_df['player_1_average_player_speed'] = player_stats_data_df['player_1_total_player_speed']/player_stats_data_df['player_2_number_of_shots']
-    player_stats_data_df['player_2_average_player_speed'] = player_stats_data_df['player_2_total_player_speed']/player_stats_data_df['player_1_number_of_shots']
-
+    player_stats_data_df['player_1_average_player_speed'] = (
+    player_stats_data_df['player_1_total_player_speed'] / player_stats_data_df['player_1_number_of_shots'])
+    player_stats_data_df['player_2_average_player_speed'] = (
+    player_stats_data_df['player_2_total_player_speed'] / player_stats_data_df['player_2_number_of_shots'])
 
 
     # Draw output
