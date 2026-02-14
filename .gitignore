@@ -1,0 +1,52 @@
+# Local editor/agent config
+.vscode/
+.claude/
+
+# Python
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Model weights
+*.pt
+*.pth
+*.cbm
+
+# Media and local data
+input_videos/
+backend/output_videos/
+backend/runs/
+backend/tracker_stubs/
+backend/analysis/
+backend/training/
+
+# Node / frontend artifacts
+**/node_modules/
+frontend/web/.next/
+frontend/web/out/
+frontend/web/build/
+frontend/web/dist/
+frontend/web/.vercel/
+*.tsbuildinfo
+frontend/web/next-env.d.ts
+
+# JS package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+# OS junk
+.DS_Store
+Thumbs.db
