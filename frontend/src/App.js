@@ -14,9 +14,9 @@ const App = () => {
   const [currentGame, setCurrentGame] = useState('Game_01');
   const [currentNav, setCurrentNav] = useState('Match Stats');
   const [user, setUser] = useState({
-    name: 'Cory_Pham_22',
+    name: 'Coach Jackson',
     id: '64838263',
-    image: 'https://i.pravatar.cc/150?img=3'
+    image: 'https://dxbhsrqyrr690.cloudfront.net/sidearm.nextgen.sites/ucdavisaggies.com/images/2024/12/2/Coach_Sara_Jackson_Headshot_24.jpg?width=300'
   });
 
   const handleUploadComplete = () => {
@@ -121,7 +121,7 @@ const App = () => {
         <header className="p-4 flex justify-between items-center">
           <div className="flex items-center">
             <span className="text-yellow-400">👋</span>
-            <h1 className="ml-2 text-xl">Hey Cory!</h1>
+            <h1 className="ml-2 text-xl">Hey Coach Jackson!</h1>
           </div>
           
           <div className="flex items-center gap-4">
@@ -151,7 +151,7 @@ const App = () => {
             </div>
             
             <div className="flex items-center gap-2">
-              <img src={user.image} alt="User" className="h-10 w-10 rounded-full object-cover" />
+              <img src={user.image} alt="User" className="h-10 w-10 rounded-full object-cover object-top" />
               <div>
                 <p className="text-sm font-medium">{user.name}</p>
                 <p className="text-xs text-gray-400">ID: {user.id}</p>
