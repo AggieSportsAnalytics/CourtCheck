@@ -19,16 +19,16 @@ This is a full-stack monorepo with two main components:
 
 **Key Modules**:
 - `backend/models/` - ML model wrappers:
-  - `ball.py` - YOLO-based ball detection
-  - `court.py` - Court keypoint detection network
-  - `bounce.py` - CatBoost-based bounce detection
-  - `stroke.py` - Stroke/action recognition
-  - `player.py` - YOLOv8x player detection and tracking with player filtering
+  - `ball_tracker.py` - YOLO-based ball detection (TrackNet)
+  - `court_line_detector.py` - Court keypoint detection network
+  - `bounce_detector.py` - CatBoost-based bounce detection
+  - `stroke_detector.py` - Stroke/action recognition
+  - `player_tracker.py` - YOLOv8x player detection and tracking with player filtering
 - `backend/vision/` - Computer vision utilities:
   - `homography.py` - Court perspective transformation
   - `court_reference.py` - Reference court diagram generation
   - `drawing.py` - Overlay rendering (ball traces, court lines, minimap)
-  - `heatmaps.py` - Heatmap generation
+  - `heatmaps.py` - Heatmap generation (bounce + player position heatmaps using histogram2d + gaussian blur)
   - `postprocess.py` - Post-processing utilities
 - `backend/pipeline/` - Pipeline orchestration:
   - `run.py` - Main pipeline execution
@@ -37,9 +37,10 @@ This is a full-stack monorepo with two main components:
 
 **Model Weights**: Stored in `backend/weights/` (not checked into git). Required files:
 - `tracknet_weights.pt` - Ball detection YOLO model
-- `model_tennis_court_det.pt` - Court detection model
+- `keypoints_model.pth` - Court keypoint detection model
 - `bounce_detection_weights.cbm` - CatBoost bounce model
 - `stroke_classifier_weights.pth` - Stroke recognition model
+- `yolov8x.pt` - YOLOv8x player detection model (auto-downloads on first run)
 
 ### Frontend (`/frontend/web`)
 - **Framework**: Next.js 16 (React 19) with TypeScript
@@ -51,12 +52,14 @@ This is a full-stack monorepo with two main components:
 **Page Routes**:
 - `/` - Dashboard (main page)
 - `/upload` - Video upload interface
-- `/recordings` - View processed recordings
+- `/recordings` - View processed recordings list
+- `/recordings/[id]` - Watch processed video with heatmaps
 - `/match-stats` - Match statistics
 - `/overall-stats` - Overall player statistics
 - `/opponents` - Opponent analysis
 - `/settings` - User settings
-- `/api` - API routes
+- `/api/recordings` - Recordings list API
+- `/api/recordings/[id]` - Single recording API (returns signed URLs for video + heatmaps)
 
 ## Development Commands
 
@@ -139,12 +142,21 @@ The pipeline processes tennis videos in two passes using a **streaming approach*
    - Homography estimation for perspective transform
    - Draw overlays: ball trace, court keypoints/lines, player bboxes, minimap
    - Minimap shows bird's-eye view of court with ball position and bounces
+   - Homography matrices collected per-frame for heatmap generation
    - Progress: 50% → 95%
 
-3. **Post-processing**:
+3. **Heatmap Generation** (post Pass 2, ~<1s overhead):
+   - Uses homography matrices from Pass 2 to project positions to court-space
+   - Rally filtering via `detect_shot_frames()` — only counts frames during active play
+   - **Bounce heatmap**: Direct circle drawing on court reference for each detected bounce
+   - **Player position heatmap**: `np.histogram2d` binning + `scipy.ndimage.gaussian_filter` for smooth density, INFERNO colormap with 99th percentile contrast clipping
+   - PNGs saved locally, uploaded to Supabase `results` bucket
+   - Controlled by `config.generate_heatmaps` flag (default: True)
+
+4. **Post-processing**:
    - Convert to browser-streamable MP4 (ffmpeg with `+faststart`)
    - Upload to Supabase storage
-   - Update database with results_path, status, metadata
+   - Update database with results_path, heatmap paths, status, metadata
 
 **Video Requirements**:
 - Format: MP4
@@ -157,16 +169,21 @@ The pipeline processes tennis videos in two passes using a **streaming approach*
 **Tables** (inferred from code):
 - `matches` - Video processing jobs
   - `id` - Match identifier (UUID)
+  - `user_id` - User identifier (UUID, FK to auth.users)
   - `status` - 'processing', 'done', or 'failed'
   - `progress` - Float 0.0-1.0
   - `results_path` - Path to processed video in storage
+  - `input_path` - Path to raw uploaded video in storage
+  - `bounce_heatmap_path` - Path to bounce heatmap PNG in storage (nullable)
+  - `player_heatmap_path` - Path to player position heatmap PNG in storage (nullable)
   - `fps` - Frames per second
   - `num_frames` - Total frame count
   - `error` - Error message if failed
+  - `created_at` - Timestamp
 
 **Storage Buckets**:
 - `raw-videos` - Uploaded input videos
-- `results` - Processed output videos
+- `results` - Processed output videos and heatmap PNGs (stored as `{match_id}/processed.mp4`, `{match_id}/bounce_heatmap.png`, `{match_id}/player_heatmap.png`)
 
 ## Common Patterns
 
