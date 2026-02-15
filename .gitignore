@@ -29,6 +29,7 @@ backend/runs/
 backend/tracker_stubs/
 backend/analysis/
 backend/training/
+*.mp4
 
 # Node / frontend artifacts
 **/node_modules/
