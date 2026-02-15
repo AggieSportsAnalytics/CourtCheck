@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+
+@theme inline {
+  --color-primary: #11052C;
+  --color-secondary: #182338;
+  --color-accent: #8bc34a;
+  --font-sans: 'Geist', 'Geist Fallback';
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+}
+
+@layer base {
+  body {
+    @apply bg-primary text-white font-sans;
+  }
+}
