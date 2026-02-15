@@ -30,7 +30,7 @@ class PipelineConfig:
     detect_bounces: bool = True
     track_players: bool = True
     enable_drawing: bool = True
-    generate_heatmaps: bool = False  # Not implemented yet
+    generate_heatmaps: bool = True
     enable_pose_detection: bool = False  # Not implemented yet
     enable_stroke_recognition: bool = False  # Not used in pipeline yet
 

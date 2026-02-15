@@ -8,8 +8,10 @@ from pathlib import Path
 
 from backend.models import BallDetector, CourtLineDetector, PlayerTracker, BounceDetector, ActionRecognition
 from backend.vision import HomographyEstimator, CourtReference, draw_ball_trace, draw_court_keypoints_and_lines, draw_minimap_ball_and_bounces, draw_minimap_players, draw_player_bboxes
+from backend.vision.heatmaps import generate_minimap_heatmaps
+from backend.vision.postprocess import detect_shot_frames
 
-from backend.pipeline.storage import upload_processed_video, get_supabase, make_streamable_mp4
+from backend.pipeline.storage import upload_processed_video, upload_heatmap_png, get_supabase, make_streamable_mp4
 from backend.pipeline.config import PipelineConfig
 
 def load_models() -> None:
@@ -197,6 +199,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         last_H = None
         last_kps = None
         last_H_ref = None
+        homography_matrices = [None] * total_frames  # Collect for heatmaps
 
         for i in tqdm(range(total_frames), desc="Pass 2: Drawing"):
             ret, frame = cap.read()
@@ -246,6 +249,9 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             else:
                 H_ref = last_H_ref
 
+            # Store for heatmap generation
+            homography_matrices[frame_idx] = H_ref
+
             minimap = draw_minimap_ball_and_bounces(
                 minimap=minimap,
                 homography_inv=H_ref,
@@ -276,6 +282,39 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         cap.release()
         out.release()
 
+        # ---------- Heatmap generation ----------
+        bounce_heatmap_path = None
+        player_heatmap_path = None
+
+        if config.generate_heatmaps:
+            print("Generating heatmaps...")
+            heatmap_dir = f"/tmp/{match_id}_heatmaps"
+            local_bounce_path = os.path.join(heatmap_dir, "bounce_heatmap.png")
+            local_player_path = os.path.join(heatmap_dir, "player_heatmap.png")
+
+            # Detect shot frames for rally filtering
+            shot_frames = detect_shot_frames(ball_track)
+
+            generate_minimap_heatmaps(
+                homography_matrices=homography_matrices,
+                ball_track=ball_track,
+                bounces=bounces_all,
+                player_detections=player_detections,
+                output_bounce_heatmap=local_bounce_path,
+                output_player_heatmap=local_player_path,
+                ball_shot_frames=shot_frames,
+            )
+
+            # Upload heatmaps to Supabase
+            if not local_mode:
+                if os.path.exists(local_bounce_path):
+                    bounce_heatmap_path = upload_heatmap_png(local_bounce_path, match_id, "bounce_heatmap.png")
+                if os.path.exists(local_player_path):
+                    player_heatmap_path = upload_heatmap_png(local_player_path, match_id, "player_heatmap.png")
+            else:
+                print(f"   Bounce heatmap: {local_bounce_path}")
+                print(f"   Player heatmap: {local_player_path}")
+
         # make browser-streamable mp4
         streamable_output = make_streamable_mp4(local_output_path)
 
@@ -289,13 +328,18 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             )
 
             # ---------- Final DB update ----------
-            supabase.table("matches").update({
+            update_data = {
                 "status": "done",
                 "progress": 1.0,
                 "results_path": results_path,
                 "fps": fps,
                 "num_frames": total_frames,
-            }).eq("id", match_id).execute()
+            }
+            if bounce_heatmap_path:
+                update_data["bounce_heatmap_path"] = bounce_heatmap_path
+            if player_heatmap_path:
+                update_data["player_heatmap_path"] = player_heatmap_path
+            supabase.table("matches").update(update_data).eq("id", match_id).execute()
         else:
             print(f"\n✅ Local processing complete!")
             print(f"   Output: {streamable_output}")

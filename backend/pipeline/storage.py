@@ -58,3 +58,27 @@ def upload_processed_video(
         )
 
     return remote_path
+
+
+def upload_heatmap_png(
+    local_path: str,
+    match_id: str,
+    filename: str,
+    bucket: str = "results"
+) -> str:
+    """Upload a heatmap PNG to Supabase storage."""
+    supabase = get_supabase()
+    remote_path = f"{match_id}/{filename}"
+
+    with open(local_path, "rb") as f:
+        supabase.storage.from_(bucket).upload(
+            remote_path,
+            f,
+            file_options={
+                "content-type": "image/png",
+                "cacheControl": "3600",
+                "x-upsert": "true"
+            }
+        )
+
+    return remote_path
