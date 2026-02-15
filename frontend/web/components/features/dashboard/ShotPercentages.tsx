@@ -35,23 +35,23 @@ const ShotPercentages = () => {
         <button
           className={`py-2 rounded-md ${activeSet === 'set1' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600'}`}
           onClick={() => setActiveSet('set1')}
-          aria-label="View Set 1 shot percentages"
+          aria-label="View Game 1 shot percentages"
         >
-          Set 1
+          Game 1
         </button>
         <button
           className={`py-2 rounded-md ${activeSet === 'set2' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600'}`}
           onClick={() => setActiveSet('set2')}
-          aria-label="View Set 2 shot percentages"
+          aria-label="View Game 2 shot percentages"
         >
-          Set 2
+          Game 2
         </button>
         <button
           className={`py-2 rounded-md ${activeSet === 'set3' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600'}`}
           onClick={() => setActiveSet('set3')}
-          aria-label="View Set 3 shot percentages"
+          aria-label="View Game 3 shot percentages"
         >
-          Set 3
+          Game 3
         </button>
         <button
           className={`py-2 rounded-md ${activeSet === 'overall' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600'}`}

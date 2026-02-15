@@ -150,11 +150,11 @@ const Game01Stats = () => {
           <div className="bg-white rounded-xl p-4">
             <h3 className="text-xl font-bold mb-4 text-gray-800">Player-Movement</h3>
             <div className="grid grid-cols-2 gap-2 mb-4">
-              <button className="py-2 rounded-md bg-gray-200 text-gray-800" aria-label="View stats for Cory Pham 22">
-                Cory_Pham_22
+              <button className="py-2 rounded-md bg-gray-200 text-gray-800" aria-label="View stats for Game 1 Player">
+                Game 1 Player
               </button>
-              <button className="py-2 rounded-md bg-gray-100 text-gray-600" aria-label="View stats for Game 01 Opponent">
-                Game_01_Opponent
+              <button className="py-2 rounded-md bg-gray-100 text-gray-600" aria-label="View stats for Game 2 Player">
+                Game 2 Player
               </button>
             </div>
 

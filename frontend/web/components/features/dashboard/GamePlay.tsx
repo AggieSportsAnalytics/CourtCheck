@@ -1,14 +1,48 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const GamePlay = () => {
   const [activeTab, setActiveTab] = useState<'stats' | 'history'>('stats');
   const [timeframe, setTimeframe] = useState('30');
+  const [totalGameplaySeconds, setTotalGameplaySeconds] = useState<number | null>(null);
+  const [hasAnyData, setHasAnyData] = useState<boolean | null>(null);
+
+  const totalGameplayHours = useMemo(() => {
+    if (totalGameplaySeconds == null) return null;
+    return totalGameplaySeconds / 3600;
+  }, [totalGameplaySeconds]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchSummary() {
+      try {
+        const res = await fetch('/api/dashboard/summary');
+        if (!res.ok) {
+          if (!cancelled) setHasAnyData(false);
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled) {
+          setHasAnyData((data?.totals?.total ?? 0) > 0);
+          setTotalGameplaySeconds(typeof data?.totalGameplaySeconds === 'number' ? data.totalGameplaySeconds : 0);
+        }
+      } catch {
+        if (!cancelled) setHasAnyData(false);
+      }
+    }
+    fetchSummary();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <div className="bg-white rounded-xl p-4">
       <h2 className="text-xl font-bold text-gray-800">You Recorded 5.89 Hrs of Game-Play This Month!</h2>
+      {hasAnyData === false && (
+        <p className="text-sm text-gray-600 mt-2">Upload a video to generate gameplay stats.</p>
+      )}
 
       <div className="flex items-center justify-between mt-4">
         <div className="flex items-center">
