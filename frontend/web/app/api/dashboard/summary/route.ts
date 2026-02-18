@@ -33,7 +33,7 @@ export async function GET() {
 
     const { data, error } = await supabaseAdmin
       .from('matches')
-      .select('id, status, progress, error, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path')
+      .select('id, status, progress, error, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces')
       .eq('user_id', authData.claims.sub)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -44,43 +44,77 @@ export async function GET() {
     }
 
     const matches = data ?? [];
+    const doneMatches = matches.filter((m) => m.status === 'done');
 
     const totals = {
       total: matches.length,
-      done: matches.filter((m) => m.status === 'done').length,
+      done: doneMatches.length,
       processing: matches.filter((m) => m.status === 'processing').length,
       failed: matches.filter((m) => m.status === 'failed').length,
     };
 
-    // "This month" = last 30 days (for dashboard display)
-    const now = Date.now();
-    const cutoffMs = now - 30 * 24 * 60 * 60 * 1000;
-    const recentDone = matches.filter((m) => {
-      const t = new Date(m.created_at).getTime();
-      return t >= cutoffMs && m.status === 'done';
-    });
+    // Aggregated tennis stats across ALL done matches
+    const tennisStats = doneMatches.reduce(
+      (acc, m) => ({
+        totalBounces:    acc.totalBounces    + (m.bounce_count     ?? 0),
+        totalShots:      acc.totalShots      + (m.shot_count       ?? 0),
+        totalRallies:    acc.totalRallies    + (m.rally_count      ?? 0),
+        totalForehands:  acc.totalForehands  + (m.forehand_count   ?? 0),
+        totalBackhands:  acc.totalBackhands  + (m.backhand_count   ?? 0),
+        totalServes:     acc.totalServes     + (m.serve_count      ?? 0),
+        totalInBounds:   acc.totalInBounds   + (m.in_bounds_bounces  ?? 0),
+        totalOutBounds:  acc.totalOutBounds  + (m.out_bounds_bounces ?? 0),
+      }),
+      {
+        totalBounces: 0, totalShots: 0, totalRallies: 0,
+        totalForehands: 0, totalBackhands: 0, totalServes: 0,
+        totalInBounds: 0, totalOutBounds: 0,
+      }
+    );
 
-    const totalGameplaySeconds = recentDone.reduce((acc, m) => {
-      const d = safeDurationSeconds(m.fps, m.num_frames);
-      return acc + (d ?? 0);
-    }, 0);
+    // Whether any match has tennis stats (for empty-state detection)
+    const hasTennisStats = doneMatches.some(
+      (m) => m.bounce_count !== null || m.shot_count !== null
+    );
 
-    const games = matches
-      .filter((m) => m.status === 'done')
-      .slice(0, 3)
-      .map((m) => ({
-        id: m.id,
-        createdAt: m.created_at,
-        fps: m.fps,
-        numFrames: m.num_frames,
-        durationSeconds: safeDurationSeconds(m.fps, m.num_frames),
-        hasBallHeatmap: !!m.bounce_heatmap_path,
-        hasPlayerHeatmap: !!m.player_heatmap_path,
-      }));
+    const doneDurations = doneMatches
+      .map((m) => safeDurationSeconds(m.fps, m.num_frames))
+      .filter((d): d is number => d !== null);
+
+    const totalGameplaySeconds = doneDurations.reduce((a, b) => a + b, 0);
+    const avgDurationSeconds =
+      doneDurations.length > 0 ? totalGameplaySeconds / doneDurations.length : 0;
+
+    const withHeatmapsCount = doneMatches.filter(
+      (m) => !!m.bounce_heatmap_path || !!m.player_heatmap_path
+    ).length;
+
+    // Per-session data for charts (last 8 done matches)
+    const games = doneMatches.slice(0, 8).map((m) => ({
+      id: m.id,
+      createdAt: m.created_at,
+      fps: m.fps,
+      numFrames: m.num_frames,
+      durationSeconds: safeDurationSeconds(m.fps, m.num_frames),
+      hasBallHeatmap: !!m.bounce_heatmap_path,
+      hasPlayerHeatmap: !!m.player_heatmap_path,
+      bounceCount:    m.bounce_count    ?? null,
+      shotCount:      m.shot_count      ?? null,
+      rallyCount:     m.rally_count     ?? null,
+      forehandCount:  m.forehand_count  ?? null,
+      backhandCount:  m.backhand_count  ?? null,
+      serveCount:     m.serve_count     ?? null,
+      inBounces:      m.in_bounds_bounces  ?? null,
+      outBounces:     m.out_bounds_bounces ?? null,
+    }));
 
     return NextResponse.json({
       totals,
+      tennisStats,
+      hasTennisStats,
       totalGameplaySeconds,
+      withHeatmapsCount,
+      avgDurationSeconds,
       games,
     });
   } catch (e) {
@@ -88,4 +122,3 @@ export async function GET() {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
 }
-

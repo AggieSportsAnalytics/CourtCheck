@@ -3,8 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
 const HeatMaps = () => {
-  const [activeSet, setActiveSet] = useState<'set1' | 'set2' | 'set3' | 'overall'>('set1');
-
   const [loading, setLoading] = useState(true);
   const [heatmaps, setHeatmaps] = useState<{
     matchId: string;
@@ -13,27 +11,23 @@ const HeatMaps = () => {
     playerHeatmapUrl: string | null;
   } | null>(null);
 
-  const defaultHeatmapUrls = useMemo(() => {
+  const defaultHeatmapSvg = useMemo(() => {
     const make = (label: string) => {
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750">
-  <rect width="1200" height="750" fill="#111827"/>
-  <rect x="120" y="75" width="960" height="600" rx="24" fill="#0f172a" stroke="#334155" stroke-width="4"/>
-  <rect x="210" y="150" width="780" height="450" fill="none" stroke="#e5e7eb" stroke-width="6"/>
-  <line x1="600" y1="150" x2="600" y2="600" stroke="#e5e7eb" stroke-width="6"/>
-  <line x1="210" y1="315" x2="990" y2="315" stroke="#e5e7eb" stroke-width="6"/>
-  <line x1="405" y1="315" x2="405" y2="510" stroke="#e5e7eb" stroke-width="6"/>
-  <line x1="795" y1="315" x2="795" y2="510" stroke="#e5e7eb" stroke-width="6"/>
-  <line x1="210" y1="510" x2="990" y2="510" stroke="#e5e7eb" stroke-width="6"/>
-  <text x="600" y="705" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto" font-size="28" fill="#94a3b8">
-    ${label}
-  </text>
+  <rect width="1200" height="750" fill="#0f172a"/>
+  <rect x="210" y="150" width="780" height="450" fill="none" stroke="#1e293b" stroke-width="4"/>
+  <line x1="600" y1="150" x2="600" y2="600" stroke="#1e293b" stroke-width="4"/>
+  <line x1="210" y1="315" x2="990" y2="315" stroke="#1e293b" stroke-width="4"/>
+  <line x1="405" y1="315" x2="405" y2="510" stroke="#1e293b" stroke-width="4"/>
+  <line x1="795" y1="315" x2="795" y2="510" stroke="#1e293b" stroke-width="4"/>
+  <line x1="210" y1="510" x2="990" y2="510" stroke="#1e293b" stroke-width="4"/>
+  <text x="600" y="400" text-anchor="middle" font-family="ui-sans-serif, system-ui" font-size="22" fill="#334155">${label}</text>
 </svg>`;
       return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
     };
-
     return {
-      ball: make('No ball heatmap yet — run an analysis to generate one'),
-      player: make('No player heatmap yet — run an analysis to generate one'),
+      ball: make('No ball heatmap — analyze a match to generate one'),
+      player: make('No player heatmap — analyze a match to generate one'),
     };
   }, []);
 
@@ -59,79 +53,63 @@ const HeatMaps = () => {
       }
     }
     fetchLatestHeatmaps();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
   const shotsUrl = heatmaps?.bounceHeatmapUrl ?? null;
   const playerUrl = heatmaps?.playerHeatmapUrl ?? null;
-  const showMissingMessage = !loading && !shotsUrl && !playerUrl;
+  const hasHeatmaps = !loading && (shotsUrl || playerUrl);
 
   return (
-    <div className="bg-secondary rounded-xl overflow-hidden">
-      <div className="p-4">
-        <h3 className="text-xl font-bold mb-4">Heat Maps!</h3>
-
-        {/* Set Selection */}
-        <div className="grid grid-cols-4 gap-1 mb-4">
-          <button
-            className={`py-2 rounded-md ${activeSet === 'set1' ? 'bg-gray-600' : 'bg-gray-800'}`}
-            onClick={() => setActiveSet('set1')}
-          aria-label="View Game 1"
-          >
-          Game 1
-          </button>
-          <button
-            className={`py-2 rounded-md ${activeSet === 'set2' ? 'bg-gray-600' : 'bg-gray-800'}`}
-            onClick={() => setActiveSet('set2')}
-          aria-label="View Game 2"
-          >
-          Game 2
-          </button>
-          <button
-            className={`py-2 rounded-md ${activeSet === 'set3' ? 'bg-gray-600' : 'bg-gray-800'}`}
-            onClick={() => setActiveSet('set3')}
-          aria-label="View Game 3"
-          >
-          Game 3
-          </button>
-          <button
-            className={`py-2 rounded-md ${activeSet === 'overall' ? 'bg-gray-600' : 'bg-gray-800'}`}
-            onClick={() => setActiveSet('overall')}
-            aria-label="View overall statistics"
-          >
-            Overall
-          </button>
-        </div>
-
-        {showMissingMessage && (
-          <p className="text-sm text-gray-300">
-            You need to run the model (upload and process a video) to see your heatmaps.
+    <div className="bg-secondary rounded-xl border border-gray-700/40 overflow-hidden">
+      <div className="p-5 pb-3 flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-white">Heatmaps</h3>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {loading
+              ? 'Loading...'
+              : hasHeatmaps
+              ? `Latest analysis · ${new Date(heatmaps!.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+              : 'Run an analysis to generate heatmaps'}
           </p>
+        </div>
+        {hasHeatmaps && (
+          <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 font-medium">
+            Latest
+          </span>
         )}
       </div>
 
-      {/* Heatmaps */}
-      <div className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <div className="text-sm text-gray-300 mb-2">Ball heatmap</div>
-            <img
-              src={shotsUrl ?? defaultHeatmapUrls.ball}
-              alt="Ball bounce heatmap"
-              className="w-full rounded-lg border border-gray-700"
-            />
+      <div className="p-5 pt-2">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="aspect-video bg-gray-700/40 rounded-lg animate-pulse" />
+            <div className="aspect-video bg-gray-700/40 rounded-lg animate-pulse" />
           </div>
-          <div>
-            <div className="text-sm text-gray-300 mb-2">Player heatmap</div>
-            <img
-              src={playerUrl ?? defaultHeatmapUrls.player}
-              alt="Player position heatmap"
-              className="w-full rounded-lg border border-gray-700"
-            />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">
+                Ball Bounces
+              </p>
+              <img
+                src={shotsUrl ?? defaultHeatmapSvg.ball}
+                alt="Ball bounce heatmap"
+                className="w-full rounded-lg border border-gray-700/60 object-cover"
+              />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-2 font-medium uppercase tracking-wide">
+                Player Positions
+              </p>
+              <img
+                src={playerUrl ?? defaultHeatmapSvg.player}
+                alt="Player position heatmap"
+                className="w-full rounded-lg border border-gray-700/60 object-cover"
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

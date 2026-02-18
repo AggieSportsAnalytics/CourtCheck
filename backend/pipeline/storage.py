@@ -7,27 +7,35 @@ def make_streamable_mp4(input_path: str) -> str:
     """
     Remux MP4 so browsers can stream it (moov atom first).
     Does NOT re-encode frames.
+    Falls back to the original file if ffmpeg is not available (e.g. local Windows testing).
 
     :param input_path: Path to the input mp4 video file.
     """
 
     input_path = Path(input_path)
     output_path = input_path.with_name(input_path.stem + "_web.mp4")
-    
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-y",  # Overwrite output file if it exists
-            "-i", str(input_path),
-            "-movflags", "+faststart",
-            str(output_path)
-        ],
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
 
-    return str(output_path)
+    try:
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i", str(input_path),
+                "-movflags", "+faststart",
+                "-c", "copy",
+                str(output_path)
+            ],
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        return str(output_path)
+    except FileNotFoundError:
+        print("⚠️  ffmpeg not found — skipping streamable remux (video still usable locally).")
+        return str(input_path)
+    except subprocess.CalledProcessError as e:
+        print(f"⚠️  ffmpeg remux failed ({e}) — returning original file.")
+        return str(input_path)
 
 def get_supabase():
     url = os.environ["SUPABASE_URL"]

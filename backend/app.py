@@ -14,9 +14,10 @@ def download_model_weights():
 image = (
     modal.Image.debian_slim(python_version="3.10")
     .apt_install(
-        "libgl1", # Required for OpenCV
+        "libgl1",       # Required for OpenCV
         "libglib2.0-0", # often needed with OpenCV
-        "ffmpeg" # needed for video writing
+        "ffmpeg",       # needed for video writing
+        "libgomp1",     # OpenMP runtime (required by catboost)
     )
     .pip_install_from_requirements("requirements.txt")
     .run_function(download_model_weights)
@@ -65,3 +66,36 @@ def process_video(payload: dict):
     result = run_pipeline(video_path, match_id)
 
     return result
+
+
+@app.local_entrypoint()
+def test_local(video: str = "", output: str = "output.mp4"):
+    """
+    Local test entrypoint — runs the pipeline in local_mode (no Supabase upload).
+
+    Usage:
+        modal run backend/app.py --video path/to/video.mp4
+        modal run backend/app.py --video path/to/video.mp4 --output result.mp4
+    """
+    import uuid
+    import shutil
+    from backend.pipeline.run import run_pipeline
+
+    if not video:
+        print("ERROR: Provide a video path with --video path/to/video.mp4")
+        return
+
+    match_id = str(uuid.uuid4())
+    print(f"\n🎾 Running pipeline locally (local_mode=True)")
+    print(f"   Video:    {video}")
+    print(f"   Output:   {output}")
+    print(f"   Match ID: {match_id}\n")
+
+    result = run_pipeline(video_path=video, match_id=match_id, local_mode=True)
+
+    out_file = result.get("output_file")
+    if out_file and __import__("os").path.exists(out_file):
+        shutil.copy(out_file, output)
+        print(f"\n✅ Done! Output saved to: {output}")
+    else:
+        print(f"\n⚠️  Pipeline finished but output file not found.")

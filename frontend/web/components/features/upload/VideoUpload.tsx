@@ -35,9 +35,9 @@ const VideoUpload = ({ onUploadComplete }: VideoUploadProps) => {
     <div className="w-full max-w-2xl mx-auto p-6">
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors
+        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
           ${status !== 'idle' ? 'cursor-not-allowed opacity-60' : ''}
-          ${isDragActive ? 'border-blue-500 bg-blue-900 bg-opacity-20' : 'border-gray-600 hover:border-blue-400'}`}
+          ${isDragActive ? 'border-accent bg-accent/5' : 'border-gray-600 hover:border-accent/50'}`}
         role="button"
         aria-label="Upload tennis match video"
       >
@@ -65,9 +65,9 @@ const VideoUpload = ({ onUploadComplete }: VideoUploadProps) => {
         ) : (
           <div className="space-y-4">
             <div className="text-2xl font-semibold text-white">{getStatusMessage()}</div>
-            <div className="w-full bg-gray-700 rounded-full h-2.5 overflow-hidden">
+              <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
               <div
-                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300 ease-out"
+                className="bg-accent h-2 rounded-full transition-all duration-300 ease-out"
                 style={{
                   width: (status === 'processing' || status === 'pending') ? `${progress * 100}%` :
                          status === 'done' ? '100%' : '0%'

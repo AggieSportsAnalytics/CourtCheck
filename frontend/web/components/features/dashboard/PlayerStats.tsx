@@ -1,97 +1,104 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
-const PlayerStats = () => {
-  const [activePlayer, setActivePlayer] = useState<'player1' | 'player2'>('player1');
-  const [hasRecordings, setHasRecordings] = useState<boolean | null>(null);
+interface TennisStats {
+  totalForehands: number;
+  totalBackhands: number;
+  totalServes: number;
+}
+
+interface Summary {
+  tennisStats: TennisStats;
+  hasTennisStats: boolean;
+}
+
+export default function PlayerStats() {
+  const [summary, setSummary] = useState<Summary | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
-    async function fetchHasRecordings() {
-      try {
-        const res = await fetch('/api/recordings');
-        if (!res.ok) {
-          if (!cancelled) setHasRecordings(false);
-          return;
-        }
-        const data = await res.json();
-        const recordings = Array.isArray(data?.recordings) ? data.recordings : [];
-        if (!cancelled) setHasRecordings(recordings.length > 0);
-      } catch {
-        if (!cancelled) setHasRecordings(false);
-      }
-    }
-    fetchHasRecordings();
-    return () => {
-      cancelled = true;
-    };
+    fetch("/api/dashboard/summary")
+      .then((r) => r.json())
+      .then((d) => setSummary(d))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
+  const fh    = summary?.tennisStats?.totalForehands ?? 0;
+  const bh    = summary?.tennisStats?.totalBackhands ?? 0;
+  const serve = summary?.tennisStats?.totalServes    ?? 0;
+  const total = fh + bh + serve;
+
+  const pct = (n: number) => (total > 0 ? Math.round((n / total) * 100) : 0);
+
+  const strokes = [
+    { label: "Forehand",      count: fh,    pct: pct(fh),    color: "bg-accent" },
+    { label: "Backhand",      count: bh,    pct: pct(bh),    color: "bg-blue-500" },
+    { label: "Serve / Smash", count: serve, pct: pct(serve), color: "bg-purple-500" },
+  ];
+
+  const hasData = !loading && summary?.hasTennisStats && total > 0;
+
   return (
-    <div className="bg-white rounded-xl p-4">
-      <h3 className="text-xl font-bold mb-4 text-gray-800">Player-Movement</h3>
+    <div className="bg-secondary rounded-2xl p-5 border border-gray-700/40 h-full flex flex-col">
+      <h3 className="text-sm font-semibold text-white mb-4">Stroke Breakdown</h3>
 
-      {/* Player Selection */}
-      <div className="grid grid-cols-2 gap-2 mb-4">
-        <button
-          className={`py-2 rounded-md ${activePlayer === 'player1' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600'}`}
-          onClick={() => setActivePlayer('player1')}
-          aria-label="View stats for Game 1 Player"
-        >
-          Game 1 Player
-        </button>
-        <button
-          className={`py-2 rounded-md ${activePlayer === 'player2' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600'}`}
-          onClick={() => setActivePlayer('player2')}
-          aria-label="View stats for Game 2 Player"
-        >
-          Game 2 Player
-        </button>
-      </div>
+      {loading && (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
 
-      {/* Player Movement Chart */}
-      <div className="mt-4">
-        {hasRecordings === false ? (
-          <div className="h-56 bg-gray-50 rounded-lg flex items-center justify-center px-4 text-center">
-            <p className="text-sm text-gray-600">Upload a video first to see player movement stats.</p>
+      {!loading && !hasData && (
+        <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-4">
+          <svg viewBox="0 0 24 24" className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" strokeWidth={1.5}>
+            <path d="M9 17H7A5 5 0 0 1 7 7h2" />
+            <path d="M15 7h2a5 5 0 1 1 0 10h-2" />
+            <line x1="8" y1="12" x2="16" y2="12" />
+          </svg>
+          <p className="text-xs text-gray-500">No stroke data yet</p>
+          <Link href="/upload" className="text-xs text-accent hover:underline">
+            Analyse a match →
+          </Link>
+        </div>
+      )}
+
+      {hasData && (
+        <div className="flex-1 flex flex-col gap-4">
+          {/* Stacked bar */}
+          <div className="flex h-3 rounded-full overflow-hidden gap-px">
+            {strokes.map((s) =>
+              s.pct > 0 ? (
+                <div
+                  key={s.label}
+                  className={`${s.color} transition-all`}
+                  style={{ width: `${s.pct}%` }}
+                  title={`${s.label}: ${s.pct}%`}
+                />
+              ) : null
+            )}
           </div>
-        ) : (
-          <div className="relative">
-            {/* This would be an actual chart in a real application */}
-            <div className="h-56 bg-gray-50 rounded-lg flex items-end px-2">
-              {/* Mock bar chart for player movement */}
-              <div className="w-1/6 h-[45%] mx-1 bg-accent rounded-t-md" aria-hidden="true"></div>
-              <div className="w-1/6 h-[65%] mx-1 bg-accent rounded-t-md" aria-hidden="true"></div>
-              <div className="w-1/6 h-[55%] mx-1 bg-accent rounded-t-md" aria-hidden="true"></div>
-              <div className="w-1/6 h-[40%] mx-1 bg-accent rounded-t-md" aria-hidden="true"></div>
-              <div className="w-1/6 h-[75%] mx-1 bg-accent rounded-t-md" aria-hidden="true"></div>
-              <div className="w-1/6 h-[60%] mx-1 bg-accent rounded-t-md" aria-hidden="true"></div>
-            </div>
 
-            {/* X axis labels */}
-            <div className="flex justify-between mt-2 px-2">
-              <div className="text-xs text-gray-600">X</div>
-              <div className="text-xs text-gray-600">X</div>
-              <div className="text-xs text-gray-600">X</div>
-              <div className="text-xs text-gray-600">X</div>
-              <div className="text-xs text-gray-600">X</div>
-              <div className="text-xs text-gray-600">X</div>
-            </div>
-
-            {/* Y axis labels */}
-            <div className="absolute left-0 top-0 h-full flex flex-col justify-between py-2">
-              <div className="text-xs text-gray-600">X</div>
-              <div className="text-xs text-gray-600">X</div>
-              <div className="text-xs text-gray-600">X</div>
-              <div className="text-xs text-gray-600">X</div>
-              <div className="text-xs text-gray-600">X</div>
-            </div>
+          {/* Legend rows */}
+          <div className="flex flex-col gap-2.5">
+            {strokes.map((s) => (
+              <div key={s.label} className="flex items-center gap-2">
+                <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${s.color}`} />
+                <span className="text-xs text-gray-300 flex-1">{s.label}</span>
+                <span className="text-xs font-semibold text-white">{s.count.toLocaleString()}</span>
+                <span className="text-xs text-gray-500 w-8 text-right">{s.pct}%</span>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
+
+          <div className="mt-auto pt-2 border-t border-gray-700/40 flex items-center justify-between">
+            <span className="text-xs text-gray-500">Total strokes classified</span>
+            <span className="text-xs font-bold text-white">{total.toLocaleString()}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-
-export default PlayerStats;
+}

@@ -1,115 +1,115 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
-interface ShotType {
-  type: string;
-  color: string;
-  value: number;
+interface GameEntry {
+  id: string;
+  createdAt: string;
+  shotCount: number | null;
+  bounceCount: number | null;
+  rallyCount: number | null;
+  inBounces: number | null;
+  outBounces: number | null;
 }
 
-const GameStatistics = () => {
-  const [summary, setSummary] = useState<{
-    totals: { total: number; done: number; processing: number; failed: number };
-  } | null>(null);
+export default function GameStatistics() {
+  const [games, setGames] = useState<GameEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
-    async function fetchSummary() {
-      try {
-        const res = await fetch('/api/dashboard/summary');
-        if (!res.ok) {
-          if (!cancelled) setSummary(null);
-          return;
-        }
-        const data = await res.json();
-        if (!cancelled) setSummary(data);
-      } catch {
-        if (!cancelled) setSummary(null);
-      }
-    }
-    fetchSummary();
-    return () => {
-      cancelled = true;
-    };
+    fetch("/api/dashboard/summary")
+      .then((r) => r.json())
+      .then((d) => setGames(d.games ?? []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  const hasData = (summary?.totals?.total ?? 0) > 0;
-  const errorCount = summary?.totals?.failed ?? 0;
-
-  const bars: ShotType[] = useMemo(() => {
-    if (!summary) {
-      return [
-        { type: 'Done', color: 'bg-green-800', value: 62 },
-        { type: 'Processing', color: 'bg-gray-600', value: 85 },
-        { type: 'Failed', color: 'bg-green-300', value: 78 },
-        { type: 'Total', color: 'bg-green-800', value: 72 },
-      ];
-    }
-
-    const max = Math.max(
-      1,
-      summary.totals.done,
-      summary.totals.processing,
-      summary.totals.failed,
-      summary.totals.total
-    );
-
-    const scale = (n: number) => Math.round((n / max) * 100);
-
-    return [
-      { type: 'Done', color: 'bg-green-800', value: scale(summary.totals.done) },
-      { type: 'Processing', color: 'bg-gray-600', value: scale(summary.totals.processing) },
-      { type: 'Failed', color: 'bg-green-300', value: scale(summary.totals.failed) },
-      { type: 'Total', color: 'bg-green-800', value: scale(summary.totals.total) },
-    ];
-  }, [summary]);
+  const withStats = games.filter((g) => g.shotCount !== null || g.bounceCount !== null);
+  const maxShots  = Math.max(...withStats.map((g) => g.shotCount ?? 0), 1);
 
   return (
-    <div className="bg-white rounded-xl p-4">
-      <h3 className="text-xl font-bold mb-4 text-gray-800">Points-by-Shots</h3>
+    <div className="bg-secondary rounded-2xl p-5 border border-gray-700/40 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-white">Shot History</h3>
+        <span className="text-xs text-gray-500">last {games.length} sessions</span>
+      </div>
 
-      <div className="flex flex-col">
-        {/* Error count */}
-        <div className="mb-6">
-          <span className="text-sm text-gray-600">Total number of errors:</span>
-          <span className="ml-2 text-xl font-bold text-gray-800">{errorCount}</span>
-          {!hasData && (
-            <div className="mt-2 text-sm text-gray-600">
-              Upload a video to generate stats. Showing default chart for now.
-            </div>
-          )}
+      {loading && (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
         </div>
+      )}
 
-        {/* Chart and Legend */}
-        <div className="flex flex-wrap">
-          {/* Chart Bars */}
-          <div className="w-full lg:w-3/4 h-44 flex items-end justify-around space-x-6 mb-6" aria-label="Points by shot type bar chart">
-            {bars.map((shot, index) => (
-              <div key={index} className="flex flex-col items-center">
-                <div className={`w-14 ${shot.color} rounded-t-md`} style={{ height: `${shot.value * 0.4}px` }} aria-hidden="true"></div>
-                <div className={`w-6 h-6 rounded-full ${shot.color} -mt-3 flex items-center justify-center text-xs font-bold text-white`} aria-label={shot.type}>
-                  {shot.type.charAt(0).toLowerCase()}
-                </div>
-              </div>
+      {!loading && withStats.length === 0 && (
+        <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-4">
+          <svg viewBox="0 0 24 24" className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" strokeWidth={1.5}>
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+          </svg>
+          <p className="text-xs text-gray-500">No session data yet</p>
+          <Link href="/upload" className="text-xs text-accent hover:underline">
+            Analyse a match →
+          </Link>
+        </div>
+      )}
+
+      {!loading && withStats.length > 0 && (
+        <div className="flex-1 flex flex-col gap-3">
+          {/* Bar chart */}
+          <div className="flex items-end gap-1.5 h-28">
+            {withStats.slice(0, 8).reverse().map((g, i) => {
+              const shots   = g.shotCount   ?? 0;
+              const bounces = g.bounceCount ?? 0;
+              const barH    = Math.round((shots / maxShots) * 100);
+              const total   = (g.inBounces ?? 0) + (g.outBounces ?? 0);
+              const inPct   = total > 0 ? Math.round(((g.inBounces ?? 0) / total) * 100) : null;
+
+              return (
+                <Link
+                  key={g.id}
+                  href={`/recordings/${g.id}`}
+                  title={`${new Date(g.createdAt).toLocaleDateString()}\nShots: ${shots} | Bounces: ${bounces}${inPct !== null ? ` | ${inPct}% in` : ""}`}
+                  className="flex-1 flex flex-col items-center gap-1 group"
+                >
+                  <div className="w-full flex flex-col justify-end" style={{ height: "96px" }}>
+                    <div
+                      className="w-full bg-accent/80 group-hover:bg-accent rounded-t transition-colors"
+                      style={{ height: `${Math.max(barH, 4)}%` }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-gray-500 group-hover:text-gray-300 transition-colors">
+                    {new Date(g.createdAt).toLocaleDateString("en-US", { month: "numeric", day: "numeric" })}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Table — last 4 */}
+          <div className="border-t border-gray-700/40 pt-3">
+            <div className="grid grid-cols-4 text-[10px] text-gray-500 mb-1 px-1">
+              <span>Date</span>
+              <span className="text-right">Shots</span>
+              <span className="text-right">Bounces</span>
+              <span className="text-right">Rallies</span>
+            </div>
+            {withStats.slice(0, 4).map((g) => (
+              <Link
+                key={g.id}
+                href={`/recordings/${g.id}`}
+                className="grid grid-cols-4 text-[11px] px-1 py-1 rounded hover:bg-white/5 transition-colors"
+              >
+                <span className="text-gray-400">
+                  {new Date(g.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </span>
+                <span className="text-white font-medium text-right">{g.shotCount ?? "—"}</span>
+                <span className="text-white font-medium text-right">{g.bounceCount ?? "—"}</span>
+                <span className="text-white font-medium text-right">{g.rallyCount ?? "—"}</span>
+              </Link>
             ))}
           </div>
-
-          {/* Legend */}
-          <div className="w-full lg:w-1/4">
-            <ul className="space-y-3">
-              {bars.map((shot, index) => (
-                <li key={index} className="flex items-center">
-                  <div className={`w-4 h-4 rounded-full ${shot.color} mr-2`} aria-hidden="true"></div>
-                  <span className="text-sm text-gray-800">{shot.type}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
-      </div>
+      )}
     </div>
   );
-};
-
-export default GameStatistics;
+}

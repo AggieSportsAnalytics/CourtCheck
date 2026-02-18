@@ -32,7 +32,7 @@ class PipelineConfig:
     enable_drawing: bool = True
     generate_heatmaps: bool = True
     enable_pose_detection: bool = False  # Not implemented yet
-    enable_stroke_recognition: bool = False  # Not used in pipeline yet
+    enable_stroke_recognition: bool = True
 
     # ========== Visualization ==========
     draw_ball_trace: bool = True

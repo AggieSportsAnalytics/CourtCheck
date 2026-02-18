@@ -1,185 +1,125 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
-const GamePlay = () => {
-  const [activeTab, setActiveTab] = useState<'stats' | 'history'>('stats');
-  const [timeframe, setTimeframe] = useState('30');
-  const [totalGameplaySeconds, setTotalGameplaySeconds] = useState<number | null>(null);
-  const [hasAnyData, setHasAnyData] = useState<boolean | null>(null);
+interface GameEntry {
+  id: string;
+  createdAt: string;
+  bounceCount: number | null;
+  shotCount: number | null;
+  rallyCount: number | null;
+  hasBallHeatmap: boolean;
+  hasPlayerHeatmap: boolean;
+}
 
-  const totalGameplayHours = useMemo(() => {
-    if (totalGameplaySeconds == null) return null;
-    return totalGameplaySeconds / 3600;
-  }, [totalGameplaySeconds]);
+function formatRelativeDate(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - d.getTime()) / 86_400_000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+export default function GamePlay() {
+  const [games, setGames] = useState<GameEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
-    async function fetchSummary() {
-      try {
-        const res = await fetch('/api/dashboard/summary');
-        if (!res.ok) {
-          if (!cancelled) setHasAnyData(false);
-          return;
-        }
-        const data = await res.json();
-        if (!cancelled) {
-          setHasAnyData((data?.totals?.total ?? 0) > 0);
-          setTotalGameplaySeconds(typeof data?.totalGameplaySeconds === 'number' ? data.totalGameplaySeconds : 0);
-        }
-      } catch {
-        if (!cancelled) setHasAnyData(false);
-      }
-    }
-    fetchSummary();
-    return () => {
-      cancelled = true;
-    };
+    fetch("/api/dashboard/summary")
+      .then((r) => r.json())
+      .then((d) => setGames(d.games ?? []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div className="bg-white rounded-xl p-4">
-      <h2 className="text-xl font-bold text-gray-800">You Recorded 5.89 Hrs of Game-Play This Month!</h2>
-      {hasAnyData === false && (
-        <p className="text-sm text-gray-600 mt-2">Upload a video to generate gameplay stats.</p>
-      )}
-
-      <div className="flex items-center justify-between mt-4">
-        <div className="flex items-center">
-          <span className="text-sm text-gray-600">Last {timeframe} days</span>
-          <button className="ml-2" aria-label="Change timeframe">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="flex gap-4">
-          <button
-            className={`px-4 py-1 rounded-md text-sm ${activeTab === 'stats' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600'}`}
-            onClick={() => setActiveTab('stats')}
-            aria-label="View stats"
-          >
-            Stats
-          </button>
-          <button
-            className={`px-4 py-1 rounded-md text-sm ${activeTab === 'history' ? 'bg-gray-200 text-gray-800' : 'bg-gray-100 text-gray-600'}`}
-            onClick={() => setActiveTab('history')}
-            aria-label="View history"
-          >
-            History
-          </button>
-        </div>
+    <div className="bg-secondary rounded-2xl p-5 border border-gray-700/40 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-white">Recent Sessions</h3>
+        <Link href="/recordings" className="text-xs text-accent hover:underline">
+          View all →
+        </Link>
       </div>
 
-      {activeTab === 'stats' && (
-        <div className="mt-6">
-          {/* Bar chart visualization */}
-          <div className="relative h-48 flex items-end">
-            {/* Y-axis labels */}
-            <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-gray-600 text-xs pr-2">
-              <span>2</span>
-              <span>1.5</span>
-              <span>1</span>
-              <span>0.5</span>
-              <span>0</span>
-            </div>
-
-            {/* Bars */}
-            <div className="flex-1 flex items-end justify-around pl-8">
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-16 bg-accent rounded-t-md" aria-hidden="true"></div>
-                <span className="text-xs mt-2 text-gray-600">Mar 1-7</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-32 bg-accent rounded-t-md" aria-hidden="true"></div>
-                <span className="text-xs mt-2 text-gray-600">Mar 8-14</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-28 bg-accent rounded-t-md" aria-hidden="true"></div>
-                <span className="text-xs mt-2 text-gray-600">Mar 15-21</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-30 bg-accent rounded-t-md" aria-hidden="true"></div>
-                <span className="text-xs mt-2 text-gray-600">Mar 22-28</span>
-              </div>
-              <div className="flex flex-col items-center">
-                <div className="w-10 h-36 bg-accent rounded-t-md" aria-hidden="true"></div>
-                <span className="text-xs mt-2 text-gray-600">Final Week</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Win Rate Section */}
-          <div className="mt-8">
-            <h3 className="text-lg font-medium mb-4">Win-Rate</h3>
-            <div className="flex items-center justify-center">
-              {/* Win-rate circle */}
-              <div className="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center relative" aria-label="Win rate 62 percent">
-                {/* Progress circle */}
-                <svg className="w-32 h-32 absolute" aria-hidden="true">
-                  <circle
-                    className="text-accent"
-                    strokeWidth="8"
-                    strokeDasharray="289.02652413026095"
-                    strokeDashoffset="109.83"
-                    stroke="currentColor"
-                    fill="transparent"
-                    r="46"
-                    cx="64"
-                    cy="64"
-                  />
-                </svg>
-                <span className="text-2xl font-bold">62%</span>
-              </div>
-            </div>
-
-            {/* Win/Loss count */}
-            <div className="flex justify-center mt-4">
-              <div className="flex items-center mr-8">
-                <div className="w-3 h-3 bg-gray-400 rounded-full mr-2" aria-hidden="true"></div>
-                <div>
-                  <span className="block text-center text-xl font-bold text-gray-800">8</span>
-                  <span className="text-xs text-gray-600">Unsuccessful</span>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <div className="w-3 h-3 bg-accent rounded-full mr-2" aria-hidden="true"></div>
-                <div>
-                  <span className="block text-center text-xl font-bold text-gray-800">13</span>
-                  <span className="text-xs text-gray-600">Successful</span>
-                </div>
-              </div>
-            </div>
-          </div>
+      {loading && (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
         </div>
       )}
 
-      {activeTab === 'history' && (
-        <div className="mt-6 space-y-4">
-          {/* Player history items */}
-          {['Brian_Le', 'emma_j', 'Harsh21', 'Bum_soo05'].map((player, index) => (
-            <div key={player} className="flex items-center justify-between p-2 hover:bg-gray-700 rounded-lg">
-              <div className="flex items-center">
-                <div className={`w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center text-sm ${
-                  index === 0 ? 'bg-green-800' : index === 1 ? 'bg-purple-800' : index === 2 ? 'bg-yellow-800' : 'bg-orange-800'
-                }`} aria-hidden="true">
-                  {player.charAt(0).toUpperCase()}
+      {!loading && games.length === 0 && (
+        <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-4">
+          <svg viewBox="0 0 24 24" className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" strokeWidth={1.5}>
+            <circle cx="12" cy="12" r="10" />
+            <path d="M8 12h4l2-4" />
+          </svg>
+          <p className="text-xs text-gray-500">No completed sessions yet</p>
+          <Link href="/upload" className="text-xs text-accent hover:underline">
+            Upload your first match →
+          </Link>
+        </div>
+      )}
+
+      {!loading && games.length > 0 && (
+        <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
+          {games.slice(0, 6).map((g) => {
+            const hasStats = g.shotCount !== null || g.bounceCount !== null;
+            return (
+              <Link
+                key={g.id}
+                href={`/recordings/${g.id}`}
+                className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-colors group"
+              >
+                {/* Date badge */}
+                <div className="shrink-0 w-10 text-center">
+                  <p className="text-xs font-bold text-accent">
+                    {new Date(g.createdAt).getDate()}
+                  </p>
+                  <p className="text-[10px] text-gray-500">
+                    {new Date(g.createdAt).toLocaleDateString("en-US", { month: "short" })}
+                  </p>
                 </div>
-                <span className="ml-3">{player}</span>
-              </div>
-              <div className="flex items-center">
-                <span className="text-xs text-gray-400 mr-2">Jan 7, 12:30pm</span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                </svg>
-              </div>
-            </div>
-          ))}
+
+                {/* Stats */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-400">{formatRelativeDate(g.createdAt)}</p>
+                  {hasStats ? (
+                    <div className="flex gap-2 mt-0.5 flex-wrap">
+                      {g.shotCount !== null && (
+                        <span className="text-[10px] bg-gray-700/60 text-gray-300 px-1.5 py-0.5 rounded">
+                          {g.shotCount} shots
+                        </span>
+                      )}
+                      {g.bounceCount !== null && (
+                        <span className="text-[10px] bg-gray-700/60 text-gray-300 px-1.5 py-0.5 rounded">
+                          {g.bounceCount} bounces
+                        </span>
+                      )}
+                      {g.rallyCount !== null && (
+                        <span className="text-[10px] bg-gray-700/60 text-gray-300 px-1.5 py-0.5 rounded">
+                          {g.rallyCount} rallies
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-gray-600 mt-0.5">Stats not available</p>
+                  )}
+                </div>
+
+                {/* Report badge */}
+                {(g.hasBallHeatmap || g.hasPlayerHeatmap) && (
+                  <span className="text-[10px] bg-accent/15 text-accent px-1.5 py-0.5 rounded shrink-0">
+                    report
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
   );
-};
-
-export default GamePlay;
+}
