@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import Logo from '@/components/layout/Logo';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -34,14 +34,21 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-primary p-4">
       <Card className="w-full max-w-md bg-secondary border-gray-700">
         <CardHeader className="space-y-4">
-          <div className="flex justify-center">
+          <div className="flex flex-col items-center gap-1">
             <div className="flex items-center gap-3">
-              <Logo />
-              <div>
-                <h2 className="text-2xl font-bold text-white">CourtCheck</h2>
-                <p className="text-sm text-gray-400">Tennis Analytics</p>
+              <div className="mt-10">
+                <Image
+                  src="https://raw.githubusercontent.com/AggieSportsAnalytics/CourtCheck/cory/images/courtcheck_ball_logo.png"
+                  alt="CourtCheck tennis ball logo"
+                  width={48}
+                  height={48}
+                  className="object-contain"
+                  style={{ filter: 'brightness(1.1)' }}
+                />
               </div>
+              <span className="text-2xl font-bold text-white mt-10">CourtCheck</span>
             </div>
+            <p className="text-sm text-gray-400">Tennis Analytics</p>
           </div>
           <CardTitle className="text-2xl text-center text-white">Sign In</CardTitle>
         </CardHeader>
