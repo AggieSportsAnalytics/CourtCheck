@@ -32,11 +32,12 @@ export async function updateSession(request: NextRequest) {
   const isAuthenticated = !!data?.claims
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
-  const isProtectedRoute = !isAuthRoute
+  const isLandingRoute = request.nextUrl.pathname.startsWith('/landing')
+  const isProtectedRoute = !isAuthRoute && !isLandingRoute
 
-  // If not authenticated and trying to access protected route, redirect to login
+  // If not authenticated and trying to access protected route, redirect to landing
   if (!isAuthenticated && isProtectedRoute) {
-    return NextResponse.redirect(new URL('/auth/login', request.url))
+    return NextResponse.redirect(new URL('/landing', request.url))
   }
 
   // If authenticated and trying to access auth pages, redirect to dashboard

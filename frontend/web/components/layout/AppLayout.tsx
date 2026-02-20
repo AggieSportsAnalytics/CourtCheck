@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,6 +21,7 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps) {
   const { user, loading, signOut } = useAuth();
+  const router = useRouter();
 
   // Show loading state while checking auth
   if (loading) {
@@ -33,8 +35,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     );
   }
 
-  // If no user, return null (middleware will redirect)
+  // If no user, redirect to landing page
   if (!user) {
+    router.replace('/landing');
     return null;
   }
 

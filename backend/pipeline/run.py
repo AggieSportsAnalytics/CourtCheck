@@ -104,7 +104,130 @@ def count_in_out_bounces(bounces, ball_track, homography_matrices, court_ref):
     return in_bounds, out_bounds
 
 
-def generate_scouting_report(stats: dict, fps: float, num_frames: int) -> "str | None":
+def compute_spatial_stats(
+    bounces: set,
+    ball_track: list,
+    homography_matrices: list,
+    player_detections: list,
+    court_ref,
+) -> dict:
+    """
+    Project bounce and player positions into court reference space and return zone
+    statistics used to enrich the AI scouting report.
+
+    Court reference coordinate system (from CourtReference):
+      x: 286 (left sideline) → 1379 (right sideline), center=832
+      y: 561 (far baseline) → 2935 (near baseline), net=1748
+      Singles inner lines: x ∈ [423, 1242]
+      Service lines: y=1110 (far), y=2386 (near)
+    """
+    left_x      = court_ref.left_court_line[0][0]      # 286
+    right_x     = court_ref.right_court_line[0][0]     # 1379
+    top_y       = court_ref.baseline_top[0][1]          # 561
+    bottom_y    = court_ref.baseline_bottom[0][1]       # 2935
+    net_y       = court_ref.net[0][1]                   # 1748
+    center_x    = court_ref.middle_line[0][0]           # 832
+    inner_left  = court_ref.left_inner_line[0][0]      # 423
+    inner_right = court_ref.right_inner_line[0][0]     # 1242
+    svc_bot_y   = court_ref.bottom_inner_line[0][1]    # 2386  (near service line)
+    svc_top_y   = court_ref.top_inner_line[0][1]       # 1110  (far service line)
+
+    def project(bx, by, H):
+        pt = np.array([[[float(bx), float(by)]]], dtype=np.float32)
+        try:
+            mapped = cv2.perspectiveTransform(pt, H)
+            return float(mapped[0, 0, 0]), float(mapped[0, 0, 1])
+        except cv2.error:
+            return None, None
+
+    def pct(n, total):
+        return round(n / total * 100) if total > 0 else 0
+
+    # --- Bounce spatial distribution (in-bounds only) ---
+    b_near = b_far = b_left = b_right = b_deep_near = b_alley = valid = 0
+
+    for frame_idx in bounces:
+        if frame_idx >= len(ball_track) or frame_idx >= len(homography_matrices):
+            continue
+        pos = ball_track[frame_idx]
+        H = homography_matrices[frame_idx]
+        if pos is None or H is None:
+            continue
+        bx, by = pos
+        if bx is None or by is None:
+            continue
+        cx, cy = project(bx, by, H)
+        if cx is None:
+            continue
+        if not (left_x <= cx <= right_x and top_y <= cy <= bottom_y):
+            continue  # out-of-bounds, skip for zone analysis
+        valid += 1
+        if cy > net_y:
+            b_near += 1
+            if cy > svc_bot_y:
+                b_deep_near += 1
+        else:
+            b_far += 1
+        if cx < center_x:
+            b_left += 1
+        else:
+            b_right += 1
+        if cx < inner_left or cx > inner_right:
+            b_alley += 1
+
+    bounce_stats = {
+        "near_pct":      pct(b_near, valid),
+        "far_pct":       pct(b_far, valid),
+        "left_pct":      pct(b_left, valid),
+        "right_pct":     pct(b_right, valid),
+        "deep_near_pct": pct(b_deep_near, b_near) if b_near > 0 else 0,
+        "alley_pct":     pct(b_alley, valid),
+        "total":         valid,
+    }
+
+    # --- Player positioning (near half, sampled every 5 frames) ---
+    p_near_left = p_near_right = p_deep = p_forward = p_far = p_samples = 0
+
+    for frame_idx in range(0, len(player_detections), 5):
+        pd = player_detections[frame_idx]
+        H = homography_matrices[frame_idx] if frame_idx < len(homography_matrices) else None
+        if not pd or H is None:
+            continue
+        for bbox in pd.values():
+            x1, y1, x2, y2 = bbox
+            cx, cy = project((x1 + x2) / 2.0, float(y2), H)
+            if cx is None:
+                continue
+            # Loose bounds check to filter projection artifacts
+            if not (left_x - 300 <= cx <= right_x + 300 and top_y - 300 <= cy <= bottom_y + 300):
+                continue
+            p_samples += 1
+            if cy > net_y:
+                if cx < center_x:
+                    p_near_left += 1
+                else:
+                    p_near_right += 1
+                if cy > svc_bot_y:
+                    p_deep += 1
+                else:
+                    p_forward += 1
+            else:
+                p_far += 1
+
+    near_samples = p_near_left + p_near_right
+    player_stats = {
+        "near_pct":         pct(near_samples, p_samples),
+        "near_left_pct":    pct(p_near_left, near_samples),
+        "near_right_pct":   pct(p_near_right, near_samples),
+        "near_deep_pct":    pct(p_deep, near_samples),
+        "near_forward_pct": pct(p_forward, near_samples),
+        "samples":          p_samples,
+    }
+
+    return {"bounces": bounce_stats, "player": player_stats}
+
+
+def generate_scouting_report(stats: dict, fps: float, num_frames: int, spatial_stats: "dict | None" = None) -> "str | None":
     """Call GPT-4o-mini to generate a markdown scouting report from match stats."""
     try:
         import openai
@@ -116,22 +239,38 @@ def generate_scouting_report(stats: dict, fps: float, num_frames: int) -> "str |
         total_b = in_b + out_b
         acc = f"{round(in_b / total_b * 100)}%" if total_b > 0 else "N/A"
 
-        prompt = (
+        lines = [
             "You are an expert tennis coach. Based on the following match statistics, "
             "write a concise scouting report in markdown with three sections: "
             "**Performance Summary**, **Strengths**, and **Areas to Improve**. "
-            "Be specific, actionable, and keep the total under 300 words.\n\n"
-            "Match statistics:\n"
-            f"- Duration: {duration_str}\n"
-            f"- Total shots detected: {stats.get('shot_count', 0)}\n"
-            f"- Rallies: {stats.get('rally_count', 0)}\n"
-            f"- Total bounces: {stats.get('bounce_count', 0)} "
-            f"(in-bounds: {in_b}, out-of-bounds: {out_b})\n"
-            f"- In-bounds accuracy: {acc}\n"
+            "Be specific, actionable, and keep the total under 350 words.\n",
+            "Match statistics:",
+            f"- Duration: {duration_str}",
+            f"- Total shots detected: {stats.get('shot_count', 0)}",
+            f"- Rallies: {stats.get('rally_count', 0)}",
+            f"- Total bounces: {stats.get('bounce_count', 0)} (in-bounds: {in_b}, out-of-bounds: {out_b})",
+            f"- In-bounds accuracy: {acc}",
             f"- Stroke breakdown — Forehand: {stats.get('forehand_count', 0)}, "
             f"Backhand: {stats.get('backhand_count', 0)}, "
-            f"Serve/Smash: {stats.get('serve_count', 0)}"
-        )
+            f"Serve/Smash: {stats.get('serve_count', 0)}",
+        ]
+
+        if spatial_stats:
+            bs = spatial_stats.get("bounces", {})
+            ps = spatial_stats.get("player", {})
+            lines.append("\nCourt zone analysis (in-bounds bounces only):")
+            lines.append(f"- Near half (player's side): {bs.get('near_pct', 0)}% of bounces")
+            lines.append(f"- Far half (opponent's side): {bs.get('far_pct', 0)}% of bounces")
+            lines.append(f"- Left side: {bs.get('left_pct', 0)}%, Right side: {bs.get('right_pct', 0)}%")
+            lines.append(f"- Deep near (behind service line, near half): {bs.get('deep_near_pct', 0)}% of near bounces")
+            lines.append(f"- Alley bounces (outside singles): {bs.get('alley_pct', 0)}%")
+            if ps.get("samples", 0) > 0:
+                lines.append("\nPlayer positioning (near half):")
+                lines.append(f"- Time on near half: {ps.get('near_pct', 0)}% of sampled frames")
+                lines.append(f"- Left side of court: {ps.get('near_left_pct', 0)}%, Right side: {ps.get('near_right_pct', 0)}%")
+                lines.append(f"- Deep (behind service line): {ps.get('near_deep_pct', 0)}%, Forward: {ps.get('near_forward_pct', 0)}%")
+
+        prompt = "\n".join(lines)
 
         client = openai.OpenAI()
         response = client.chat.completions.create(
@@ -371,6 +510,15 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             bounces_all, ball_track, homography_matrices, court_ref
         )
 
+        # ---------- Spatial zone stats (for scouting report) ----------
+        spatial_stats = compute_spatial_stats(
+            bounces=bounces_all,
+            ball_track=ball_track,
+            homography_matrices=homography_matrices,
+            player_detections=player_detections,
+            court_ref=court_ref,
+        )
+
         # ---------- AI Scouting Report ----------
         scouting_report = generate_scouting_report(
             stats={
@@ -385,6 +533,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             },
             fps=fps,
             num_frames=total_frames,
+            spatial_stats=spatial_stats,
         )
 
         # ---------- Heatmap generation ----------

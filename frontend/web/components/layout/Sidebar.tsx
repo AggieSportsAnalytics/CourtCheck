@@ -98,7 +98,9 @@ const Sidebar = ({ username }: SidebarProps) => {
     <div className="w-60 bg-secondary h-full flex flex-col border-r border-gray-700/60 shrink-0">
       {/* Logo */}
       <div className="p-5 flex items-center gap-3 border-b border-gray-700/60">
-        <Logo />
+        <Link href="/landing">
+          <Logo />
+        </Link>
       </div>
 
       {/* User */}

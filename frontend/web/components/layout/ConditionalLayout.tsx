@@ -11,10 +11,10 @@ interface ConditionalLayoutProps {
 export default function ConditionalLayout({ children }: ConditionalLayoutProps) {
   const pathname = usePathname();
 
-  // Don't wrap auth pages with AppLayout
-  const isAuthPage = pathname?.startsWith('/auth');
+  // Don't wrap auth or landing pages with AppLayout
+  const isNoLayout = pathname?.startsWith('/auth') || pathname?.startsWith('/landing');
 
-  if (isAuthPage) {
+  if (isNoLayout) {
     return <>{children}</>;
   }
 

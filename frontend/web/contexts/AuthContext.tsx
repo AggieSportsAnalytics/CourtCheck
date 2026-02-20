@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Avoids redirecting when Supabase re-fires SIGNED_IN on tab switch/token refresh
         router.push('/');
       } else if (event === 'SIGNED_OUT') {
-        router.push('/auth/login');
+        router.push('/landing');
       }
     });
 
