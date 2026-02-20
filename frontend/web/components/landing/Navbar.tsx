@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
 
 const BALL_LOGO = 'https://raw.githubusercontent.com/AggieSportsAnalytics/CourtCheck/cory/images/courtcheck_ball_logo.png';
 
@@ -13,6 +14,7 @@ const NAV_LINKS = [
 ];
 
 export function Navbar() {
+  const { user } = useAuth();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -54,13 +56,13 @@ export function Navbar() {
 
         {/* CTA */}
         <Link
-          href="/auth/login"
+          href={user ? '/' : '/auth/login'}
           className="text-sm font-semibold px-4 py-2 rounded-lg transition-all duration-200"
           style={{ background: '#B4F000', color: '#07070A' }}
           onMouseEnter={(e) => (e.currentTarget.style.background = '#C7FF00')}
           onMouseLeave={(e) => (e.currentTarget.style.background = '#B4F000')}
         >
-          Get Started
+          {user ? 'Dashboard' : 'Get Started'}
         </Link>
       </div>
     </header>

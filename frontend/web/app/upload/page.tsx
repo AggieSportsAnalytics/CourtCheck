@@ -60,7 +60,7 @@ export default function UploadPage() {
           </p>
           <h1 className="text-3xl font-black tracking-tight text-white">Upload a Match</h1>
           <p className="text-sm mt-1" style={{ color: '#5A5A66' }}>
-            Drop in your video and get full AI analysis in minutes.
+            Drop in your video and get full AI analysis of your match.
           </p>
         </div>
 

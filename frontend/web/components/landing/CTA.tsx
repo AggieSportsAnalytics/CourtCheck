@@ -2,8 +2,10 @@
 
 import Link from 'next/link';
 import { FadeIn } from './FadeIn';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function CTA() {
+  const { user } = useAuth();
   return (
     <section className="py-28" style={{ background: '#07070A' }}>
       <div className="max-w-6xl mx-auto px-5 sm:px-8">
@@ -48,30 +50,32 @@ export function CTA() {
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4">
                 <Link
-                  href="/auth/login"
+                  href={user ? '/' : '/auth/login'}
                   className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-bold transition-all duration-200"
                   style={{ background: '#B4F000', color: '#07070A' }}
                   onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#C7FF00'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 30px rgba(180,240,0,0.3)'; }}
                   onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = '#B4F000'; (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}
                 >
-                  Analyze Your First Match
+                  {user ? 'Go to Dashboard' : 'Analyze Your First Match'}
                   <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4">
                     <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </Link>
-                <Link
-                  href="/auth/login"
-                  className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200"
-                  style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: '#FAFAFA',
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
-                >
-                  Sign In
-                </Link>
+                {!user && (
+                  <Link
+                    href="/auth/login"
+                    className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl text-sm font-semibold transition-all duration-200"
+                    style={{
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#FAFAFA',
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; }}
+                  >
+                    Sign In
+                  </Link>
+                )}
               </div>
             </div>
           </div>

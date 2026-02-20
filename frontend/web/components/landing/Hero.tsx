@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 function MockCourt() {
   return (
@@ -134,6 +135,7 @@ function MockDashboard() {
 }
 
 export function Hero() {
+  const { user } = useAuth();
   return (
     <section
       className="relative min-h-screen flex flex-col justify-center overflow-hidden"
@@ -198,13 +200,13 @@ export function Hero() {
           {/* CTAs */}
           <div className="flex flex-wrap gap-3">
             <Link
-              href="/auth/login"
+              href={user ? '/' : '/auth/login'}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200"
               style={{ background: '#B4F000', color: '#07070A' }}
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = '#C7FF00'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = '#B4F000'; (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; }}
             >
-              Analyze Your Match
+              {user ? 'Go to Dashboard' : 'Analyze Your Match'}
               <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4">
                 <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -226,7 +228,7 @@ export function Hero() {
 
           {/* Social proof */}
           <p className="mt-8 text-sm" style={{ color: '#4A4A55' }}>
-            Used by competitive players and coaches across the country
+            AI-powered tennis analytics for competitive players
           </p>
         </div>
 
