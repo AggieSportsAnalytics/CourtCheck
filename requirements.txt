@@ -17,3 +17,4 @@ modal
 requests
 ffmpeg-python
 fastapi
+openai

@@ -104,6 +104,48 @@ def count_in_out_bounces(bounces, ball_track, homography_matrices, court_ref):
     return in_bounds, out_bounds
 
 
+def generate_scouting_report(stats: dict, fps: float, num_frames: int) -> "str | None":
+    """Call GPT-4o-mini to generate a markdown scouting report from match stats."""
+    try:
+        import openai
+        duration_sec = round(num_frames / fps) if fps else 0
+        duration_str = f"{duration_sec // 60}m {duration_sec % 60}s"
+
+        in_b = stats.get("in_bounds_bounces", 0) or 0
+        out_b = stats.get("out_bounds_bounces", 0) or 0
+        total_b = in_b + out_b
+        acc = f"{round(in_b / total_b * 100)}%" if total_b > 0 else "N/A"
+
+        prompt = (
+            "You are an expert tennis coach. Based on the following match statistics, "
+            "write a concise scouting report in markdown with three sections: "
+            "**Performance Summary**, **Strengths**, and **Areas to Improve**. "
+            "Be specific, actionable, and keep the total under 300 words.\n\n"
+            "Match statistics:\n"
+            f"- Duration: {duration_str}\n"
+            f"- Total shots detected: {stats.get('shot_count', 0)}\n"
+            f"- Rallies: {stats.get('rally_count', 0)}\n"
+            f"- Total bounces: {stats.get('bounce_count', 0)} "
+            f"(in-bounds: {in_b}, out-of-bounds: {out_b})\n"
+            f"- In-bounds accuracy: {acc}\n"
+            f"- Stroke breakdown — Forehand: {stats.get('forehand_count', 0)}, "
+            f"Backhand: {stats.get('backhand_count', 0)}, "
+            f"Serve/Smash: {stats.get('serve_count', 0)}"
+        )
+
+        client = openai.OpenAI()
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            temperature=0.7,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"[SCOUTING] Report generation failed: {e}")
+        return None
+
+
 def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, config: PipelineConfig = None):
     """
     Main pipeline entry point (Modal-compatible).
@@ -329,6 +371,22 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             bounces_all, ball_track, homography_matrices, court_ref
         )
 
+        # ---------- AI Scouting Report ----------
+        scouting_report = generate_scouting_report(
+            stats={
+                "shot_count": len(shot_frames),
+                "rally_count": rally_count,
+                "bounce_count": len(bounces_all),
+                "in_bounds_bounces": in_bounds_bounces,
+                "out_bounds_bounces": out_bounds_bounces,
+                "forehand_count": stroke_counts.get("Forehand", 0),
+                "backhand_count": stroke_counts.get("Backhand", 0),
+                "serve_count": stroke_counts.get("Service/Smash", 0),
+            },
+            fps=fps,
+            num_frames=total_frames,
+        )
+
         # ---------- Heatmap generation ----------
         bounce_heatmap_path = None
         player_heatmap_path = None
@@ -339,7 +397,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             local_bounce_path = os.path.join(heatmap_dir, "bounce_heatmap.png")
             local_player_path = os.path.join(heatmap_dir, "player_heatmap.png")
 
-            shot_frames_list = detect_shot_frames(ball_track)
             generate_minimap_heatmaps(
                 homography_matrices=homography_matrices,
                 ball_track=ball_track,
@@ -347,7 +404,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 player_detections=player_detections,
                 output_bounce_heatmap=local_bounce_path,
                 output_player_heatmap=local_player_path,
-                ball_shot_frames=shot_frames_list,
+                ball_shot_frames=shot_frames,
             )
 
             if not local_mode:
@@ -384,6 +441,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 "forehand_count": stroke_counts.get("Forehand", 0),
                 "backhand_count": stroke_counts.get("Backhand", 0),
                 "serve_count": stroke_counts.get("Service/Smash", 0),
+                "scouting_report": scouting_report,
             }
             if bounce_heatmap_path:
                 update_data["bounce_heatmap_path"] = bounce_heatmap_path

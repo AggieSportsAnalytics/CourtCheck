@@ -36,7 +36,7 @@ export async function GET(
 
     const { data, error } = await supabaseAdmin
       .from("matches")
-      .select("id, status, progress, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces")
+      .select("id, status, progress, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, scouting_report")
       .eq("id", id)
       .eq("user_id", authData.claims.sub)
       .single();
@@ -91,6 +91,7 @@ export async function GET(
         serveCount: data.serve_count ?? null,
         inBoundsBounces: data.in_bounds_bounces ?? null,
         outBoundsBounces: data.out_bounds_bounces ?? null,
+        scoutingReport: data.scouting_report ?? null,
       },
     });
   } catch (e) {

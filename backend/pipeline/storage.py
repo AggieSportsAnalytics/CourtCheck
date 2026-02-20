@@ -22,7 +22,6 @@ def make_streamable_mp4(input_path: str) -> str:
                 "-y",
                 "-i", str(input_path),
                 "-movflags", "+faststart",
-                "-c", "copy",
                 str(output_path)
             ],
             check=True,

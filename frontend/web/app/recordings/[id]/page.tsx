@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 
 interface Recording {
   id: string;
@@ -24,6 +25,7 @@ interface Recording {
   serveCount: number | null;
   inBoundsBounces: number | null;
   outBoundsBounces: number | null;
+  scoutingReport: string | null;
 }
 
 function StatCard({
@@ -453,6 +455,25 @@ export default function RecordingDetailPage() {
           ))}
         </div>
       </div>
+
+      {/* AI Scouting Report */}
+      {recording.scoutingReport && (
+        <div className="bg-secondary rounded-2xl p-5 border border-gray-700/40 mt-4">
+          <div className="flex items-center gap-2 mb-4">
+            <h3 className="text-sm font-semibold text-white">AI Scouting Report</h3>
+            <span className="text-[10px] bg-accent/15 text-accent px-2 py-0.5 rounded-full font-medium">
+              GPT-4o mini
+            </span>
+          </div>
+          <div className="prose prose-sm prose-invert max-w-none
+            prose-headings:text-white prose-headings:font-semibold
+            prose-p:text-gray-300 prose-p:leading-relaxed
+            prose-strong:text-white
+            prose-ul:text-gray-300 prose-li:marker:text-accent">
+            <ReactMarkdown>{recording.scoutingReport}</ReactMarkdown>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

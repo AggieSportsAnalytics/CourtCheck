@@ -32,7 +32,10 @@ image = (
     image=image,
     gpu="A10G",
     timeout=1800,
-    secrets=[modal.Secret.from_name("supabase-secrets")]
+    secrets=[
+        modal.Secret.from_name("supabase-secrets"),
+        modal.Secret.from_name("openai-secrets"),
+    ]
 )
 @modal.fastapi_endpoint(method="POST")
 def process_video(payload: dict):
