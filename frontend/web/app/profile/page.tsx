@@ -56,7 +56,7 @@ export default function ProfilePage() {
   const inPct = totalBounced > 0 ? Math.round((ts!.totalInBounds / totalBounced) * 100) : 0;
 
   const stats = [
-    { label: "Sessions analysed",  value: summary?.totals?.done ?? 0 },
+    { label: "Sessions analyzed",  value: summary?.totals?.done ?? 0 },
     { label: "Total shots",        value: ts?.totalShots    ?? 0 },
     { label: "Total bounces",      value: ts?.totalBounces  ?? 0 },
     { label: "Total rallies",      value: ts?.totalRallies  ?? 0 },

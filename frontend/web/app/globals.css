@@ -2,9 +2,13 @@
 @plugin "@tailwindcss/typography";
 
 @theme inline {
-  --color-primary: #11052C;
-  --color-secondary: #182338;
-  --color-accent: #8bc34a;
+  /* Background: near-black matching landing page */
+  --color-primary: #07070A;
+  /* Elevated surfaces: slightly lighter with a neutral-cool cast */
+  --color-secondary: #111116;
+  /* Neon tennis green — the CourtCheck brand accent */
+  --color-accent: #B4F000;
+
   --font-sans: 'Geist', 'Geist Fallback';
   --font-mono: 'Geist Mono', 'Geist Mono Fallback';
 }
@@ -12,5 +16,28 @@
 @layer base {
   body {
     @apply bg-primary text-white font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgba(180, 240, 0, 0.2);
+    color: #fff;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.18);
   }
 }

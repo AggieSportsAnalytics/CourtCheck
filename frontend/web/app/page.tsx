@@ -7,25 +7,29 @@ import GameStatistics from '@/components/features/dashboard/GameStatistics';
 
 export default function DashboardPage() {
   return (
-    <div className="px-5 py-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-white">Dashboard</h2>
-        <p className="text-sm text-gray-400 mt-1">Your tennis analytics overview</p>
+    <div className="px-6 py-8 max-w-7xl">
+      {/* Page header */}
+      <div className="mb-8">
+        <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#B4F000' }}>
+          Overview
+        </p>
+        <h1 className="text-3xl font-black tracking-tight text-white">Dashboard</h1>
+        <p className="text-sm mt-1" style={{ color: '#5A5A66' }}>
+          Your tennis analytics at a glance
+        </p>
       </div>
 
-      {/* Top stats strip: shots / bounces / rallies / court accuracy */}
+      {/* Top stats strip */}
       <DashboardStats />
 
-      <div className="grid gap-4 pb-8">
+      <div className="grid gap-4 pb-10">
         {/* Row 1: Heatmaps + Stroke Breakdown + Shot Quality */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
           <div className="lg:col-span-3">
             <HeatMaps />
           </div>
           <div className="lg:col-span-2 grid gap-4 content-start">
-            {/* Stroke Breakdown (forehand / backhand / serve) */}
             <PlayerStats />
-            {/* Shot Quality (in-bounds vs out-of-bounds) */}
             <ShotPercentages />
           </div>
         </div>

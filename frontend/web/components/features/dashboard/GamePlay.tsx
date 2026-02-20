@@ -36,82 +36,106 @@ export default function GamePlay() {
   }, []);
 
   return (
-    <div className="bg-secondary rounded-2xl p-5 border border-gray-700/40 h-full flex flex-col">
+    <div
+      className="rounded-2xl p-5 h-full flex flex-col"
+      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-white">Recent Sessions</h3>
-        <Link href="/recordings" className="text-xs text-accent hover:underline">
+        <Link
+          href="/recordings"
+          className="text-xs transition-opacity hover:opacity-70"
+          style={{ color: '#B4F000' }}
+        >
           View all →
         </Link>
       </div>
 
       {loading && (
         <div className="flex-1 flex items-center justify-center">
-          <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          <div
+            className="w-5 h-5 rounded-full animate-spin"
+            style={{ border: '2px solid rgba(180,240,0,0.15)', borderTopColor: '#B4F000' }}
+          />
         </div>
       )}
 
       {!loading && games.length === 0 && (
         <div className="flex-1 flex flex-col items-center justify-center text-center gap-2 py-4">
-          <svg viewBox="0 0 24 24" className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" strokeWidth={1.5}>
+          <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ color: '#2A2A33' }}>
             <circle cx="12" cy="12" r="10" />
             <path d="M8 12h4l2-4" />
           </svg>
-          <p className="text-xs text-gray-500">No completed sessions yet</p>
-          <Link href="/upload" className="text-xs text-accent hover:underline">
+          <p className="text-xs" style={{ color: '#3A3A44' }}>No completed sessions yet</p>
+          <Link href="/upload" className="text-xs transition-opacity hover:opacity-70" style={{ color: '#B4F000' }}>
             Upload your first match →
           </Link>
         </div>
       )}
 
       {!loading && games.length > 0 && (
-        <div className="flex flex-col gap-2 flex-1 overflow-y-auto">
+        <div className="flex flex-col gap-0.5 flex-1 overflow-y-auto">
           {games.slice(0, 6).map((g) => {
             const hasStats = g.shotCount !== null || g.bounceCount !== null;
             return (
               <Link
                 key={g.id}
                 href={`/recordings/${g.id}`}
-                className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-white/5 transition-colors group"
+                className="flex items-start gap-3 p-2.5 rounded-xl transition-colors group"
+                style={{ color: 'inherit' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
               >
                 {/* Date badge */}
-                <div className="shrink-0 w-10 text-center">
-                  <p className="text-xs font-bold text-accent">
+                <div className="shrink-0 w-9 text-center">
+                  <p className="text-xs font-bold" style={{ color: '#B4F000' }}>
                     {new Date(g.createdAt).getDate()}
                   </p>
-                  <p className="text-[10px] text-gray-500">
+                  <p className="text-[10px]" style={{ color: '#3A3A44' }}>
                     {new Date(g.createdAt).toLocaleDateString("en-US", { month: "short" })}
                   </p>
                 </div>
 
                 {/* Stats */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs text-gray-400">{formatRelativeDate(g.createdAt)}</p>
+                  <p className="text-xs" style={{ color: '#5A5A66' }}>{formatRelativeDate(g.createdAt)}</p>
                   {hasStats ? (
-                    <div className="flex gap-2 mt-0.5 flex-wrap">
+                    <div className="flex gap-1.5 mt-1 flex-wrap">
                       {g.shotCount !== null && (
-                        <span className="text-[10px] bg-gray-700/60 text-gray-300 px-1.5 py-0.5 rounded">
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded"
+                          style={{ background: 'rgba(255,255,255,0.05)', color: '#9CA3AF' }}
+                        >
                           {g.shotCount} shots
                         </span>
                       )}
                       {g.bounceCount !== null && (
-                        <span className="text-[10px] bg-gray-700/60 text-gray-300 px-1.5 py-0.5 rounded">
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded"
+                          style={{ background: 'rgba(255,255,255,0.05)', color: '#9CA3AF' }}
+                        >
                           {g.bounceCount} bounces
                         </span>
                       )}
                       {g.rallyCount !== null && (
-                        <span className="text-[10px] bg-gray-700/60 text-gray-300 px-1.5 py-0.5 rounded">
+                        <span
+                          className="text-[10px] px-1.5 py-0.5 rounded"
+                          style={{ background: 'rgba(255,255,255,0.05)', color: '#9CA3AF' }}
+                        >
                           {g.rallyCount} rallies
                         </span>
                       )}
                     </div>
                   ) : (
-                    <p className="text-[10px] text-gray-600 mt-0.5">Stats not available</p>
+                    <p className="text-[10px] mt-0.5" style={{ color: '#2A2A33' }}>Stats not available</p>
                   )}
                 </div>
 
-                {/* Report badge */}
                 {(g.hasBallHeatmap || g.hasPlayerHeatmap) && (
-                  <span className="text-[10px] bg-accent/15 text-accent px-1.5 py-0.5 rounded shrink-0">
+                  <span
+                    className="text-[10px] px-1.5 py-0.5 rounded shrink-0"
+                    style={{ background: 'rgba(180,240,0,0.08)', color: '#B4F000' }}
+                  >
                     report
                   </span>
                 )}

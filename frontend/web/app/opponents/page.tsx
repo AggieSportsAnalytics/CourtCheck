@@ -32,7 +32,7 @@ export default function OpponentsPage() {
             href="/upload"
             className="px-4 py-2 bg-secondary hover:bg-white/5 border border-gray-700/40 rounded-xl text-sm text-gray-300 font-medium transition-colors"
           >
-            Analyse a Match
+            Analyze a Match
           </Link>
         </div>
       </div>
