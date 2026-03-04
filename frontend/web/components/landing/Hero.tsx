@@ -66,7 +66,7 @@ function MockDashboard() {
       <div className="p-5 grid grid-cols-2 gap-5">
         {/* Court visualization */}
         <div
-          className="rounded-xl p-3 aspect-[120/220]"
+          className="rounded-xl p-3 aspect-120/220"
           style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
         >
           <MockCourt />
@@ -172,7 +172,7 @@ export function Hero() {
               color: '#B4F000',
             }}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#B4F000] animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
             Computer Vision + AI · Tennis Analytics
           </div>
 

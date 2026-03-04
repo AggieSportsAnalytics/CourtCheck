@@ -25,14 +25,18 @@ export function useVideoUpload(onUploadComplete?: () => void) {
 
       // 2️⃣ upload file directly to Supabase
       setStatus('uploading');
-      await fetch(upload_url, {
+      const uploadRes = await fetch(upload_url, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'video/mp4',
-          'x-upsert': 'false',
+          'Content-Type': file.type || 'video/mp4',
         },
         body: file,
       });
+
+      if (!uploadRes.ok) {
+        const text = await uploadRes.text().catch(() => uploadRes.statusText);
+        throw new Error(`Upload failed (${uploadRes.status}): ${text}`);
+      }
 
       // 3️⃣ trigger processing (fire and forget - don't wait!)
       setStatus('pending');

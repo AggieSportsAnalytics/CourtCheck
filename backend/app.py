@@ -56,8 +56,9 @@ def process_video(payload: dict):
 
     signed_url = signed["signedUrl"]
 
-    # Download video
-    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+    # Download video — preserve original extension so OpenCV picks the right decoder
+    ext = os.path.splitext(file_key)[-1] or ".mp4"
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
         r = requests.get(signed_url, stream=True)
         r.raise_for_status()
         for chunk in r.iter_content(8192):

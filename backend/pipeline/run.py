@@ -239,38 +239,48 @@ def generate_scouting_report(stats: dict, fps: float, num_frames: int, spatial_s
         total_b = in_b + out_b
         acc = f"{round(in_b / total_b * 100)}%" if total_b > 0 else "N/A"
 
-        lines = [
-            "You are an expert tennis coach. Based on the following match statistics, "
-            "write a concise scouting report in markdown with three sections: "
-            "**Performance Summary**, **Strengths**, and **Areas to Improve**. "
-            "Be specific, actionable, and keep the total under 350 words.\n",
-            "Match statistics:",
-            f"- Duration: {duration_str}",
-            f"- Total shots detected: {stats.get('shot_count', 0)}",
-            f"- Rallies: {stats.get('rally_count', 0)}",
-            f"- Total bounces: {stats.get('bounce_count', 0)} (in-bounds: {in_b}, out-of-bounds: {out_b})",
-            f"- In-bounds accuracy: {acc}",
-            f"- Stroke breakdown — Forehand: {stats.get('forehand_count', 0)}, "
-            f"Backhand: {stats.get('backhand_count', 0)}, "
-            f"Serve/Smash: {stats.get('serve_count', 0)}",
-        ]
+        prompt = (
+            "You are a Division I tennis performance analyst.\n"
+            "The player being analyzed is the player closer to the camera "
+            "(bottom side of player movement map, top side of bounce map).\n\n"
+            "Write a clear, data-driven match report under 250 words.\n"
+            "Use direct second-person language ('You...').\n"
+            "Do NOT mention AI, models, or assumptions.\n"
+            "Only use the numbers provided.\n\n"
+            "Structure your response EXACTLY with these sections:\n"
+            "1) Match Snapshot\n"
+            "2) Positioning Tendencies\n"
+            "3) Error Patterns\n"
+            "4) Strengths\n"
+            "5) Areas to Improve\n"
+            "6) One-Line Coaching Adjustment\n\n"
+            "Be specific and quantitative. Avoid generic advice.\n\n"
+            "Match Statistics:\n"
+            f"- Duration: {duration_str}\n"
+            f"- Total shots: {stats.get('shot_count', 0)}\n"
+            f"- Rallies: {stats.get('rally_count', 0)}\n"
+            f"- Total bounces: {stats.get('bounce_count', 0)} "
+            f"(In-bounds: {in_b}, Out-of-bounds: {out_b})\n"
+            f"- In-bounds accuracy: {acc}\n"
+            f"- Forehands: {stats.get('forehand_count', 0)}\n"
+            f"- Backhands: {stats.get('backhand_count', 0)}\n"
+            f"- Serves/Smashes: {stats.get('serve_count', 0)}\n"
+        )
 
         if spatial_stats:
             bs = spatial_stats.get("bounces", {})
             ps = spatial_stats.get("player", {})
-            lines.append("\nCourt zone analysis (in-bounds bounces only):")
-            lines.append(f"- Near half (player's side): {bs.get('near_pct', 0)}% of bounces")
-            lines.append(f"- Far half (opponent's side): {bs.get('far_pct', 0)}% of bounces")
-            lines.append(f"- Left side: {bs.get('left_pct', 0)}%, Right side: {bs.get('right_pct', 0)}%")
-            lines.append(f"- Deep near (behind service line, near half): {bs.get('deep_near_pct', 0)}% of near bounces")
-            lines.append(f"- Alley bounces (outside singles): {bs.get('alley_pct', 0)}%")
+            prompt += "\nCourt zone analysis (in-bounds bounces only):\n"
+            prompt += f"- Near half (player's side): {bs.get('near_pct', 0)}% of bounces\n"
+            prompt += f"- Far half (opponent's side): {bs.get('far_pct', 0)}% of bounces\n"
+            prompt += f"- Left side: {bs.get('left_pct', 0)}%, Right side: {bs.get('right_pct', 0)}%\n"
+            prompt += f"- Deep near (behind service line, near half): {bs.get('deep_near_pct', 0)}% of near bounces\n"
+            prompt += f"- Alley bounces (outside singles): {bs.get('alley_pct', 0)}%\n"
             if ps.get("samples", 0) > 0:
-                lines.append("\nPlayer positioning (near half):")
-                lines.append(f"- Time on near half: {ps.get('near_pct', 0)}% of sampled frames")
-                lines.append(f"- Left side of court: {ps.get('near_left_pct', 0)}%, Right side: {ps.get('near_right_pct', 0)}%")
-                lines.append(f"- Deep (behind service line): {ps.get('near_deep_pct', 0)}%, Forward: {ps.get('near_forward_pct', 0)}%")
-
-        prompt = "\n".join(lines)
+                prompt += "\nPlayer positioning (near half):\n"
+                prompt += f"- Time on near half: {ps.get('near_pct', 0)}% of sampled frames\n"
+                prompt += f"- Left side of court: {ps.get('near_left_pct', 0)}%, Right side: {ps.get('near_right_pct', 0)}%\n"
+                prompt += f"- Deep (behind service line): {ps.get('near_deep_pct', 0)}%, Forward: {ps.get('near_forward_pct', 0)}%\n"
 
         client = openai.OpenAI()
         response = client.chat.completions.create(
