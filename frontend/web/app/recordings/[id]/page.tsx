@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 
 interface Recording {
   id: string;
@@ -434,7 +435,7 @@ export default function RecordingDetailPage() {
             prose-p:text-gray-300 prose-p:leading-relaxed prose-p:text-sm
             prose-strong:text-white
             prose-ul:text-gray-300 prose-li:marker:text-accent prose-li:text-sm">
-            <ReactMarkdown>{recording.scoutingReport}</ReactMarkdown>
+            <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{recording.scoutingReport}</ReactMarkdown>
           </div>
         </Card>
       )}

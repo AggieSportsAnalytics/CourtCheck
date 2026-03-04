@@ -38,7 +38,7 @@ export default function LoginPage() {
             <div className="flex items-center gap-3">
               <div className="mt-10">
                 <Image
-                  src="https://raw.githubusercontent.com/AggieSportsAnalytics/CourtCheck/cory/images/courtcheck_ball_logo.png"
+                  src="/courtcheck_ball_logo.png"
                   alt="CourtCheck tennis ball logo"
                   width={48}
                   height={48}

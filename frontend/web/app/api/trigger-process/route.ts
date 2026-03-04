@@ -32,7 +32,6 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const { file_key, match_id } = body;
-    console.log("Trigger payload:", body);
     if (!file_key || !match_id) {
       return Response.json(
         { error: "Missing file_key or match_id" },
@@ -49,6 +48,18 @@ export async function POST(req: Request) {
 
     if (matchError || !match || match.user_id !== authData.claims.sub) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // Rate limit: max 10 processing jobs per user per hour
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { count } = await supabaseAdmin
+      .from("matches")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", authData.claims.sub)
+      .gte("created_at", oneHourAgo);
+
+    if ((count ?? 0) >= 20) {
+      return Response.json({ error: "Too many requests" }, { status: 429 });
     }
 
     // Call Modal function to process video
@@ -76,6 +87,6 @@ export async function POST(req: Request) {
     return Response.json({ status: "ok" });
   } catch (e) {
     console.error(e);
-    return Response.json({ error: (e as Error).message }, { status: 500 });
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }

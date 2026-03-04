@@ -638,9 +638,11 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         }
     except Exception as e:
         if supabase:
+            import logging
+            logging.exception("Pipeline failed for match %s", match_id)
             supabase.table("matches").update({
                 "status": "failed",
-                "error": str(e),
+                "error": "Processing failed. Please try again.",
                 "progress": 0
             }).eq("id", match_id).execute()
         raise

@@ -5,12 +5,17 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from "uuid";
 
-export async function POST(req: Request) {
-  console.log("ENV CHECK", {
-    hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-    hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-  });
+const ALLOWED_EXTS = ['mp4', 'mov', 'avi'];
 
+function sanitizeFilename(raw: string): string | null {
+  const ext = raw.split('.').pop()?.toLowerCase() || '';
+  if (!ALLOWED_EXTS.includes(ext)) return null;
+  const base = raw.slice(0, raw.lastIndexOf('.'));
+  const safeBase = base.replace(/[^a-zA-Z0-9\s\-_]/g, '').trim().slice(0, 100) || 'upload';
+  return `${safeBase}.${ext}`;
+}
+
+export async function POST(req: Request) {
   try {
     // Check authentication
     const cookieStore = await cookies();
@@ -38,9 +43,12 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const filename = body.filename || `upload-${Date.now()}.mp4`;
+    const safeFilename = sanitizeFilename((body.filename as string) || '');
+    if (!safeFilename) {
+      return NextResponse.json({ error: 'Invalid file type. Allowed: mp4, mov, avi' }, { status: 400 });
+    }
     const match_id = uuidv4();
-    const file_key = `${match_id}/${filename}`;
+    const file_key = `${match_id}/${safeFilename}`;
 
     // create row in matches table (status: pending) with user_id
     await supabaseAdmin.from("matches").insert([{
@@ -63,7 +71,7 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error("Supabase signed url error", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Upload failed" }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -74,6 +82,6 @@ export async function POST(req: Request) {
     });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

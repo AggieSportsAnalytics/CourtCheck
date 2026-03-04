@@ -37,7 +37,7 @@ export async function GET() {
 
     if (error) {
       console.error("Recordings fetch error", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: "Failed to fetch recordings" }, { status: 500 });
     }
 
     // Generate signed URLs for completed matches
@@ -80,6 +80,6 @@ export async function GET() {
     return NextResponse.json({ recordings });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
