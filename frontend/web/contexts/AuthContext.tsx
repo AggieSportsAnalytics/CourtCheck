@@ -50,6 +50,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (error) throw error;
 
+    // Supabase returns a fake user with empty identities when the email is already registered
+    // (to prevent email enumeration). Detect this and show a helpful error.
+    if (data?.user?.identities?.length === 0) {
+      throw new Error('An account with this email already exists. Try signing in instead.');
+    }
+
     // Don't redirect here - let middleware handle it after session is established
   };
 
