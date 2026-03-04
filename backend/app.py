@@ -3,6 +3,7 @@ import tempfile
 import modal
 import requests
 from typing import Dict
+from fastapi import Request, HTTPException
 app = modal.App("tennis-modal")
 
 def download_model_weights():
@@ -35,10 +36,17 @@ image = (
     secrets=[
         modal.Secret.from_name("supabase-secrets"),
         modal.Secret.from_name("openai-secrets"),
+        modal.Secret.from_name("webhook-secret"),
     ]
 )
 @modal.fastapi_endpoint(method="POST")
-def process_video(payload: dict):
+async def process_video(request: Request):
+    auth_header = request.headers.get("Authorization", "")
+    expected_secret = os.environ.get("MODAL_WEBHOOK_SECRET", "")
+    if not expected_secret or auth_header != f"Bearer {expected_secret}":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    payload = await request.json()
     file_key = payload["file_key"]
     match_id = payload["match_id"]
 

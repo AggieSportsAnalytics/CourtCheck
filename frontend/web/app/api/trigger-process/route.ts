@@ -53,10 +53,13 @@ export async function POST(req: Request) {
 
     // Call Modal function to process video
     const res = await fetch(
-      process.env.MODAL_FUNCTION_URL!, 
+      process.env.MODAL_FUNCTION_URL!,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.MODAL_WEBHOOK_SECRET}`,
+        },
         body: JSON.stringify({
           file_key,
           match_id

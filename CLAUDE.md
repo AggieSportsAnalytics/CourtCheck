@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Always-Active Skills
+
+These skills must be followed at all times, without exception:
+
+- **`verification-before-completion`** — Never claim work is done, fixed, or passing without running verification commands first. Evidence before assertions, always.
+- **`test-driven-development`** — Write the test before the implementation for any new feature or bug fix.
+- **`systematic-debugging`** — Always find the root cause before proposing a fix. No patches without investigation first.
+
 ## Project Overview
 
 CourtCheck is a tennis video analysis application that uses computer vision and machine learning to analyze tennis match recordings. The system detects balls, court boundaries, bounces, and strokes, then overlays tracking data and a minimap on the processed video.
