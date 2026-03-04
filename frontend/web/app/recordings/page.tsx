@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 
 interface Recording {
@@ -9,6 +9,7 @@ interface Recording {
   progress: number;
   error: string | null;
   createdAt: string;
+  name: string;
   filename: string;
   fps: number | null;
   numFrames: number | null;
@@ -73,10 +74,96 @@ function StatChip({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function InlineName({
+  recordingId,
+  value,
+  onRename,
+}: {
+  recordingId: string;
+  value: string;
+  onRename: (id: string, newName: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  const save = async () => {
+    const trimmed = draft.trim();
+    if (!trimmed || trimmed === value) {
+      setDraft(value);
+      setEditing(false);
+      return;
+    }
+    // Optimistic update
+    onRename(recordingId, trimmed);
+    setEditing(false);
+    try {
+      const res = await fetch(`/api/recordings/${recordingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed }),
+      });
+      if (!res.ok) {
+        // Rollback on failure
+        onRename(recordingId, value);
+        setDraft(value);
+      }
+    } catch {
+      onRename(recordingId, value);
+      setDraft(value);
+    }
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        className="text-sm font-medium text-white bg-transparent border-b outline-none truncate max-w-50"
+        style={{ borderColor: '#B4F000' }}
+        value={draft}
+        maxLength={100}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') save();
+          if (e.key === 'Escape') { setDraft(value); setEditing(false); }
+        }}
+        onBlur={save}
+      />
+    );
+  }
+
+  return (
+    <button
+      className="group/name flex items-center gap-1.5 text-sm font-medium text-white truncate cursor-text max-w-50"
+      onClick={() => { setDraft(value); setEditing(true); }}
+      title="Click to rename"
+    >
+      <span className="truncate">{value}</span>
+      <svg
+        viewBox="0 0 16 16"
+        className="w-3 h-3 shrink-0 opacity-0 group-hover/name:opacity-40 transition-opacity"
+        fill="currentColor"
+      >
+        <path d="M11.013 1.427a1.75 1.75 0 012.474 0l1.086 1.086a1.75 1.75 0 010 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 01-.927-.928l.929-3.25a1.75 1.75 0 01.445-.758l8.61-8.61zm1.414 1.06a.25.25 0 00-.354 0L3.463 11.098a.25.25 0 00-.064.108l-.631 2.208 2.208-.63a.25.25 0 00.108-.064l8.61-8.61a.25.25 0 000-.354l-1.086-1.086z" />
+      </svg>
+    </button>
+  );
+}
+
 export default function RecordingsPage() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const handleRename = (id: string, newName: string) => {
+    setRecordings((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, name: newName } : r))
+    );
+  };
 
   useEffect(() => {
     fetch('/api/recordings')
@@ -183,7 +270,7 @@ export default function RecordingsPage() {
                   {/* Main content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <p className="text-sm font-medium text-white truncate">{rec.filename}</p>
+                      <InlineName recordingId={rec.id} value={rec.name} onRename={handleRename} />
                       <StatusPill status={rec.status} />
                       {heatmapCount > 0 && (
                         <span

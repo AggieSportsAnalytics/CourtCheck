@@ -36,7 +36,7 @@ export async function GET(
 
     const { data, error } = await supabaseAdmin
       .from("matches")
-      .select("id, status, progress, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, scouting_report")
+      .select("id, name, status, progress, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, scouting_report")
       .eq("id", id)
       .eq("user_id", authData.claims.sub)
       .single();
@@ -80,6 +80,7 @@ export async function GET(
         bounceHeatmapUrl,
         playerHeatmapUrl,
         createdAt: data.created_at,
+        name: data.name || data.input_path?.split("/").pop() || "Unknown",
         filename: data.input_path?.split("/").pop() || "Unknown",
         fps: data.fps,
         numFrames: data.num_frames,
@@ -94,6 +95,67 @@ export async function GET(
         scoutingReport: data.scouting_report ?? null,
       },
     });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+
+    const { data: authData } = await supabase.auth.getClaims();
+
+    if (!authData?.claims) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const body = await req.json();
+
+    let name = typeof body.name === 'string' ? body.name.trim() : '';
+    // Strip control characters
+    name = name.replace(/[\x00-\x1F\x7F]/g, '');
+
+    if (!name) {
+      return NextResponse.json({ error: 'Name cannot be empty' }, { status: 400 });
+    }
+    if (name.length > 100) {
+      return NextResponse.json({ error: 'Name too long (max 100 characters)' }, { status: 400 });
+    }
+
+    const { error } = await supabaseAdmin
+      .from("matches")
+      .update({ name })
+      .eq("id", id)
+      .eq("user_id", authData.claims.sub);
+
+    if (error) {
+      console.error("Rename error", error);
+      return NextResponse.json({ error: "Failed to rename" }, { status: 500 });
+    }
+
+    return NextResponse.json({ name });
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -15,6 +15,7 @@ interface Recording {
   bounceHeatmapUrl: string | null;
   playerHeatmapUrl: string | null;
   createdAt: string;
+  name: string;
   filename: string;
   fps: number | null;
   numFrames: number | null;
@@ -251,7 +252,7 @@ export default function RecordingDetailPage() {
           <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#B4F000' }}>
             Match Report
           </p>
-          <h1 className="text-2xl font-black text-white tracking-tight">{recording.filename}</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight">{recording.name}</h1>
           <p className="text-sm mt-0.5" style={{ color: '#5A5A66' }}>{datePlayed}</p>
         </div>
         <span
