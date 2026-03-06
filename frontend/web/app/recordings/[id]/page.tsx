@@ -359,31 +359,43 @@ export default function RecordingDetailPage() {
       {/* Court Report heatmaps */}
       <Card className="mb-5">
         <SectionLabel>Court Report</SectionLabel>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="flex flex-col gap-6">
           {[
             { url: recording.bounceHeatmapUrl, label: 'Ball Bounce Map', sub: 'Where the ball landed — useful for identifying opponent patterns' },
             { url: recording.playerHeatmapUrl, label: 'Player Movement Map', sub: 'Your court coverage — identify areas to improve' },
           ].map(({ url, label, sub }) => (
-            <div
-              key={label}
-              className="rounded-xl overflow-hidden"
-              style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}
-            >
+            <div key={label}>
               {url ? (
-                <>
-                  <img src={url} alt={label} className="w-full object-contain" />
-                  <div className="px-3 py-2">
-                    <p className="text-xs font-semibold text-white">{label}</p>
+                <div
+                  className="rounded-xl overflow-hidden"
+                  style={{ border: '1px solid rgba(255,255,255,0.07)', background: '#050507' }}
+                >
+                  {/* Container uses padding-bottom trick for the rotated aspect ratio (1665:3506 portrait → 3506:1665 landscape ≈ 2.105:1) */}
+                  <div className="relative w-full" style={{ paddingBottom: '47.5%' }}>
+                    <img
+                      src={url}
+                      alt={label}
+                      className="absolute inset-0 w-full h-full object-contain"
+                      style={{ transform: 'rotate(90deg) scale(2.1)', transformOrigin: 'center center' }}
+                    />
+                  </div>
+                  <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <p className="text-xs font-semibold text-white tracking-wide">{label}</p>
                     <p className="text-[10px] mt-0.5" style={{ color: '#3A3A44' }}>{sub}</p>
                   </div>
-                </>
+                </div>
               ) : (
-                <div className="aspect-video flex flex-col items-center justify-center gap-2 p-4 text-center">
-                  <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ color: '#2A2A33' }}>
-                    <rect x="3" y="3" width="18" height="18" rx="1" /><path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
-                  </svg>
-                  <p className="text-xs" style={{ color: '#3A3A44' }}>{label}</p>
-                  <p className="text-[10px]" style={{ color: '#2A2A33' }}>Not generated</p>
+                <div
+                  className="rounded-xl overflow-hidden"
+                  style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}
+                >
+                  <div className="aspect-video flex flex-col items-center justify-center gap-2 p-4 text-center">
+                    <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ color: '#2A2A33' }}>
+                      <rect x="3" y="3" width="18" height="18" rx="1" /><path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+                    </svg>
+                    <p className="text-xs" style={{ color: '#3A3A44' }}>{label}</p>
+                    <p className="text-[10px]" style={{ color: '#2A2A33' }}>Not generated</p>
+                  </div>
                 </div>
               )}
             </div>
