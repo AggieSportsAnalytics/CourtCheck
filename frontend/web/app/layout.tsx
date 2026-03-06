@@ -23,12 +23,23 @@ export const metadata: Metadata = {
         url: '/icon-dark-32x32.png',
         media: '(prefers-color-scheme: dark)',
       },
+],
+    apple: '/apple-icon.png',
+  },
+  openGraph: {
+    title: 'CourtCheck - Tennis Analytics Platform',
+    description: 'AI-powered tennis analytics platform for match analysis, performance metrics, and scouting insights.',
+    url: 'https://courtcheck-rho.vercel.app',
+    siteName: 'CourtCheck',
+    images: [
       {
-        url: '/icon.svg',
-        type: 'image/svg+xml',
+        url: 'https://courtcheck-rho.vercel.app/courtcheck_logo.png',
+        width: 1200,
+        height: 630,
       },
     ],
-    apple: '/apple-icon.png',
+    locale: 'en_US',
+    type: 'website',
   },
 }
 
