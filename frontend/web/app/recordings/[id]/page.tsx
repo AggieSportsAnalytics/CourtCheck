@@ -55,6 +55,66 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+const COURT_TABS = [
+  { key: 'ball' as const, label: 'Ball Bounces', sub: 'Where the ball landed — useful for identifying opponent patterns' },
+  { key: 'player' as const, label: 'Player Positions', sub: 'Your court coverage — identify areas to improve' },
+];
+
+function CourtReportTabs({ bounceUrl, playerUrl }: { bounceUrl: string | null; playerUrl: string | null }) {
+  const [active, setActive] = useState<'ball' | 'player'>('ball');
+  const url = active === 'ball' ? bounceUrl : playerUrl;
+  const tab = COURT_TABS.find((t) => t.key === active)!;
+
+  return (
+    <div>
+      <div className="flex gap-1 mb-4">
+        {COURT_TABS.map(({ key, label }) => {
+          const isActive = active === key;
+          return (
+            <button
+              key={key}
+              onClick={() => setActive(key)}
+              className="text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all duration-200"
+              style={{
+                background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
+                color: isActive ? '#FAFAFA' : '#4A4A55',
+                border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      {url ? (
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{ border: '1px solid rgba(255,255,255,0.07)', background: '#050507' }}
+        >
+          <img src={url} alt={tab.label} className="w-full object-contain" />
+          <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            <p className="text-xs font-semibold text-white tracking-wide">{tab.label}</p>
+            <p className="text-[10px] mt-0.5" style={{ color: '#3A3A44' }}>{tab.sub}</p>
+          </div>
+        </div>
+      ) : (
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}
+        >
+          <div className="aspect-video flex flex-col items-center justify-center gap-2 p-4 text-center">
+            <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ color: '#2A2A33' }}>
+              <rect x="3" y="3" width="18" height="18" rx="1" /><path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+            </svg>
+            <p className="text-xs" style={{ color: '#3A3A44' }}>{tab.label}</p>
+            <p className="text-[10px]" style={{ color: '#2A2A33' }}>Not generated</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: boolean }) {
   return (
     <div
@@ -359,48 +419,10 @@ export default function RecordingDetailPage() {
       {/* Court Report heatmaps */}
       <Card className="mb-5">
         <SectionLabel>Court Report</SectionLabel>
-        <div className="flex flex-col gap-6">
-          {[
-            { url: recording.bounceHeatmapUrl, label: 'Ball Bounce Map', sub: 'Where the ball landed — useful for identifying opponent patterns' },
-            { url: recording.playerHeatmapUrl, label: 'Player Movement Map', sub: 'Your court coverage — identify areas to improve' },
-          ].map(({ url, label, sub }) => (
-            <div key={label}>
-              {url ? (
-                <div
-                  className="rounded-xl overflow-hidden"
-                  style={{ border: '1px solid rgba(255,255,255,0.07)', background: '#050507' }}
-                >
-                  {/* Container uses padding-bottom trick for the rotated aspect ratio (1665:3506 portrait → 3506:1665 landscape ≈ 2.105:1) */}
-                  <div className="relative w-full" style={{ paddingBottom: '47.5%' }}>
-                    <img
-                      src={url}
-                      alt={label}
-                      className="absolute inset-0 w-full h-full object-contain"
-                      style={{ transform: 'rotate(90deg) scale(2.1)', transformOrigin: 'center center' }}
-                    />
-                  </div>
-                  <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    <p className="text-xs font-semibold text-white tracking-wide">{label}</p>
-                    <p className="text-[10px] mt-0.5" style={{ color: '#3A3A44' }}>{sub}</p>
-                  </div>
-                </div>
-              ) : (
-                <div
-                  className="rounded-xl overflow-hidden"
-                  style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}
-                >
-                  <div className="aspect-video flex flex-col items-center justify-center gap-2 p-4 text-center">
-                    <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ color: '#2A2A33' }}>
-                      <rect x="3" y="3" width="18" height="18" rx="1" /><path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
-                    </svg>
-                    <p className="text-xs" style={{ color: '#3A3A44' }}>{label}</p>
-                    <p className="text-[10px]" style={{ color: '#2A2A33' }}>Not generated</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        <CourtReportTabs
+          bounceUrl={recording.bounceHeatmapUrl}
+          playerUrl={recording.playerHeatmapUrl}
+        />
       </Card>
 
       {/* Match Summary table */}

@@ -1,15 +1,30 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+
+const TABS = [
+  { key: 'ball', label: 'Ball Bounces' },
+  { key: 'player', label: 'Player Positions' },
+] as const;
+
+type TabKey = (typeof TABS)[number]['key'];
+
+interface HeatmapData {
+  matchId: string;
+  matchName: string;
+  createdAt: string;
+  bounceHeatmapUrl: string | null;
+  playerHeatmapUrl: string | null;
+  bounceCount: number | null;
+  shotCount: number | null;
+  rallyCount: number | null;
+}
 
 const HeatMaps = () => {
   const [loading, setLoading] = useState(true);
-  const [heatmaps, setHeatmaps] = useState<{
-    matchId: string;
-    createdAt: string;
-    bounceHeatmapUrl: string | null;
-    playerHeatmapUrl: string | null;
-  } | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>('ball');
+  const [heatmaps, setHeatmaps] = useState<HeatmapData | null>(null);
 
   const defaultHeatmapSvg = useMemo(() => {
     const make = (label: string) => {
@@ -26,8 +41,8 @@ const HeatMaps = () => {
       return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
     };
     return {
-      ball: make('No ball heatmap — analyze a match to generate one'),
-      player: make('No player heatmap — analyze a match to generate one'),
+      ball: make('No ball heatmap \u2014 analyze a match to generate one'),
+      player: make('No player heatmap \u2014 analyze a match to generate one'),
     };
   }, []);
 
@@ -56,23 +71,33 @@ const HeatMaps = () => {
     return () => { cancelled = true; };
   }, []);
 
-  const shotsUrl = heatmaps?.bounceHeatmapUrl ?? null;
-  const playerUrl = heatmaps?.playerHeatmapUrl ?? null;
-  const hasHeatmaps = !loading && (shotsUrl || playerUrl);
+  const urlForTab: Record<TabKey, string | null> = {
+    ball: heatmaps?.bounceHeatmapUrl ?? null,
+    player: heatmaps?.playerHeatmapUrl ?? null,
+  };
+  const fallbackForTab: Record<TabKey, string> = {
+    ball: defaultHeatmapSvg.ball,
+    player: defaultHeatmapSvg.player,
+  };
+
+  const activeUrl = urlForTab[activeTab];
+  const activeFallback = fallbackForTab[activeTab];
+  const hasHeatmaps = !loading && (urlForTab.ball || urlForTab.player);
 
   return (
     <div
-      className="rounded-xl overflow-hidden"
+      className="rounded-xl overflow-hidden w-full flex flex-col"
       style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}
     >
-      <div className="p-5 pb-3 flex items-center justify-between">
+      {/* Header row */}
+      <div className="p-5 pb-0 flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-white">Heatmaps</h3>
           <p className="text-xs mt-0.5" style={{ color: '#5A5A66' }}>
             {loading
-              ? 'Loading…'
+              ? 'Loading\u2026'
               : hasHeatmaps
-              ? `Latest · ${new Date(heatmaps!.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+              ? `Latest \u00b7 ${new Date(heatmaps!.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
               : 'Run an analysis to generate heatmaps'}
           </p>
         </div>
@@ -86,39 +111,99 @@ const HeatMaps = () => {
         )}
       </div>
 
-      <div className="p-5 pt-2">
+      {/* Tab switcher */}
+      <div className="px-5 pt-4 pb-3 flex gap-1">
+        {TABS.map(({ key, label }) => {
+          const isActive = activeTab === key;
+          return (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className="text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all duration-200"
+              style={{
+                background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
+                color: isActive ? '#FAFAFA' : '#4A4A55',
+                border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Heatmap display */}
+      <div className="px-5 flex-1 flex flex-col">
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="aspect-video rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.04)' }} />
-            <div className="aspect-video rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.04)' }} />
-          </div>
+          <div
+            className="rounded-lg animate-pulse"
+            style={{ background: 'rgba(255,255,255,0.04)', paddingBottom: '47.5%' }}
+          />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: '#3A3A44' }}>
-                Ball Bounces
-              </p>
-              <img
-                src={shotsUrl ?? defaultHeatmapSvg.ball}
-                alt="Ball bounce heatmap"
-                className="w-full rounded-lg object-cover"
-                style={{ border: '1px solid rgba(255,255,255,0.07)' }}
-              />
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: '#3A3A44' }}>
-                Player Positions
-              </p>
-              <img
-                src={playerUrl ?? defaultHeatmapSvg.player}
-                alt="Player position heatmap"
-                className="w-full rounded-lg object-cover"
-                style={{ border: '1px solid rgba(255,255,255,0.07)' }}
-              />
-            </div>
+          <div
+            className="rounded-lg overflow-hidden"
+            style={{ border: '1px solid rgba(255,255,255,0.07)', background: '#050507' }}
+          >
+            <img
+              src={activeUrl ?? activeFallback}
+              alt={`${activeTab === 'ball' ? 'Ball bounce' : 'Player position'} heatmap`}
+              className="w-full block"
+            />
           </div>
         )}
       </div>
+
+      {/* Match context bar */}
+      {!loading && hasHeatmaps && heatmaps && (
+        <div className="px-5 pt-4 pb-5">
+          <Link
+            href={`/recordings/${heatmaps.matchId}`}
+            className="block rounded-lg px-4 py-3 transition-colors duration-200"
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-white truncate">
+                  {heatmaps.matchName}
+                </p>
+                <p className="text-[10px] mt-0.5" style={{ color: '#4A4A55' }}>
+                  {new Date(heatmaps.createdAt).toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </p>
+              </div>
+              <div className="flex items-center gap-4 shrink-0 ml-4">
+                {heatmaps.shotCount != null && (
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-white tabular-nums">{heatmaps.shotCount}</p>
+                    <p className="text-[9px] uppercase tracking-wider" style={{ color: '#3A3A44' }}>shots</p>
+                  </div>
+                )}
+                {heatmaps.bounceCount != null && (
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-white tabular-nums">{heatmaps.bounceCount}</p>
+                    <p className="text-[9px] uppercase tracking-wider" style={{ color: '#3A3A44' }}>bounces</p>
+                  </div>
+                )}
+                {heatmaps.rallyCount != null && (
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-white tabular-nums">{heatmaps.rallyCount}</p>
+                    <p className="text-[9px] uppercase tracking-wider" style={{ color: '#3A3A44' }}>rallies</p>
+                  </div>
+                )}
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: '#3A3A44' }}>
+                  <path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </Link>
+        </div>
+      )}
+
+      {/* Bottom padding when no context bar */}
+      {(loading || !hasHeatmaps) && <div className="pb-5" />}
     </div>
   );
 };

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 
-const BALL_LOGO = 'https://raw.githubusercontent.com/AggieSportsAnalytics/CourtCheck/cory/images/courtcheck_ball_logo.png';
+const BALL_LOGO = '/courtcheck_ball_logo.png';
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },

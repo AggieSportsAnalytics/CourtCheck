@@ -187,11 +187,12 @@ def generate_minimap_heatmaps(
 
 
 def _save_heatmap_png(path, image, label):
-    """Save a heatmap image to disk with logging."""
+    """Save a heatmap image to disk as landscape (rotated 90 CW)."""
     heatmap_dir = os.path.dirname(path)
     if heatmap_dir and not os.path.exists(heatmap_dir):
         os.makedirs(heatmap_dir, exist_ok=True)
 
+    image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
     success = cv2.imwrite(path, image)
     if success and os.path.exists(path):
         print(f"[Heatmap] {label} heatmap saved: {path}")

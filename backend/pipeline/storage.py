@@ -21,6 +21,10 @@ def make_streamable_mp4(input_path: str) -> str:
                 "ffmpeg",
                 "-y",
                 "-i", str(input_path),
+                "-c:v", "libx264",
+                "-preset", "fast",
+                "-crf", "23",
+                "-c:a", "copy",
                 "-movflags", "+faststart",
                 str(output_path)
             ],

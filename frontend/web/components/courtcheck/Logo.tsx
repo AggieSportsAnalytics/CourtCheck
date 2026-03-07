@@ -1,7 +1,7 @@
 import Image from 'next/image';
 
 const Logo = () => {
-  const ballLogoUrl = "https://raw.githubusercontent.com/AggieSportsAnalytics/CourtCheck/cory/images/courtcheck_ball_logo.png";
+  const ballLogoUrl = "/courtcheck_ball_logo.png";
 
   return (
     <div className="flex items-center">

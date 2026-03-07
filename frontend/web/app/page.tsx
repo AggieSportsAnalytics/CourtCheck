@@ -25,10 +25,10 @@ export default function DashboardPage() {
       <div className="grid gap-4 pb-10">
         {/* Row 1: Heatmaps + Stroke Breakdown + Shot Quality */}
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 flex">
             <HeatMaps />
           </div>
-          <div className="lg:col-span-2 grid gap-4 content-start">
+          <div className="lg:col-span-2 grid gap-4">
             <PlayerStats />
             <ShotPercentages />
           </div>

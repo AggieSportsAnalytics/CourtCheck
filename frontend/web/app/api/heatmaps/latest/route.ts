@@ -28,7 +28,7 @@ export async function GET() {
 
     const { data, error } = await supabaseAdmin
       .from('matches')
-      .select('id, created_at, status, bounce_heatmap_path, player_heatmap_path')
+      .select('id, name, input_path, created_at, status, bounce_heatmap_path, player_heatmap_path, bounce_count, shot_count, rally_count')
       .eq('user_id', authData.claims.sub)
       .eq('status', 'done')
       .order('created_at', { ascending: false })
@@ -64,9 +64,13 @@ export async function GET() {
     return NextResponse.json({
       heatmaps: {
         matchId: latest.id,
+        matchName: latest.name || latest.input_path?.split('/').pop() || 'Untitled',
         createdAt: latest.created_at,
         bounceHeatmapUrl,
         playerHeatmapUrl,
+        bounceCount: latest.bounce_count,
+        shotCount: latest.shot_count,
+        rallyCount: latest.rally_count,
       },
     });
   } catch (e) {
