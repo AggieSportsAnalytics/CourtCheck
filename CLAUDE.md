@@ -10,6 +10,20 @@ These skills must be followed at all times, without exception:
 - **`test-driven-development`** — Write the test before the implementation for any new feature or bug fix.
 - **`systematic-debugging`** — Always find the root cause before proposing a fix. No patches without investigation first.
 
+## Vault Context
+
+My Obsidian vault is located at:
+- Windows path: `C:\Users\kenny\Documents\CourtCheckVault2026`
+- WSL path: `/mnt/c/Users/kenny/Documents/CourtCheckVault2026`
+
+### Instructions
+At the start of every session, read the following files for context:
+- `/mnt/c/Users/kenny/Documents/CourtCheckVault2026/profile.md`
+- `/mnt/c/Users/kenny/Documents/CourtCheckVault2026/projects/courtcheck.md`
+
+### On Important Decisions
+When we make an important decision, learn something about my preferences, or establish useful context, write it to the relevant note in the vault.
+
 ## Project Overview
 
 CourtCheck is a tennis video analysis application that uses computer vision and machine learning to analyze tennis match recordings. The system detects balls, court boundaries, bounces, and strokes, then overlays tracking data and a minimap on the processed video.
