@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-
-const BALL_LOGO = '/courtcheck_ball_logo.png';
+import Logo from '@/components/layout/Logo';
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
@@ -34,11 +32,8 @@ export function Navbar() {
     >
       <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/landing" className="flex items-center gap-2.5">
-          <div className="relative w-8 h-8 shrink-0">
-            <Image src={BALL_LOGO} alt="CourtCheck" width={32} height={32} className="object-contain" />
-          </div>
-          <span className="text-[15px] font-semibold text-white tracking-tight">CourtCheck</span>
+        <Link href="/landing">
+          <Logo size="sm" />
         </Link>
 
         {/* Desktop nav */}

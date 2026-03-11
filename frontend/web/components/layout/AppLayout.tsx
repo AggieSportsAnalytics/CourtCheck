@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Sidebar from './Sidebar';
@@ -23,6 +23,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!loading && !user) {
+      router.replace('/landing');
+    }
+  }, [loading, user, router]);
+
   if (loading) {
     return (
       <div className="flex h-screen bg-primary text-white items-center justify-center">
@@ -38,7 +44,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
 
   if (!user) {
-    router.replace('/landing');
     return null;
   }
 

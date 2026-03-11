@@ -1,9 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
-
-const BALL_LOGO = '/courtcheck_ball_logo.png';
+import Logo from '@/components/layout/Logo';
 
 export function Footer() {
   return (
@@ -15,9 +13,8 @@ export function Footer() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-8">
           {/* Logo + tagline */}
           <div>
-            <Link href="/landing" className="flex items-center gap-2.5 mb-2">
-              <Image src={BALL_LOGO} alt="CourtCheck" width={24} height={24} className="object-contain" />
-              <span className="text-sm font-semibold text-white">CourtCheck</span>
+            <Link href="/landing" className="mb-2 inline-block">
+              <Logo size="sm" />
             </Link>
             <p className="text-xs" style={{ color: '#4A4A55' }}>
               AI-powered tennis analytics for competitive players.

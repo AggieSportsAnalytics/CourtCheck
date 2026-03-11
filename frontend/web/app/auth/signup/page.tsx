@@ -16,6 +16,7 @@ export default function SignupPage() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const { signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,24 +37,49 @@ export default function SignupPage() {
 
     try {
       await signUp(email, password, { name });
+      setEmailSent(true);
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
       setLoading(false);
     }
   };
 
+  if (emailSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-primary p-4">
+        <Card className="w-full max-w-md bg-secondary border-gray-700">
+          <CardHeader>
+            <div className="flex justify-center">
+                <Logo />
+            </div>
+            <CardTitle className="text-2xl text-center text-white">Check your email</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-center">
+            <p className="text-gray-300">
+              We sent a confirmation link to{' '}
+              <span className="text-white font-medium">{email}</span>.
+            </p>
+            <p className="text-sm text-gray-400">
+              Click the link in the email to activate your account. Check your spam folder if you don&apos;t see it.
+            </p>
+            <p className="text-sm text-gray-400">
+              Already confirmed?{' '}
+              <Link href="/auth/login" className="text-accent hover:underline">
+                Sign in
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-primary p-4">
       <Card className="w-full max-w-md bg-secondary border-gray-700">
         <CardHeader className="space-y-4">
           <div className="flex justify-center">
-            <div className="flex items-center gap-3">
-              <Logo />
-              <div>
-                <h2 className="text-2xl font-bold text-white">CourtCheck</h2>
-                <p className="text-sm text-gray-400">Tennis Analytics</p>
-              </div>
-            </div>
+            <Logo />
           </div>
           <CardTitle className="text-2xl text-center text-white">Create Account</CardTitle>
         </CardHeader>
