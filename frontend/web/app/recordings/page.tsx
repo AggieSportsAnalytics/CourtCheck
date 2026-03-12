@@ -158,11 +158,30 @@ export default function RecordingsPage() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const handleRename = (id: string, newName: string) => {
     setRecordings((prev) =>
       prev.map((r) => (r.id === id ? { ...r, name: newName } : r))
     );
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeleteError(null);
+    setDeletingId(id);
+    setConfirmDeleteId(null);
+    try {
+      const res = await fetch(`/api/recordings/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setRecordings((prev) => prev.filter((r) => r.id !== id));
+      } else {
+        setDeleteError('Failed to delete recording. Please try again.');
+      }
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   useEffect(() => {
@@ -219,6 +238,10 @@ export default function RecordingsPage() {
         </Link>
       </div>
 
+      {deleteError && (
+        <p className="text-sm text-red-400 mb-4">{deleteError}</p>
+      )}
+
       {recordings.length === 0 && (
         <div
           className="rounded-2xl p-12 text-center"
@@ -251,7 +274,7 @@ export default function RecordingsPage() {
             return (
               <div
                 key={rec.id}
-                className="rounded-2xl p-4 transition-all duration-150"
+                className="group rounded-2xl p-4 transition-all duration-150"
                 style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.border = '1px solid rgba(255,255,255,0.12)'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.border = '1px solid rgba(255,255,255,0.07)'; }}
@@ -322,7 +345,7 @@ export default function RecordingsPage() {
                   </div>
 
                   {/* Action */}
-                  <div className="shrink-0">
+                  <div className="shrink-0 flex items-center gap-2">
                     {rec.status === 'done' && (
                       <Link
                         href={`/recordings/${rec.id}`}
@@ -333,6 +356,39 @@ export default function RecordingsPage() {
                       >
                         View →
                       </Link>
+                    )}
+
+                    {confirmDeleteId === rec.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleDelete(rec.id)}
+                          disabled={deletingId === rec.id}
+                          className="px-2 py-1 rounded-lg text-xs font-semibold transition-all"
+                          style={{ background: 'rgba(239,68,68,0.12)', color: '#F87171', border: '1px solid rgba(239,68,68,0.2)' }}
+                        >
+                          {deletingId === rec.id ? '…' : 'Delete'}
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          disabled={deletingId === rec.id}
+                          className="px-2 py-1 rounded-lg text-xs transition-all disabled:opacity-40"
+                          style={{ color: '#5A5A66' }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDeleteId(rec.id)}
+                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ color: '#3A3A44' }}
+                        title="Delete recording"
+                        aria-label="Delete recording"
+                      >
+                        <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="currentColor">
+                          <path d="M6.5 1.75a.25.25 0 01.25-.25h2.5a.25.25 0 01.25.25V3h-3V1.75zm4.5 0V3h2.25a.75.75 0 010 1.5H2.75a.75.75 0 010-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.675a.75.75 0 10-1.492.15l.66 6.6A1.75 1.75 0 005.405 15h5.19a1.75 1.75 0 001.741-1.575l.66-6.6a.75.75 0 00-1.492-.15l-.66 6.6a.25.25 0 01-.249.225H5.405a.25.25 0 01-.249-.225l-.66-6.6z" />
+                        </svg>
+                      </button>
                     )}
                   </div>
                 </div>

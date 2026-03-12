@@ -161,3 +161,89 @@ export async function PATCH(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const cookieStore = await cookies();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          },
+        },
+      }
+    );
+
+    const { data: authData } = await supabase.auth.getClaims();
+    if (!authData?.claims) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    // Fetch row first to get storage paths and verify ownership
+    const { data, error: fetchError } = await supabaseAdmin
+      .from("matches")
+      .select("id, input_path, results_path, bounce_heatmap_path, player_heatmap_path")
+      .eq("id", id)
+      .eq("user_id", authData.claims.sub)
+      .single();
+
+    if (fetchError || !data) {
+      return NextResponse.json({ error: "Recording not found" }, { status: 404 });
+    }
+
+    // Delete DB row first — if this fails, storage files remain intact (recoverable)
+    const { error: deleteError } = await supabaseAdmin
+      .from("matches")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", authData.claims.sub);
+
+    if (deleteError) {
+      console.error("Delete error", deleteError);
+      return NextResponse.json({ error: "Failed to delete" }, { status: 500 });
+    }
+
+    // DB row is gone — clean up storage files (non-blocking: log errors but don't return 500)
+    if (data.input_path) {
+      const { error: rawError } = await supabaseAdmin.storage
+        .from("raw-videos")
+        .remove([data.input_path]);
+      if (rawError) {
+        console.error("Storage cleanup error (raw-videos):", rawError);
+      }
+    }
+
+    const resultsPaths = [
+      data.results_path,
+      data.bounce_heatmap_path,
+      data.player_heatmap_path,
+    ].filter(Boolean) as string[];
+
+    if (resultsPaths.length > 0) {
+      const { error: resultsError } = await supabaseAdmin.storage
+        .from("results")
+        .remove(resultsPaths);
+      if (resultsError) {
+        console.error("Storage cleanup error (results):", resultsError);
+      }
+    }
+
+    return new NextResponse(null, { status: 204 });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
