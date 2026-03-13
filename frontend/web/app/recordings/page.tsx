@@ -380,7 +380,7 @@ export default function RecordingsPage() {
                     ) : (
                       <button
                         onClick={() => setConfirmDeleteId(rec.id)}
-                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                         style={{ color: '#3A3A44' }}
                         title="Delete recording"
                         aria-label="Delete recording"
