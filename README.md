@@ -2,7 +2,7 @@
 
 **AI-powered tennis analytics by [Aggie Sports Analytics](https://aggiesportsanalytics.com)**
 
-🎾 **[courtcheck-rho.vercel.app](https://courtcheck-rho.vercel.app)**
+Check it out: **[courtcheck-rho.vercel.app](https://courtcheck-rho.vercel.app)**
 
 ---
 
