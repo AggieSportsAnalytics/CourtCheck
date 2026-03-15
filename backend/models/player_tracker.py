@@ -65,7 +65,7 @@ class PlayerTracker:
         per frame in the same inference pass — no extra compute cost.
 
         Args:
-            model_path: Path to the YOLOv8-Pose model (e.g. 'yolov8x-pose.pt').
+            model_path: Path to the YOLOv8-Pose model (e.g. 'yolov8m-pose.pt').
             device: 'cuda' or 'cpu'
             imgsz: YOLO inference resolution. Should match input video resolution
                    to avoid downscaling small far-player detections below threshold.

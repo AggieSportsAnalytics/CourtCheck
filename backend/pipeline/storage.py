@@ -5,39 +5,48 @@ from pathlib import Path
 
 def make_streamable_mp4(input_path: str) -> str:
     """
-    Remux MP4 so browsers can stream it (moov atom first).
-    Does NOT re-encode frames.
-    Falls back to the original file if ffmpeg is not available (e.g. local Windows testing).
+    Re-encode and remux to a browser-streamable MP4 (moov atom first).
 
-    :param input_path: Path to the input mp4 video file.
+    Tries h264_nvenc (GPU, ~2-3 ms/frame) first for maximum throughput on A10G.
+    Falls back to libx264 (CPU) when NVENC is unavailable (local dev, CPU instances).
+    Falls back to the original file if ffmpeg is not found at all.
     """
-
     input_path = Path(input_path)
-    output_path = input_path.with_name(input_path.stem + "_web.mp4")
+    output_path = input_path.with_suffix("").with_name(input_path.stem + "_web.mp4")
+
+    def _run_ffmpeg(codec: str) -> bool:
+        try:
+            subprocess.run(
+                [
+                    "ffmpeg", "-y",
+                    "-i", str(input_path),
+                    "-c:v", codec,
+                    "-preset", "fast",
+                    "-crf", "23",
+                    "-c:a", "copy",
+                    "-movflags", "+faststart",
+                    str(output_path),
+                ],
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            return True
+        except subprocess.CalledProcessError:
+            return False
 
     try:
-        subprocess.run(
-            [
-                "ffmpeg",
-                "-y",
-                "-i", str(input_path),
-                "-c:v", "libx264",
-                "-preset", "fast",
-                "-crf", "23",
-                "-c:a", "copy",
-                "-movflags", "+faststart",
-                str(output_path)
-            ],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-        return str(output_path)
+        if _run_ffmpeg("h264_nvenc"):
+            print("[Storage] Encoded with h264_nvenc (GPU)")
+            return str(output_path)
+        print("[Storage] h264_nvenc unavailable — falling back to libx264")
+        if _run_ffmpeg("libx264"):
+            print("[Storage] Encoded with libx264 (CPU fallback)")
+            return str(output_path)
+        print("⚠️  Both h264_nvenc and libx264 failed — returning original file.")
+        return str(input_path)
     except FileNotFoundError:
         print("⚠️  ffmpeg not found — skipping streamable remux (video still usable locally).")
-        return str(input_path)
-    except subprocess.CalledProcessError as e:
-        print(f"⚠️  ffmpeg remux failed ({e}) — returning original file.")
         return str(input_path)
 
 def get_supabase():

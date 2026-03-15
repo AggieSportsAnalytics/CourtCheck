@@ -62,6 +62,106 @@ def calculate_rally_count(shot_frames, fps=30.0, gap_seconds=4):
     return rallies
 
 
+def _interpolate_player_detections(detections: list[dict]) -> list[dict]:
+    """
+    Fill empty player-detection frames by linearly interpolating between the
+    nearest non-empty frames on either side.
+
+    Empty frames arise when player_detection_interval > 1: YOLO is only called
+    every Nth frame, so intermediate frames are stored as {}.
+
+    For each track_id present in the surrounding anchor frames, the four bbox
+    coordinates (x1, y1, x2, y2) are linearly interpolated. Frames before the
+    first anchor are back-filled; frames after the last anchor are forward-filled.
+    """
+    n = len(detections)
+    result = [dict(d) for d in detections]  # shallow-copy each frame dict
+
+    # Collect anchor indices (frames where YOLO actually ran)
+    anchors = [i for i, d in enumerate(detections) if d]
+
+    if not anchors:
+        return result
+
+    # Back-fill frames before the first anchor
+    for i in range(anchors[0]):
+        result[i] = dict(detections[anchors[0]])
+
+    # Forward-fill frames after the last anchor
+    for i in range(anchors[-1] + 1, n):
+        result[i] = dict(detections[anchors[-1]])
+
+    # Interpolate between consecutive anchors
+    for a_idx in range(len(anchors) - 1):
+        start = anchors[a_idx]
+        end = anchors[a_idx + 1]
+        if end - start <= 1:
+            continue  # adjacent anchors, nothing to fill
+        start_bboxes = detections[start]
+        end_bboxes = detections[end]
+        shared_ids = set(start_bboxes) & set(end_bboxes)
+        for frame_i in range(start + 1, end):
+            t = (frame_i - start) / (end - start)
+            for tid in shared_ids:
+                s = start_bboxes[tid]
+                e = end_bboxes[tid]
+                result[frame_i][tid] = [
+                    s[0] + t * (e[0] - s[0]),
+                    s[1] + t * (e[1] - s[1]),
+                    s[2] + t * (e[2] - s[2]),
+                    s[3] + t * (e[3] - s[3]),
+                ]
+
+    # Forward-fill fallback: if a frame is still empty after interpolation
+    # (e.g., no shared track_ids between adjacent anchors), propagate last known bbox.
+    _last_frame: dict = {}
+    for i in range(len(result)):
+        if result[i]:
+            _last_frame = result[i]
+        elif _last_frame:
+            result[i] = dict(_last_frame)
+
+    return result
+
+
+def _detect_court_once(
+    frames: list,
+    court_detector,
+    homography_estimator,
+) -> tuple:
+    """
+    Run court detection on the provided frames and return the homography
+    matrix + keypoints from the frame with the most valid detected keypoints.
+
+    Args:
+        frames: List of BGR frames to try (typically first N frames of video).
+        court_detector: CourtLineDetector instance.
+        homography_estimator: HomographyEstimator instance.
+
+    Returns:
+        (H_ref, keypoints) — best result, or (None, None) if all frames fail.
+    """
+    best_H_ref = None
+    best_kps = None
+    best_kp_count = 0
+
+    for frame in frames:
+        kps = court_detector.infer_single(frame)
+        if kps is None:
+            continue
+        valid_count = sum(1 for k in kps if k is not None)
+        if valid_count <= best_kp_count:
+            continue
+        H_ref, _ = homography_estimator.estimate(kps)
+        if H_ref is None:
+            continue
+        best_H_ref = H_ref
+        best_kps = kps
+        best_kp_count = valid_count
+
+    return best_H_ref, best_kps
+
+
 def count_in_out_bounces(bounces, ball_track, homography_matrices, court_ref):
     """
     Classify each detected bounce as in-bounds or out-of-bounds using the
@@ -300,6 +400,10 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         if config is None:
             config = PipelineConfig()
 
+        # Initialize cleanup variables early to ensure they exist even if exception occurs
+        _mjpeg_writer_ok = False
+        intermediate_frames_path = None
+
         device = config.device
 
         supabase = None
@@ -394,9 +498,45 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 calibrated_keypoints = cal_kps
                 print(f"[Pipeline] Using saved calibration for camera '{config.camera_id}' — skipping per-frame court detection")
 
+        # If no calibration was loaded, detect the court once on the first N frames.
+        # This replaces per-frame detection in Pass 2 — the camera is fixed.
+        if calibrated_H_ref is None:
+            print(f"[Pipeline] No calibration — detecting court on first {config.court_detection_startup_frames} frames")
+            cap_startup = cv2.VideoCapture(video_path)
+            startup_frames = []
+            for _ in range(config.court_detection_startup_frames):
+                ret_s, frm_s = cap_startup.read()
+                if ret_s:
+                    startup_frames.append(frm_s)
+            cap_startup.release()
+            calibrated_H_ref, calibrated_keypoints = _detect_court_once(
+                startup_frames, court_detector, homography_estimator
+            )
+            if calibrated_H_ref is not None:
+                print(f"[Pipeline] Court detected from startup — reusing for all frames")
+            else:
+                print("[Pipeline] WARNING: Court detection failed on startup frames")
+
         # ---------- Pass 1: Ball + Player tracking + pose extraction ----------
         cap = cv2.VideoCapture(video_path)
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps_source = cap.get(cv2.CAP_PROP_FPS)
+        frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        # Write decoded frames to a fast-decode MJPEG intermediate so Pass 2
+        # never has to re-decode the H.264 source.
+        intermediate_frames_path = f"/tmp/{match_id}_frames.avi"
+        _mjpeg_writer = cv2.VideoWriter(
+            intermediate_frames_path,
+            cv2.VideoWriter_fourcc(*"MJPG"),
+            fps_source,
+            (frame_w, frame_h),
+        )
+        _mjpeg_writer_ok = _mjpeg_writer.isOpened()
+        if not _mjpeg_writer_ok:
+            print("[Pipeline] MJPEG writer unavailable — Pass 2 will re-decode H.264")
+
         ball_track = []
         player_detections = []
         pose_keypoints_per_frame = []  # list of {track_id: np.ndarray(17,3)}
@@ -405,14 +545,44 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             ret, frame = cap.read()
             if not ret:
                 break
+            if _mjpeg_writer_ok:
+                _mjpeg_writer.write(frame)
             ball_track.append(ball_detector.infer_single(frame))
-            player_dict, kps_dict = player_tracker.detect_frame(frame)
+
+            if i % config.player_detection_interval == 0:
+                player_dict, kps_dict = player_tracker.detect_frame(frame)
+            else:
+                player_dict, kps_dict = {}, {}
             player_detections.append(player_dict)
             pose_keypoints_per_frame.append(kps_dict)
 
             if i % max(1, total_frames // config.progress_update_frequency) == 0:
                 update_progress(0.05 + 0.4 * (i / total_frames))
+
+        # Fill gaps between detection frames using linear bbox interpolation
+        player_detections = _interpolate_player_detections(player_detections)
+        # Pose keypoints: forward-fill, then backward-fill to cover frames before first detection
+        _last_kps: dict = {}
+        for i, kd in enumerate(pose_keypoints_per_frame):
+            if kd:
+                _last_kps = kd
+            elif _last_kps:
+                pose_keypoints_per_frame[i] = dict(_last_kps)
+        _last_kps = {}
+        for i in range(len(pose_keypoints_per_frame) - 1, -1, -1):
+            kd = pose_keypoints_per_frame[i]
+            if kd:
+                _last_kps = kd
+            elif _last_kps:
+                pose_keypoints_per_frame[i] = dict(_last_kps)
+        # Note: bboxes use linear interpolation (smooth player movement);
+        # pose keypoints use fill (carry-forward/back) since interpolating
+        # 17-keypoint arrays would not produce meaningful intermediate poses.
         # Don't release cap — Pass 2 reuses it by seeking to frame 0
+
+        if _mjpeg_writer_ok:
+            _mjpeg_writer.release()
+            print(f"[Pipeline] MJPEG intermediate written: {intermediate_frames_path}")
 
         # Filter players using homography: pick 1 player per side of the net
         H_ref_for_filter = calibrated_H_ref
@@ -500,14 +670,22 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         update_progress(0.5)
 
         # ---------- Pass 2: Drawing ----------
-        # Reuse same VideoCapture — seek back to start instead of re-opening
-        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        # Pass 2 reads from MJPEG intermediate (fast decode) if available,
+        # otherwise re-seeks the H.264 source.
+        if _mjpeg_writer_ok and os.path.exists(intermediate_frames_path):
+            cap.release()
+            cap = cv2.VideoCapture(intermediate_frames_path)
+            print("[Pipeline] Pass 2 reading from MJPEG intermediate")
+        else:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
         fps = cap.get(cv2.CAP_PROP_FPS)
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        local_output_path = f"/tmp/{match_id}_processed.mp4"
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        # Use MJPEG for the intermediate output — fast to write since
+        # make_streamable_mp4 re-encodes to H.264 as its final step anyway.
+        local_output_path = f"/tmp/{match_id}_processed.avi"
+        fourcc = cv2.VideoWriter_fourcc(*"MJPG")
         out = cv2.VideoWriter(local_output_path, fourcc, fps, (width, height))
 
         frame_idx = 0
@@ -536,17 +714,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             if not ret:
                 break
 
-            # Court detection: skip entirely if calibration is loaded
-            if calibrated_H_ref is not None:
-                kps = last_kps  # may be None — draw functions handle this gracefully
-            else:
-                process_this_frame = frame_idx % config.court_detection_interval == 0
-                if process_this_frame:
-                    kps = court_detector.infer_single(frame)
-                    if kps is not None:
-                        last_kps = kps
-                else:
-                    kps = last_kps
+            # Court was detected once at startup — use fixed result for all frames.
+            kps = last_kps
 
             output = frame.copy()
             output = draw_ball_trace(output, ball_track, frame_idx,
@@ -619,6 +788,11 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         update_progress(0.95)
         cap.release()
         out.release()
+
+        # Remove MJPEG intermediate to free /tmp space
+        if _mjpeg_writer_ok and os.path.exists(intermediate_frames_path):
+            os.remove(intermediate_frames_path)
+            print(f"[Pipeline] Removed MJPEG intermediate: {intermediate_frames_path}")
 
         # ---------- In-bounds / out-of-bounds bounce classification ----------
         in_bounds_bounces, out_bounds_bounces, in_bounds_set = count_in_out_bounces(
@@ -775,6 +949,14 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             },
         }
     except Exception as e:
+        # Clean up MJPEG intermediate on failure to avoid /tmp leaks
+        try:
+            if _mjpeg_writer_ok:
+                _mjpeg_writer.release()
+            if intermediate_frames_path and os.path.exists(intermediate_frames_path):
+                os.remove(intermediate_frames_path)
+        except Exception:
+            pass
         if supabase:
             import logging
             logging.exception("Pipeline failed for match %s", match_id)

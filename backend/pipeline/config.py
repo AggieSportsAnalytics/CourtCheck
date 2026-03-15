@@ -33,9 +33,17 @@ class PipelineConfig:
     player_imgsz: int = 1280
 
     # ========== Detection Settings ==========
-    # Court detection runs every Nth frame to save compute.
+    # Number of frames at pipeline startup to try court detection on.
+    # The frame with the most detected keypoints is used for the entire video.
     # Ignored when a valid calibration is loaded (calibration_path + camera_id).
+    court_detection_startup_frames: int = 10
+
+    # Legacy — retained for backwards compatibility but no longer used by the pipeline.
     court_detection_interval: int = 5
+
+    # Run YOLO player detection every Nth frame; interpolate bboxes between.
+    # 1 = every frame (original behaviour). 3 = detect every 3rd frame (~3x speedup).
+    player_detection_interval: int = 3
 
     # ========== Court Calibration ==========
     # Path to court_calibration.json produced by backend.tools.calibrate_court.
