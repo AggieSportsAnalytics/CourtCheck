@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
 
 export type UploadStatus = 'idle' | 'creating upload' | 'uploading' | 'pending' | 'processing' | 'done' | 'failed';
 
@@ -20,22 +21,20 @@ export function useVideoUpload(onUploadComplete?: () => void) {
         body: JSON.stringify({ filename: file.name }),
       });
 
-      const { upload_url, file_key, match_id } = await res.json();
+      const { file_key, match_id, token } = await res.json();
       setMatchId(match_id);
 
-      // 2️⃣ upload file directly to Supabase
+      // 2️⃣ upload file directly to Supabase using the JS client (handles CORS + auth headers)
       setStatus('uploading');
-      const uploadRes = await fetch(upload_url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': file.type || 'video/mp4',
-        },
-        body: file,
-      });
+      const { error: uploadError } = await supabase.storage
+        .from('raw-videos')
+        .uploadToSignedUrl(file_key, token, file, {
+          contentType: file.type || 'video/mp4',
+          upsert: false,
+        });
 
-      if (!uploadRes.ok) {
-        const text = await uploadRes.text().catch(() => uploadRes.statusText);
-        throw new Error(`Upload failed (${uploadRes.status}): ${text}`);
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
       // 3️⃣ trigger processing (fire and forget - don't wait!)
