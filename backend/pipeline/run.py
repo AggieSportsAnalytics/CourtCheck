@@ -730,12 +730,15 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         # The geometric detector projects to court-space (perspective-invariant) and
         # catches those missed sign reversals.
         if calibrated_H_ref is not None:
+            # Camera is fixed: broadcast calibrated H_ref across all frames.
+            # _geometric_bounce_detector supports per-frame H (for future moving-camera use),
+            # but here we use the single calibrated matrix for all frames.
             _H_for_geo = [calibrated_H_ref] * total_frames
             geo_bounces = _geometric_bounce_detector(
                 ball_track,
                 _H_for_geo,
-                min_court_disp=80.0,
-                min_gap=8,
+                min_court_disp=config.geo_bounce_min_court_disp,
+                min_gap=config.geo_bounce_min_gap,
             )
             new_geo = geo_bounces - bounces_all
             if new_geo:

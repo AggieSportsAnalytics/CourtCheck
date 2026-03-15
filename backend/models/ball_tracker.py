@@ -172,7 +172,7 @@ class BallDetector:
             minDist=1,
             param1=50,
             param2=2,
-            minRadius=2,
+            minRadius=1,   # lowered from 2: far-baseline balls are 1-2px in 360x640 map
             maxRadius=7,
         )
         x, y = None, None

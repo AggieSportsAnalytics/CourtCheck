@@ -137,7 +137,7 @@ class TestGeometricBounceDetector:
         ball_track, H_mats = self._make_trajectory(y_vals)
         bounces = _geometric_bounce_detector(ball_track, H_mats, min_court_disp=30, min_gap=8)
         # With min_gap=8, only the first (or last) bounce should survive
-        assert len(bounces) <= 1, f"Expected ≤1 bounce with tight gap, got {bounces}"
+        assert len(bounces) == 1, f"Expected 1 bounce with tight gap, got {bounces}"
 
 
 class TestBounceDetectorUnion:
@@ -160,3 +160,48 @@ class TestBounceDetectorUnion:
         combined = catboost_bounces | geometric_bounces
         assert len(combined) == 4
         assert 110 in combined
+
+
+# ---------------------------------------------------------------------------
+# Task 3: Hough minRadius=1
+# ---------------------------------------------------------------------------
+
+class TestBallDetectorFarCourt:
+    def test_hough_min_radius_is_1(self):
+        """
+        BallDetector should detect a 1-pixel activation at the far baseline.
+        This regression test ensures minRadius is not raised back above 1.
+        """
+        import numpy as np
+        from backend.models.ball_tracker import BallDetector
+
+        # Build a minimal heatmap (360x640) with a single bright pixel
+        # After model output is multiplied by 255 and thresholded, a single
+        # bright pixel simulates far-baseline ball detection
+        feature_map = np.zeros((1, 360, 640), dtype=np.float32)
+        feature_map[0, 50, 320] = 1.0  # single activation at far-baseline position
+
+        # Call postprocess directly to verify detection
+        detector = BallDetector(path_model=None)  # Create without loading weights
+        x, y = detector.postprocess(feature_map, prev_pred=[None, None])
+        assert x is not None and y is not None, (
+            "BallDetector.postprocess must detect a single bright pixel at far baseline. "
+            "Likely minRadius was raised above 1 — check ball_tracker.py HoughCircles call."
+        )
+
+    def test_hough_detects_single_pixel_blob(self):
+        """
+        cv2.HoughCircles with minRadius=1 detects a single bright pixel blob.
+        Confirms the OpenCV primitive works for the far-baseline ball size.
+        """
+        import cv2
+        import numpy as np
+
+        feature_map = np.zeros((360, 640), dtype=np.uint8)
+        feature_map[50, 320] = 255
+
+        circles = cv2.HoughCircles(
+            feature_map, cv2.HOUGH_GRADIENT, dp=1, minDist=1,
+            param1=50, param2=2, minRadius=1, maxRadius=7
+        )
+        assert circles is not None, "minRadius=1 should detect a single bright pixel"

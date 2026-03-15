@@ -49,7 +49,7 @@ class PipelineConfig:
     # Path to court_calibration.json produced by backend.tools.calibrate_court.
     # When set together with camera_id, per-frame court detection is skipped.
     calibration_path: Optional[str] = _DEFAULT_CALIBRATION_PATH
-    camera_id: Optional[str] = 'uc_davis_court1'
+    camera_id: Optional[str] = 'uc_davis_court1_zoomed'
 
     # ========== Stroke Classifier ==========
     # Path to TCN weights trained on pose keypoints (THETIS dataset).
@@ -59,6 +59,11 @@ class PipelineConfig:
     # Swing trigger thresholds for the pose-based swing detector
     swing_velocity_threshold: float = 15.0   # pixels/frame at wrist
     swing_ball_proximity: float = 300.0      # ball must be within N pixels of player
+
+    # ========== Bounce Detection ==========
+    # Geometric bounce detector thresholds (far-court supplement to CatBoost)
+    geo_bounce_min_court_disp: float = 80.0  # Min court-space displacement to count as bounce
+    geo_bounce_min_gap: int = 8              # Min frames between bounces (deduplication)
 
     # ========== Feature Toggles ==========
     generate_heatmaps: bool = True
