@@ -1,6 +1,7 @@
 from supabase import create_client
 import os
 import subprocess
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 def make_streamable_mp4(input_path: str) -> str:
@@ -102,3 +103,43 @@ def upload_heatmap_png(
         )
 
     return remote_path
+
+
+def upload_results_parallel(
+    local_video_path: str,
+    match_id: str,
+    local_bounce_path: str | None = None,
+    local_player_path: str | None = None,
+    local_shot_map_path: str | None = None,
+) -> dict:
+    """
+    Upload processed video and heatmaps to Supabase in parallel.
+    Returns dict with keys: results_path, bounce_heatmap_path, player_heatmap_path, player_shot_map_path.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    tasks = {}
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        tasks["results_path"] = executor.submit(upload_processed_video, local_video_path, match_id)
+        if local_bounce_path and os.path.exists(local_bounce_path):
+            tasks["bounce_heatmap_path"] = executor.submit(
+                upload_heatmap_png, local_bounce_path, match_id, "bounce_heatmap.png"
+            )
+        if local_player_path and os.path.exists(local_player_path):
+            tasks["player_heatmap_path"] = executor.submit(
+                upload_heatmap_png, local_player_path, match_id, "player_heatmap.png"
+            )
+        if local_shot_map_path and os.path.exists(local_shot_map_path):
+            tasks["player_shot_map_path"] = executor.submit(
+                upload_heatmap_png, local_shot_map_path, match_id, "player_shot_map.png"
+            )
+
+    results = {}
+    for key, future in tasks.items():
+        try:
+            results[key] = future.result()
+        except Exception as e:
+            print(f"[Storage] Upload failed for {key}: {e}")
+            results[key] = None
+
+    return results

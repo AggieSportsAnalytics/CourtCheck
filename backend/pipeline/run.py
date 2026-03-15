@@ -12,11 +12,13 @@ from backend.vision.calibration import load_calibration
 from backend.vision.heatmaps import generate_minimap_heatmaps, generate_player_shot_dot_map
 from backend.vision.postprocess import detect_shot_frames
 
-from backend.pipeline.storage import upload_processed_video, upload_heatmap_png, get_supabase, make_streamable_mp4
+from backend.pipeline.storage import upload_processed_video, upload_heatmap_png, get_supabase, make_streamable_mp4, upload_results_parallel
 from backend.pipeline.config import PipelineConfig
 
 
 def ensure_720p(input_path, intermediate_path, target_width=1280, target_height=720):
+    """Resize video to target resolution using ffmpeg (GPU NVENC when available)."""
+    import subprocess
     cap = cv2.VideoCapture(input_path)
     fps = cap.get(cv2.CAP_PROP_FPS)
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -24,26 +26,46 @@ def ensure_720p(input_path, intermediate_path, target_width=1280, target_height=
     cap.release()
 
     print(f"Original input: {width}x{height}, fps={fps:.2f}")
-    if (width != target_width) or (height != target_height):
-        print(f"Resizing from ({width}x{height}) to ({target_width}x{target_height}) -> {intermediate_path}")
-        cap_in = cv2.VideoCapture(input_path)
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        out = cv2.VideoWriter(intermediate_path, fourcc, fps, (target_width, target_height))
-
-        while True:
-            ret, frame = cap_in.read()
-            if not ret:
-                break
-            frame = cv2.resize(frame, (target_width, target_height), interpolation=cv2.INTER_AREA)
-            out.write(frame)
-
-        cap_in.release()
-        out.release()
-        print(f"Finished writing intermediate: {intermediate_path}")
-        return intermediate_path
-    else:
-        print(f"Video is already {target_width}x{target_height}; using input directly.")
+    if (width == target_width) and (height == target_height) and fps <= 30:
+        print(f"Video is already {target_width}x{target_height} @ {fps:.0f}fps; using input directly.")
         return input_path
+
+    if fps > 30:
+        print(f"Resizing from ({width}x{height} @ {fps:.0f}fps) to ({target_width}x{target_height} @ 30fps) -> {intermediate_path}")
+    else:
+        print(f"Resizing from ({width}x{height}) to ({target_width}x{target_height}) -> {intermediate_path}")
+    scale_filter = f"scale={target_width}:{target_height}"
+
+    def _run(codec):
+        cmd = ["ffmpeg", "-y", "-i", input_path, "-vf", scale_filter]
+        if fps > 30:
+            cmd += ["-r", "30"]
+        cmd += ["-c:v", codec, "-preset", "fast", "-c:a", "copy", intermediate_path]
+        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return result.returncode == 0
+
+    if _run("h264_nvenc"):
+        print(f"Finished writing intermediate (h264_nvenc): {intermediate_path}")
+        return intermediate_path
+    if _run("libx264"):
+        print(f"Finished writing intermediate (libx264): {intermediate_path}")
+        return intermediate_path
+
+    # Last resort: copy streams + scale filter (no re-encode, may not work for all inputs)
+    print("ffmpeg h264_nvenc and libx264 failed — falling back to OpenCV resize")
+    cap_in = cv2.VideoCapture(input_path)
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter(intermediate_path, fourcc, fps, (target_width, target_height))
+    while True:
+        ret, frame = cap_in.read()
+        if not ret:
+            break
+        frame = cv2.resize(frame, (target_width, target_height), interpolation=cv2.INTER_AREA)
+        out.write(frame)
+    cap_in.release()
+    out.release()
+    print(f"Finished writing intermediate (OpenCV): {intermediate_path}")
+    return intermediate_path
 
 
 def calculate_rally_count(shot_frames, fps=30.0, gap_seconds=4):
@@ -122,97 +144,6 @@ def _interpolate_player_detections(detections: list[dict]) -> list[dict]:
             result[i] = dict(_last_frame)
 
     return result
-
-
-def _geometric_bounce_detector(
-    ball_track: list,
-    homography_matrices: list,
-    min_court_disp: float = 80.0,
-    min_gap: int = 8,
-) -> set:
-    """
-    Perspective-invariant bounce detector using court-space geometry.
-
-    Projects ball positions to court-space via homography and detects
-    frames where the ball's y velocity changes sign (direction reversal = bounce).
-    Works on both near- and far-court equally because court-space coordinates
-    remove the perspective scaling that makes far-court y_diff smaller.
-
-    Args:
-        ball_track:         List of (x, y) tuples or None, one per frame.
-        homography_matrices: Per-frame H_ref matrices (frame → court-space).
-                             None entries use the last valid matrix.
-        min_court_disp:     Minimum total y-displacement (in court units) across
-                             the sign-change window to count as a real bounce.
-                             Prevents noise-triggered false positives.
-        min_gap:            Minimum frames between two accepted bounces.
-
-    Returns:
-        Set of frame indices where a bounce was detected.
-    """
-    n = len(ball_track)
-    if n == 0:
-        return set()
-
-    # Project all ball positions to court-space
-    court_y: list = [None] * n
-    last_H = None
-    for i, pos in enumerate(ball_track):
-        H = homography_matrices[i] if i < len(homography_matrices) else None
-        if H is not None:
-            last_H = H
-        if pos is None or last_H is None:
-            continue
-        bx, by = pos
-        if bx is None or by is None:
-            continue
-        pt = np.array([[[float(bx), float(by)]]], dtype=np.float32)
-        try:
-            mapped = cv2.perspectiveTransform(pt, last_H)
-            court_y[i] = float(mapped[0, 0, 1])
-        except cv2.error:
-            pass
-
-    # Build a list of (frame_idx, court_y_val) for non-None positions only
-    valid = [(i, cy) for i, cy in enumerate(court_y) if cy is not None]
-    if len(valid) < 4:
-        return set()
-
-    # Find sign reversals in the dy sequence over valid frames
-    bounces: set = set()
-    last_accepted = -min_gap
-
-    for j in range(1, len(valid) - 1):
-        i_prev, cy_prev = valid[j - 1]
-        i_curr, cy_curr = valid[j]
-        i_next, cy_next = valid[j + 1]
-
-        dy_before = cy_curr - cy_prev
-        dy_after  = cy_next - cy_curr
-
-        if dy_before == 0 or dy_after == 0:
-            continue
-
-        # Sign reversal: direction of y changed
-        if (dy_before > 0) == (dy_after > 0):
-            continue
-
-        # Require minimum displacement across the local window
-        lo = max(0, j - 3)
-        hi = min(len(valid) - 1, j + 3)
-        y_vals_window = [valid[k][1] for k in range(lo, hi + 1)]
-        disp = max(y_vals_window) - min(y_vals_window)
-        if disp < min_court_disp:
-            continue
-
-        # Enforce minimum gap
-        if i_curr - last_accepted < min_gap:
-            continue
-
-        bounces.add(i_curr)
-        last_accepted = i_curr
-
-    return bounces
 
 
 def _detect_court_once(
@@ -491,10 +422,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         if config is None:
             config = PipelineConfig()
 
-        # Initialize cleanup variables early to ensure they exist even if exception occurs
-        _mjpeg_writer_ok = False
-        intermediate_frames_path = None
-
         device = config.device
 
         supabase = None
@@ -525,10 +452,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         )
 
         print("court detection")
-        court_detector = CourtLineDetector(
-            model_path=os.path.join(WEIGHTS_DIR, "keypoints_model.pth"),
-            device=device,
-        )
+        # Lazy-load: only needed when calibration is absent
+        court_detector = None
 
         print("player tracking")
         player_model_path = os.path.join(WEIGHTS_DIR, config.player_model)
@@ -593,6 +518,10 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         # This replaces per-frame detection in Pass 2 — the camera is fixed.
         if calibrated_H_ref is None:
             print(f"[Pipeline] No calibration — detecting court on first {config.court_detection_startup_frames} frames")
+            court_detector = CourtLineDetector(
+                model_path=os.path.join(WEIGHTS_DIR, "keypoints_model.pth"),
+                device=device,
+            )
             cap_startup = cv2.VideoCapture(video_path)
             startup_frames = []
             for _ in range(config.court_detection_startup_frames):
@@ -615,19 +544,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        # Write decoded frames to a fast-decode MJPEG intermediate so Pass 2
-        # never has to re-decode the H.264 source.
-        intermediate_frames_path = f"/tmp/{match_id}_frames.avi"
-        _mjpeg_writer = cv2.VideoWriter(
-            intermediate_frames_path,
-            cv2.VideoWriter_fourcc(*"MJPG"),
-            fps_source,
-            (frame_w, frame_h),
-        )
-        _mjpeg_writer_ok = _mjpeg_writer.isOpened()
-        if not _mjpeg_writer_ok:
-            print("[Pipeline] MJPEG writer unavailable — Pass 2 will re-decode H.264")
-
         ball_track = []
         player_detections = []
         pose_keypoints_per_frame = []  # list of {track_id: np.ndarray(17,3)}
@@ -636,9 +552,11 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             ret, frame = cap.read()
             if not ret:
                 break
-            if _mjpeg_writer_ok:
-                _mjpeg_writer.write(frame)
-            ball_track.append(ball_detector.infer_single(frame))
+            if i % config.ball_detection_interval == 0:
+                ball_pos = ball_detector.infer_single(frame)
+            else:
+                ball_pos = ball_track[-1] if ball_track else (None, None)
+            ball_track.append(ball_pos)
 
             if i % config.player_detection_interval == 0:
                 player_dict, kps_dict = player_tracker.detect_frame(frame)
@@ -671,26 +589,19 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         # 17-keypoint arrays would not produce meaningful intermediate poses.
         # Don't release cap — Pass 2 reuses it by seeking to frame 0
 
-        if _mjpeg_writer_ok:
-            _mjpeg_writer.release()
-            print(f"[Pipeline] MJPEG intermediate written: {intermediate_frames_path}")
-
         # Filter players using homography: pick 1 player per side of the net
         H_ref_for_filter = calibrated_H_ref
         if H_ref_for_filter is None:
-            # No calibration — estimate from first frame
-            cap = cv2.VideoCapture(video_path)
-            ret, first_frame = cap.read()
-            cap.release()
-            kps_first = court_detector.infer_single(first_frame)
-            if kps_first is not None:
-                H_ref_for_filter, _ = homography_estimator.estimate(kps_first)
+            print("[Pipeline] WARNING: No homography available — player filtering skipped. Load a calibration file.")
 
         if H_ref_for_filter is not None and len(player_detections) > 0:
             player_detections, pose_keypoints_per_frame = player_tracker.choose_and_filter_players(
                 H_ref_for_filter,
                 player_detections,
                 pose_keypoints_per_frame,
+                court_ref=court_ref,
+                x_margin=config.far_player_court_x_margin,
+                far_player_max_height=config.far_player_max_height,
             )
 
         # ---------- Bounce + shot detection ----------
@@ -723,28 +634,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             else:
                 bounces_all = bounce_detector.predict(x_ball_raw, y_ball_raw, smooth=True)
             print(f"[Bounce] detected {len(bounces_all)} bounces (screen-space coords)")
-
-        # ---------- Geometric bounce detector (far-court supplement) ----------
-        # CatBoost operates in pixel-space and underdetects far-court bounces because
-        # the y_diff features are ~3x smaller there due to perspective foreshortening.
-        # The geometric detector projects to court-space (perspective-invariant) and
-        # catches those missed sign reversals.
-        if calibrated_H_ref is not None:
-            # Camera is fixed: broadcast calibrated H_ref across all frames.
-            # _geometric_bounce_detector supports per-frame H (for future moving-camera use),
-            # but here we use the single calibrated matrix for all frames.
-            _H_for_geo = [calibrated_H_ref] * total_frames
-            geo_bounces = _geometric_bounce_detector(
-                ball_track,
-                _H_for_geo,
-                min_court_disp=config.geo_bounce_min_court_disp,
-                min_gap=config.geo_bounce_min_gap,
-            )
-            new_geo = geo_bounces - bounces_all
-            if new_geo:
-                print(f"[Bounce] geometric detector added {len(new_geo)} far-court bounces: {sorted(new_geo)[:10]}")
-            bounces_all = bounces_all | geo_bounces
-            print(f"[Bounce] total after geometric union: {len(bounces_all)}")
 
         shot_frames = detect_shot_frames(ball_track)
         shot_frames_set = set(shot_frames)
@@ -783,14 +672,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         update_progress(0.5)
 
         # ---------- Pass 2: Drawing ----------
-        # Pass 2 reads from MJPEG intermediate (fast decode) if available,
-        # otherwise re-seeks the H.264 source.
-        if _mjpeg_writer_ok and os.path.exists(intermediate_frames_path):
-            cap.release()
-            cap = cv2.VideoCapture(intermediate_frames_path)
-            print("[Pipeline] Pass 2 reading from MJPEG intermediate")
-        else:
-            cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
         fps = cap.get(cv2.CAP_PROP_FPS)
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -902,11 +784,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         cap.release()
         out.release()
 
-        # Remove MJPEG intermediate to free /tmp space
-        if _mjpeg_writer_ok and os.path.exists(intermediate_frames_path):
-            os.remove(intermediate_frames_path)
-            print(f"[Pipeline] Removed MJPEG intermediate: {intermediate_frames_path}")
-
         # ---------- In-bounds / out-of-bounds bounce classification ----------
         in_bounds_bounces, out_bounds_bounces, in_bounds_set = count_in_out_bounces(
             bounces_all, ball_track, homography_matrices, court_ref
@@ -953,6 +830,9 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         bounce_heatmap_path = None
         player_heatmap_path = None
         player_shot_map_path = None
+        local_bounce_path = None
+        local_player_path = None
+        local_shot_map_path = None
 
         if config.generate_heatmaps:
             print("Generating heatmaps...")
@@ -981,14 +861,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 output_path=local_shot_map_path,
             )
 
-            if not local_mode:
-                if os.path.exists(local_bounce_path):
-                    bounce_heatmap_path = upload_heatmap_png(local_bounce_path, match_id, "bounce_heatmap.png")
-                if os.path.exists(local_player_path):
-                    player_heatmap_path = upload_heatmap_png(local_player_path, match_id, "player_heatmap.png")
-                if os.path.exists(local_shot_map_path):
-                    player_shot_map_path = upload_heatmap_png(local_shot_map_path, match_id, "player_shot_map.png")
-            else:
+            if local_mode:
                 print(f"   Bounce heatmap: {local_bounce_path}")
                 print(f"   Player heatmap: {local_player_path}")
                 print(f"   Player shot map: {local_shot_map_path}")
@@ -998,10 +871,17 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         results_path = None
 
         if not local_mode:
-            results_path = upload_processed_video(
-                local_path=streamable_output,
+            upload_results = upload_results_parallel(
+                local_video_path=streamable_output,
                 match_id=match_id,
+                local_bounce_path=local_bounce_path,
+                local_player_path=local_player_path,
+                local_shot_map_path=local_shot_map_path,
             )
+            results_path = upload_results.get("results_path")
+            bounce_heatmap_path = upload_results.get("bounce_heatmap_path")
+            player_heatmap_path = upload_results.get("player_heatmap_path")
+            player_shot_map_path = upload_results.get("player_shot_map_path")
 
             update_data = {
                 "status": "done",
@@ -1062,14 +942,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             },
         }
     except Exception as e:
-        # Clean up MJPEG intermediate on failure to avoid /tmp leaks
-        try:
-            if _mjpeg_writer_ok:
-                _mjpeg_writer.release()
-            if intermediate_frames_path and os.path.exists(intermediate_frames_path):
-                os.remove(intermediate_frames_path)
-        except Exception:
-            pass
         if supabase:
             import logging
             logging.exception("Pipeline failed for match %s", match_id)

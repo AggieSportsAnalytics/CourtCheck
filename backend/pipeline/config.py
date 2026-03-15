@@ -30,7 +30,7 @@ class PipelineConfig:
     # YOLO inference resolution. Must match or exceed input video resolution for small object
     # detection. At imgsz=640 (default), far players at ~25-35px become ~12-18px at inference
     # — below YOLO's detection floor. imgsz=1280 preserves full 720p detail.
-    player_imgsz: int = 1280
+    player_imgsz: int = 960
 
     # ========== Detection Settings ==========
     # Number of frames at pipeline startup to try court detection on.
@@ -44,6 +44,18 @@ class PipelineConfig:
     # Run YOLO player detection every Nth frame; interpolate bboxes between.
     # 1 = every frame (original behaviour). 3 = detect every 3rd frame (~3x speedup).
     player_detection_interval: int = 3
+
+    # Run ball detection every Nth frame; use previous result for skipped frames.
+    # 1 = every frame. 2 = detect every 2nd frame (~2x throughput on TrackNet).
+    ball_detection_interval: int = 2
+
+    # Far player detection thresholds (court-space projection, calibration required).
+    # x_margin: how far beyond the court sideline (in court units) a foot projection
+    # may land and still count as a valid far player. Zoomed cameras project wider.
+    far_player_court_x_margin: float = 500
+    # Max bbox pixel height for a far player. Near players are excluded by track_id,
+    # but this filters non-player detections with oversized bboxes.
+    far_player_max_height: int = 400
 
     # ========== Court Calibration ==========
     # Path to court_calibration.json produced by backend.tools.calibrate_court.
@@ -59,11 +71,6 @@ class PipelineConfig:
     # Swing trigger thresholds for the pose-based swing detector
     swing_velocity_threshold: float = 15.0   # pixels/frame at wrist
     swing_ball_proximity: float = 300.0      # ball must be within N pixels of player
-
-    # ========== Bounce Detection ==========
-    # Geometric bounce detector thresholds (far-court supplement to CatBoost)
-    geo_bounce_min_court_disp: float = 80.0  # Min court-space displacement to count as bounce
-    geo_bounce_min_gap: int = 8              # Min frames between bounces (deduplication)
 
     # ========== Feature Toggles ==========
     generate_heatmaps: bool = True
@@ -84,4 +91,4 @@ class PipelineConfig:
 
     # ========== Progress Tracking ==========
     # Number of progress updates to send (more = finer granularity)
-    progress_update_frequency: int = 20
+    progress_update_frequency: int = 5
