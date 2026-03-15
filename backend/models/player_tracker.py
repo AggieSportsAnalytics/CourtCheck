@@ -56,6 +56,53 @@ def _far_player_score(bbox, near_id, tid) -> float:
     return 0.0
 
 
+# Court-space Y range for a valid far player.
+# Far side: between far baseline (561) and net (1748), with 100-unit margin each side.
+_FAR_COURT_Y_MIN = _COURT_TOP_Y - 100    # 461
+_FAR_COURT_Y_MAX = _COURT_NET_Y + 100    # 1848  (slight overlap over net handles mid-court)
+
+
+def _far_player_score_with_H(bbox, near_id: int, tid: int, H_ref) -> float:
+    """
+    Court-space version of _far_player_score.
+
+    Projects the candidate bbox's foot position to court-space using H_ref and
+    verifies it lands on the far side of the net within court X bounds.
+    Falls back to the original image-space check when H_ref is None.
+
+    Score = bbox area (same as _far_player_score) when the candidate passes.
+    Returns 0 if the detection belongs to near_id or fails the court-space check.
+    """
+    if tid == near_id:
+        return 0.0
+
+    x1, y1, x2, y2 = bbox
+    w = x2 - x1
+    h = y2 - y1
+    if w < _FAR_MIN_WIDTH or h < _FAR_MIN_HEIGHT or h > _FAR_MAX_HEIGHT:
+        return 0.0
+
+    if H_ref is None:
+        # Fallback: original image-space filter
+        return _far_player_score(bbox, near_id, tid)
+
+    result = _project_foot(bbox, H_ref)
+    if result is None:
+        return 0.0
+
+    court_x, court_y = result
+
+    # Must be within court X bounds (with margin for slight sideline overrun)
+    if not (_COURT_LEFT_X - _COURT_X_MARGIN <= court_x <= _COURT_RIGHT_X + _COURT_X_MARGIN):
+        return 0.0
+
+    # Must be on far side of net
+    if not (_FAR_COURT_Y_MIN <= court_y <= _FAR_COURT_Y_MAX):
+        return 0.0
+
+    return w * h
+
+
 class PlayerTracker:
     def __init__(self, model_path='yolov8m-pose.pt', device='cuda', imgsz: int = 1280):
         """
@@ -173,10 +220,11 @@ class PlayerTracker:
             if near_id is not None and near_id in frame:
                 new_frame[near_id] = frame[near_id]
 
-            # Pick best far-court candidate in this frame (largest qualifying bbox)
+            # Pick best far-court candidate using court-space projection.
+            # _far_player_score_with_H falls back to image-space if H_ref is None.
             best_tid, best_score = None, 0.0
             for tid, bbox in frame.items():
-                score = _far_player_score(bbox, near_id, tid)
+                score = _far_player_score_with_H(bbox, near_id, tid, H_ref)
                 if score > best_score:
                     best_score = score
                     best_tid = tid
