@@ -57,7 +57,7 @@ def _far_player_score(bbox, near_id, tid) -> float:
 
 
 class PlayerTracker:
-    def __init__(self, model_path='yolov8x-pose.pt', device='cuda', imgsz: int = 1280):
+    def __init__(self, model_path='yolov8m-pose.pt', device='cuda', imgsz: int = 1280):
         """
         Initialize player tracker with a YOLOv8-Pose model.
 
