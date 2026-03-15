@@ -25,7 +25,7 @@ class PipelineConfig:
 
     # ========== Model Settings ==========
     # YOLOv8 pose model for player detection + keypoint extraction.
-    player_model: str = 'yolov8x-pose.pt'
+    player_model: str = 'yolov8m-pose.pt'
 
     # YOLO inference resolution. Must match or exceed input video resolution for small object
     # detection. At imgsz=640 (default), far players at ~25-35px become ~12-18px at inference
