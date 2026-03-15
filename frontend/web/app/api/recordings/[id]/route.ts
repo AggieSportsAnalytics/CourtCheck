@@ -55,6 +55,7 @@ export async function GET(
 
     let bounceHeatmapUrl = null;
     let playerHeatmapUrl = null;
+    let playerShotMapUrl = null;
     if (data.status === "done") {
       if (data.bounce_heatmap_path) {
         const { data: signed } = await supabaseAdmin.storage
@@ -68,6 +69,7 @@ export async function GET(
           .createSignedUrl(data.player_heatmap_path, 3600);
         playerHeatmapUrl = signed?.signedUrl ?? null;
       }
+      // player_shot_map_path not yet in schema — skip gracefully
     }
 
     return NextResponse.json({
@@ -79,6 +81,7 @@ export async function GET(
         videoUrl,
         bounceHeatmapUrl,
         playerHeatmapUrl,
+        playerShotMapUrl,
         createdAt: data.created_at,
         name: data.name || data.input_path?.split("/").pop() || "Unknown",
         filename: data.input_path?.split("/").pop() || "Unknown",

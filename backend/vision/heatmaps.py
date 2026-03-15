@@ -1,46 +1,22 @@
 import cv2
 import numpy as np
 import os
-from scipy.ndimage import gaussian_filter
 from backend.vision.court_reference import CourtReference
+from backend.vision.drawing import STROKE_COLORS_BGR
+
+_DEFAULT_BOUNCE_COLOR_BGR: tuple[int, int, int] = (0, 220, 200)   # teal (unknown)
+_DEFAULT_SHOT_COLOR_BGR:   tuple[int, int, int] = (40, 180, 255)   # amber (no label)
+_OUT_COLOR_BGR:            tuple[int, int, int] = (0, 0, 220)      # red  (out of bounds)
 
 
-def build_heatmap_court_background(style="black"):
-    """
-    Court background for heatmaps.
-    style="black": black bg with white lines (default)
-    style="white": white bg with gray lines
-    """
+def build_heatmap_court_background():
+    """Dark navy background with soft white court lines — matches minimap style."""
     raw_court = CourtReference().build_court_reference()
     raw_court = cv2.dilate(raw_court, np.ones((10, 10), dtype=np.uint8))
+    bg = np.full((*raw_court.shape, 3), (52, 36, 18), dtype=np.uint8)  # dark navy (BGR)
+    bg[raw_court.astype(bool)] = (235, 235, 235)                        # soft white lines
+    return bg
 
-    if style == "white":
-        background = np.full_like(raw_court, 255, dtype=np.uint8)
-        background[raw_court == 1] = 180  # gray lines
-    else:
-        background = np.zeros_like(raw_court, dtype=np.uint8)
-        background[raw_court == 1] = 255  # white lines
-
-    return cv2.cvtColor(background, cv2.COLOR_GRAY2BGR)
-
-
-def get_rally_frame_mask(num_frames, ball_shot_frames):
-    """
-    Returns boolean mask where True = frame is during an active rally
-    (between consecutive shot frames).
-    """
-    mask = np.zeros(num_frames, dtype=bool)
-    if not ball_shot_frames or len(ball_shot_frames) < 2:
-        # If no shot data, treat all frames as valid
-        mask[:] = True
-        return mask
-
-    for i in range(len(ball_shot_frames) - 1):
-        s = int(ball_shot_frames[i])
-        e = int(ball_shot_frames[i + 1])
-        if 0 <= s < num_frames and 0 <= e < num_frames and e > s:
-            mask[s:e + 1] = True
-    return mask
 
 
 def _project_point(x, y, homography):
@@ -53,6 +29,47 @@ def _project_point(x, y, homography):
     return float(mapped[0, 0, 0]), float(mapped[0, 0, 1])
 
 
+def _lookup_stroke_label(frame_idx: int, frame_stroke_labels: "dict[int, dict[int, str]] | None", window: int = 5) -> "str | None":
+    """
+    Look up the stroke label for a given frame from frame_stroke_labels.
+    Searches frame_idx and a ±window frame window around it.
+    Returns the first label found, or None.
+    """
+    if not frame_stroke_labels:
+        return None
+    for offset in range(0, window + 1):
+        for delta in ([0] if offset == 0 else [offset, -offset]):
+            candidate = frame_idx + delta
+            entry = frame_stroke_labels.get(candidate)
+            if entry:
+                # Take the first player's label (doesn't matter which player)
+                return next(iter(entry.values()), None)
+    return None
+
+
+def _draw_bounce_dot(
+    image: np.ndarray,
+    xx: int,
+    yy: int,
+    color_bgr: tuple[int, int, int],
+    is_out: bool,
+) -> np.ndarray:
+    """
+    Draw a bounce marker on image (in-place copy).
+    In-bounds: filled circle (radius 12) with white ring (radius 16, thickness 4).
+    Out-of-bounds: red X (two crossing lines).
+    Returns the same image (mutations applied).
+    """
+    if is_out:
+        arm = 18
+        cv2.line(image, (xx - arm, yy - arm), (xx + arm, yy + arm), _OUT_COLOR_BGR, 5, cv2.LINE_AA)
+        cv2.line(image, (xx + arm, yy - arm), (xx - arm, yy + arm), _OUT_COLOR_BGR, 5, cv2.LINE_AA)
+    else:
+        # Solid filled dot — no white ring (it obscures the color at this scale)
+        cv2.circle(image, (xx, yy), 28, color_bgr, -1, cv2.LINE_AA)
+    return image
+
+
 def generate_minimap_heatmaps(
     homography_matrices,
     ball_track,
@@ -61,47 +78,27 @@ def generate_minimap_heatmaps(
     output_bounce_heatmap,
     output_player_heatmap,
     ball_shot_frames=None,
-    alpha=0.72,
-    clip_percentile=99.0,
-    colormap=cv2.COLORMAP_INFERNO,
-    blur_sigma=8.0,
-    bins=(350, 170),
-    stride=3,
+    frame_stroke_labels: "dict[int, dict[int, str]] | None" = None,
+    in_bounds_bounces: "set[int] | None" = None,
+    **_kwargs,
 ):
     """
-    Generate bounce heatmap and player position heatmap on a top-down court.
+    Generate bounce dot map and player shot-position dot map on a top-down court.
 
-    Uses homography matrices to project frame-space positions to court-space.
-    Player heatmap uses histogram2d binning + gaussian blur for smooth density.
-
-    Args:
-        homography_matrices: list of 3x3 matrices (frame -> court), one per frame
-        ball_track: list of (x, y) or None per frame
-        bounces: set of frame indices where bounces occurred
-        player_detections: list of {track_id: [x1,y1,x2,y2]} per frame
-        output_bounce_heatmap: path to save bounce heatmap PNG
-        output_player_heatmap: path to save player heatmap PNG
-        ball_shot_frames: list of frame indices where shots occurred (for rally filtering)
-        alpha: blend weight for heatmap overlay
-        clip_percentile: percentile for contrast clipping (None to disable)
-        colormap: OpenCV colormap constant
-        blur_sigma: sigma for gaussian blur on histogram (controls smoothness)
-        bins: (y_bins, x_bins) for histogram2d density grid
-        stride: process every Nth frame for player positions (speed vs accuracy)
+    Bounce heatmap: color-coded dot per detected bounce (stroke type + in/out).
+    Player heatmap: dot per shot moment at player foot position.
     """
     court_img = build_heatmap_court_background()
     Hc, Wc = court_img.shape[:2]
     n_frames = len(homography_matrices)
 
-    # Rally mask for filtering non-rally frames
-    rally_mask = get_rally_frame_mask(n_frames, ball_shot_frames)
-
-    # ---- Bounce heatmap: direct circle drawing ----
+    # ---- Bounce heatmap: direct circle drawing, color-coded by stroke ----
     bounce_overlay = court_img.copy()
     for i in bounces:
         if i >= n_frames or i >= len(ball_track):
             continue
-        bx, by = ball_track[i] if ball_track[i] is not None else (None, None)
+        bpos = ball_track[i]
+        bx, by = bpos if bpos is not None else (None, None)
         inv_mat = homography_matrices[i] if i < len(homography_matrices) else None
         if bx is None or inv_mat is None:
             continue
@@ -110,24 +107,57 @@ def generate_minimap_heatmaps(
         if result is None:
             continue
         xx, yy = int(result[0]), int(result[1])
-        if 0 <= xx < Wc and 0 <= yy < Hc:
-            cv2.circle(bounce_overlay, (xx, yy), 12, (0, 255, 255), -1)  # yellow fill
-            cv2.circle(bounce_overlay, (xx, yy), 12, (0, 0, 255), 2)     # red outline
-
-    # ---- Player position heatmap: histogram2d + gaussian blur ----
-    # Collect all projected court-space positions
-    xs, ys = [], []
-    for i in range(0, n_frames, stride):
-        if not rally_mask[i]:
+        if not (0 <= xx < Wc and 0 <= yy < Hc):
             continue
 
-        inv_mat = homography_matrices[i] if i < len(homography_matrices) else None
+        label = _lookup_stroke_label(i, frame_stroke_labels)
+        color_bgr = STROKE_COLORS_BGR.get(label, _DEFAULT_BOUNCE_COLOR_BGR) if label else _DEFAULT_BOUNCE_COLOR_BGR
+        is_out = (in_bounds_bounces is not None) and (i not in in_bounds_bounces)
+        _draw_bounce_dot(bounce_overlay, xx, yy, color_bgr, is_out)
+
+    # ---- Player shot-position dot map (replaces gaussian blob) ----
+    generate_player_shot_dot_map(
+        homography_matrices=homography_matrices,
+        player_detections=player_detections,
+        shot_frames=ball_shot_frames or [],
+        frame_stroke_labels=frame_stroke_labels,
+        output_path=output_player_heatmap,
+    )
+
+    _save_heatmap_png(output_bounce_heatmap, bounce_overlay, "bounce")
+
+
+def generate_player_shot_dot_map(
+    homography_matrices,
+    player_detections,
+    shot_frames,
+    frame_stroke_labels: "dict[int, dict[int, str]] | None",
+    output_path: str,
+):
+    """
+    Generate a player position dot map at shot moments on a top-down court.
+
+    For each shot frame, projects each detected player's foot position to court
+    space and draws a colored dot (color = stroke type).
+    """
+    court_img = build_heatmap_court_background()
+    Hc, Wc = court_img.shape[:2]
+    n_frames = len(homography_matrices)
+    overlay = court_img.copy()
+
+    for frame_idx in shot_frames:
+        if frame_idx >= n_frames:
+            continue
+
+        inv_mat = homography_matrices[frame_idx]
         if inv_mat is None:
             continue
 
-        player_dict = player_detections[i] if i < len(player_detections) else None
-        if player_dict is None:
+        player_dict = player_detections[frame_idx] if frame_idx < len(player_detections) else None
+        if not player_dict:
             continue
+
+        frame_labels: "dict[int, str]" = frame_stroke_labels.get(frame_idx, {}) if frame_stroke_labels else {}
 
         for track_id, bbox in player_dict.items():
             x1, y1, x2, y2 = bbox
@@ -137,57 +167,22 @@ def generate_minimap_heatmaps(
             result = _project_point(foot_x, foot_y, inv_mat)
             if result is None:
                 continue
-            cx, cy = result
-            if 0 <= cx < Wc and 0 <= cy < Hc:
-                xs.append(cx)
-                ys.append(cy)
+            cx, cy = int(result[0]), int(result[1])
+            if not (0 <= cx < Wc and 0 <= cy < Hc):
+                continue
 
-    if len(xs) < 10:
-        # Not enough data for a meaningful heatmap
-        player_overlay = court_img.copy()
-    else:
-        xs = np.array(xs, dtype=np.float32)
-        ys = np.array(ys, dtype=np.float32)
+            label = frame_labels.get(track_id)
+            if label is None:
+                label = _lookup_stroke_label(frame_idx, frame_stroke_labels)
+            color_bgr = STROKE_COLORS_BGR.get(label, _DEFAULT_SHOT_COLOR_BGR) if label else _DEFAULT_SHOT_COLOR_BGR
 
-        # histogram2d: (ys, xs) so output shape is [y_bins, x_bins]
-        h, _, _ = np.histogram2d(
-            ys, xs,
-            bins=bins,
-            range=[[0.0, float(Hc)], [0.0, float(Wc)]],
-        )
-        h = h.astype(np.float32)
+            cv2.circle(overlay, (cx, cy), 32, color_bgr, -1, cv2.LINE_AA)       # filled dot
 
-        # Smooth with gaussian filter
-        h = gaussian_filter(h, sigma=blur_sigma)
-
-        # Normalize
-        h = h / (h.max() + 1e-9)
-
-        # Contrast clipping
-        if clip_percentile is not None:
-            p = np.percentile(h, clip_percentile)
-            if p > 1e-9:
-                h = np.clip(h / p, 0, 1)
-
-        # Convert to colormap and resize to court dimensions
-        hm_u8 = (h * 255).astype(np.uint8)
-        hm_color = cv2.applyColorMap(hm_u8, colormap)
-        hm_color = cv2.resize(hm_color, (Wc, Hc), interpolation=cv2.INTER_LINEAR)
-
-        # Blend: only apply heat where there's actual data
-        mask = cv2.resize(hm_u8, (Wc, Hc), interpolation=cv2.INTER_LINEAR) > 0
-        player_overlay = court_img.copy()
-        player_overlay[mask] = cv2.addWeighted(
-            hm_color, alpha, court_img, 1.0 - alpha, 0.0
-        )[mask]
-
-    # ---- Save PNGs ----
-    _save_heatmap_png(output_bounce_heatmap, bounce_overlay, "bounce")
-    _save_heatmap_png(output_player_heatmap, player_overlay, "player")
+    _save_heatmap_png(output_path, overlay, "player_shot_map")
 
 
 def _save_heatmap_png(path, image, label):
-    """Save a heatmap image to disk as landscape (rotated 90 CW)."""
+    """Save a heatmap image to disk as landscape (rotated 90 CW so near baseline is on the right)."""
     heatmap_dir = os.path.dirname(path)
     if heatmap_dir and not os.path.exists(heatmap_dir):
         os.makedirs(heatmap_dir, exist_ok=True)

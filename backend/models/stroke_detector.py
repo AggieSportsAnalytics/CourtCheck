@@ -94,47 +94,6 @@ class ActionRecognition:
     self.softmax = nn.Softmax(dim=1)
     self.strokes_label = ["Forehand", "Backhand", "Service/Smash"]
 
-  def add_frame(self, frame, player_box):
-    """
-    Extract frame features using feature extractor model and add the results to the frames until now
-    """
-    # ROI is a small box around the player
-    box_center = (
-      int((player_box[0] + player_box[2]) / 2),
-      int((player_box[1] + player_box[3]) / 2),
-    )
-    patch = frame[
-      int(box_center[1] - self.box_margin) : int(box_center[1] + self.box_margin),
-      int(box_center[0] - self.box_margin) : int(box_center[0] + self.box_margin),
-    ].copy()
-    patch = imutils.resize(patch, 299)
-    frame_t = patch.transpose((2, 0, 1)) / 255
-    frame_tensor = torch.from_numpy(frame_t).type(self.dtype)
-    frame_tensor = self.normalize(frame_tensor).unsqueeze(0)
-    with torch.no_grad():
-      # forward pass
-      features = self.feature_extractor(frame_tensor)
-    features = features.unsqueeze(1)
-    # Concatenate the features to previous features
-    if self.frames_features_seq is None:
-      self.frames_features_seq = features
-    else:
-      self.frames_features_seq = torch.cat(
-        [self.frames_features_seq, features], dim=1
-      )
-
-  def predict_saved_seq(self, clear=True):
-    """
-    Use saved sequence and predict the stroke
-    """
-    with torch.no_grad():
-      scores = self.LSTM(self.frames_features_seq)[-1].unsqueeze(0)
-      probs = self.softmax(scores).squeeze().cpu().numpy()
-
-    if clear:
-      self.frames_features_seq = None
-    return probs, self.strokes_label[np.argmax(probs)]
-
   def predict_stroke(self, frame, player_box):
     """
     Predict the stroke for each frame

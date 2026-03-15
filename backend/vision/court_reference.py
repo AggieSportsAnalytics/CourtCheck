@@ -1,10 +1,6 @@
 ## Court Reference
 import cv2
 import numpy as np
-import catboost as ctb
-import pandas as pd
-from scipy.interpolate import CubicSpline
-from scipy.spatial import distance
 
 class CourtReference:
   """
@@ -136,58 +132,4 @@ class CourtReference:
 
     return court
 
-  def get_important_lines(self):
-    """
-    Returns all lines of the court
-    """
-    lines = [
-        *self.baseline_top,
-        *self.baseline_bottom,
-        *self.net,
-        *self.left_court_line,
-        *self.right_court_line,
-        *self.left_inner_line,
-        *self.right_inner_line,
-        *self.middle_line,
-        *self.top_inner_line,
-        *self.bottom_inner_line,
-    ]
-    return lines
-
-  def get_extra_parts(self):
-    parts = [self.top_extra_part, self.bottom_extra_part]
-    return parts
-
-  def save_all_court_configurations(self):
-    """
-    Create all configurations of 4 points on court reference
-    """
-    for i, conf in self.court_conf.items():
-        c = cv2.cvtColor(255 - self.court, cv2.COLOR_GRAY2BGR)
-        for p in conf:
-            c = cv2.circle(c, p, 15, (0, 0, 255), 30)
-        cv2.imwrite(f"court_configurations/court_conf_{i}.png", c)
-
-  def get_court_mask(self, mask_type=0):
-    """
-    Get mask of the court
-    """
-    mask = np.ones_like(self.court)
-    if mask_type == 1:  # Bottom half court
-        # mask[:self.net[0][1] - 1000, :] = 0
-        mask[: self.net[0][1], :] = 0
-    elif mask_type == 2:  # Top half court
-        mask[self.net[0][1] :, :] = 0
-    elif mask_type == 3:  # court without margins
-        mask[: self.baseline_top[0][1], :] = 0
-        mask[self.baseline_bottom[0][1] :, :] = 0
-        mask[:, : self.left_court_line[0][0]] = 0
-        mask[:, self.right_court_line[0][0] :] = 0
-    return mask
-  
-  def get_court_image(self):
-    """
-    Prevents accidental mutation by callers
-    """
-    return self.court.copy()
 

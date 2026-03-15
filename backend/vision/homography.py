@@ -116,12 +116,3 @@ class HomographyEstimator:
 
         return best_H
 
-    @staticmethod
-    def invert_homography(H):
-        """
-        Safely invert a homography matrix.
-        """
-        if H is None:
-            return None
-        ok, H_inv = cv2.invert(H)
-        return H_inv if ok else None

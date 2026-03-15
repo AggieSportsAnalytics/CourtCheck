@@ -108,7 +108,9 @@ class BallDetector:
         if path_model:
             self.model.load_state_dict(torch.load(path_model, map_location=device))
             self.model = self.model.to(device)
-            self.model.eval()
+            if device == "cuda":
+                self.model = self.model.half()  # FP16 for ~2x throughput on GPU
+            self.model.eval()  # inference mode
         self.width = 640
         self.height = 360
         self.frame_buffer = deque(maxlen=3)
@@ -134,9 +136,11 @@ class BallDetector:
         imgs = np.rollaxis(imgs, 2, 0)
         inp = np.expand_dims(imgs, axis=0)
 
-        # Model inference
+        # Model inference — use FP16 on GPU, FP32 on CPU
         with torch.no_grad():
-            out = self.model(torch.from_numpy(inp).float().to(self.device))
+            tensor = torch.from_numpy(inp)
+            tensor = tensor.half() if self.device == "cuda" else tensor.float()
+            out = self.model(tensor.to(self.device))
             output = out.argmax(dim=1).detach().cpu().numpy()
 
         # Post-process using previous prediction for stability

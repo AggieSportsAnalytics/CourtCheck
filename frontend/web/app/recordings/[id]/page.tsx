@@ -14,6 +14,7 @@ interface Recording {
   videoUrl: string | null;
   bounceHeatmapUrl: string | null;
   playerHeatmapUrl: string | null;
+  playerShotMapUrl: string | null;
   createdAt: string;
   name: string;
   filename: string;
@@ -55,14 +56,33 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+const STROKE_LEGEND = [
+  { label: 'Forehand',  color: 'rgb(80,220,80)' },
+  { label: 'Backhand',  color: 'rgb(80,100,220)' },
+  { label: 'Serve',     color: 'rgb(255,210,0)' },
+  { label: 'Slice',     color: 'rgb(160,60,220)' },
+] as const;
+
 const COURT_TABS = [
-  { key: 'ball' as const, label: 'Ball Bounces', sub: 'Where the ball landed — useful for identifying opponent patterns' },
+  { key: 'ball'   as const, label: 'Ball Bounces',     sub: 'Where the ball landed — useful for identifying opponent patterns' },
   { key: 'player' as const, label: 'Player Positions', sub: 'Your court coverage — identify areas to improve' },
+  { key: 'shot'   as const, label: 'Shot Map',         sub: 'Player position at each shot — color-coded by stroke type' },
 ];
 
-function CourtReportTabs({ bounceUrl, playerUrl }: { bounceUrl: string | null; playerUrl: string | null }) {
-  const [active, setActive] = useState<'ball' | 'player'>('ball');
-  const url = active === 'ball' ? bounceUrl : playerUrl;
+type CourtTabKey = 'ball' | 'player' | 'shot';
+
+function CourtReportTabs({
+  bounceUrl,
+  playerUrl,
+  shotMapUrl,
+}: {
+  bounceUrl: string | null;
+  playerUrl: string | null;
+  shotMapUrl: string | null;
+}) {
+  const [active, setActive] = useState<CourtTabKey>('ball');
+  const urlMap: Record<CourtTabKey, string | null> = { ball: bounceUrl, player: playerUrl, shot: shotMapUrl };
+  const url = urlMap[active];
   const tab = COURT_TABS.find((t) => t.key === active)!;
 
   return (
@@ -111,6 +131,23 @@ function CourtReportTabs({ bounceUrl, playerUrl }: { bounceUrl: string | null; p
           </div>
         </div>
       )}
+
+      {/* Stroke type color legend */}
+      <div className="flex flex-wrap gap-x-5 gap-y-1.5 pt-3">
+        {STROKE_LEGEND.map(({ label, color }) => (
+          <div key={label} className="flex items-center gap-1.5">
+            <span className="block rounded-full shrink-0" style={{ width: 8, height: 8, background: color }} />
+            <span className="text-[10px]" style={{ color: '#4A4A55' }}>{label}</span>
+          </div>
+        ))}
+        <div className="flex items-center gap-1.5">
+          <svg width="10" height="10" viewBox="0 0 10 10" className="shrink-0">
+            <line x1="1" y1="1" x2="9" y2="9" stroke="rgb(220,0,0)" strokeWidth="2" strokeLinecap="round"/>
+            <line x1="9" y1="1" x2="1" y2="9" stroke="rgb(220,0,0)" strokeWidth="2" strokeLinecap="round"/>
+          </svg>
+          <span className="text-[10px]" style={{ color: '#4A4A55' }}>Out of bounds</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -422,6 +459,7 @@ export default function RecordingDetailPage() {
         <CourtReportTabs
           bounceUrl={recording.bounceHeatmapUrl}
           playerUrl={recording.playerHeatmapUrl}
+          shotMapUrl={recording.playerShotMapUrl}
         />
       </Card>
 
@@ -440,7 +478,7 @@ export default function RecordingDetailPage() {
             { label: "Serve / Smash", value: recording.serveCount  !== null ? recording.serveCount.toLocaleString()  : "—" },
             { label: "In Bounds",     value: recording.inBoundsBounces  !== null ? `${recording.inBoundsBounces.toLocaleString()} (${inPct ?? "—"}%)` : "—" },
             { label: "Out of Bounds", value: recording.outBoundsBounces !== null ? recording.outBoundsBounces.toLocaleString() : "—" },
-            { label: "Court Report",  value: [recording.bounceHeatmapUrl && "Bounce map", recording.playerHeatmapUrl && "Player map"].filter(Boolean).join(", ") || "Not generated" },
+            { label: "Court Report",  value: [recording.bounceHeatmapUrl && "Bounce map", recording.playerHeatmapUrl && "Player map", recording.playerShotMapUrl && "Shot map"].filter(Boolean).join(", ") || "Not generated" },
           ].map(({ label, value }) => (
             <div key={label} className="flex justify-between py-2.5 text-sm" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
               <span style={{ color: '#5A5A66' }}>{label}</span>

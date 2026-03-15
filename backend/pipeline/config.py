@@ -1,7 +1,14 @@
 # Pipeline Config class to replace colab global flags
+import os
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Optional, Tuple
 import torch
+
+# Absolute path to calibration_frames/ regardless of working directory
+_CALIBRATION_DIR = os.path.join(os.path.dirname(__file__), '..', 'calibration_frames')
+_DEFAULT_CALIBRATION_PATH = os.path.normpath(
+    os.path.join(_CALIBRATION_DIR, 'court_calibration.json')
+)
 
 
 @dataclass
@@ -17,29 +24,39 @@ class PipelineConfig:
     target_height: int = 720
 
     # ========== Model Settings ==========
-    player_model: str = 'yolov8x.pt'  # YOLOv8 model for player detection (downloads to weights/ on first run)
+    # YOLOv8 pose model for player detection + keypoint extraction.
+    player_model: str = 'yolov8x-pose.pt'
+
+    # YOLO inference resolution. Must match or exceed input video resolution for small object
+    # detection. At imgsz=640 (default), far players at ~25-35px become ~12-18px at inference
+    # — below YOLO's detection floor. imgsz=1280 preserves full 720p detail.
+    player_imgsz: int = 1280
 
     # ========== Detection Settings ==========
-    # Court detection runs every Nth frame to save compute
+    # Court detection runs every Nth frame to save compute.
+    # Ignored when a valid calibration is loaded (calibration_path + camera_id).
     court_detection_interval: int = 5
 
-    # Ball detection runs every frame (critical for tracking)
-    ball_detection_interval: int = 1
+    # ========== Court Calibration ==========
+    # Path to court_calibration.json produced by backend.tools.calibrate_court.
+    # When set together with camera_id, per-frame court detection is skipped.
+    calibration_path: Optional[str] = _DEFAULT_CALIBRATION_PATH
+    camera_id: Optional[str] = 'uc_davis_court1'
+
+    # ========== Stroke Classifier ==========
+    # Path to TCN weights trained on pose keypoints (THETIS dataset).
+    # When None, stroke classification uses a simple rule-based heuristic.
+    stroke_classifier_weights_tcn: Optional[str] = None
+
+    # Swing trigger thresholds for the pose-based swing detector
+    swing_velocity_threshold: float = 15.0   # pixels/frame at wrist
+    swing_ball_proximity: float = 300.0      # ball must be within N pixels of player
 
     # ========== Feature Toggles ==========
-    detect_bounces: bool = True
-    track_players: bool = True
-    enable_drawing: bool = True
     generate_heatmaps: bool = True
-    enable_pose_detection: bool = False  # Not implemented yet
     enable_stroke_recognition: bool = True
 
     # ========== Visualization ==========
-    draw_ball_trace: bool = True
-    draw_court_lines: bool = True
-    draw_player_bboxes: bool = True
-    draw_minimap: bool = True
-
     # Ball trace settings
     trace_length: int = 7  # Number of frames to show in ball trace
     ball_trace_color: Tuple[int, int, int] = (255, 255, 0)  # BGR: Cyan/Yellow
@@ -47,7 +64,7 @@ class PipelineConfig:
     # Minimap settings
     minimap_width: int = 166
     minimap_height: int = 350
-    minimap_position: Tuple[int, int] = (0, 0)  # Top-left corner
+
 
     # Player bbox color
     player_bbox_color: Tuple[int, int, int] = (0, 0, 255)  # BGR: Red

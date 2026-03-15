@@ -4,11 +4,18 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
 const TABS = [
-  { key: 'ball', label: 'Ball Bounces' },
-  { key: 'player', label: 'Player Positions' },
+  { key: 'ball',   label: 'Ball Bounces' },
+  { key: 'player', label: 'Shot Positions' },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
+
+const STROKE_LEGEND = [
+  { label: 'Forehand',  color: 'rgb(80,220,80)' },
+  { label: 'Backhand',  color: 'rgb(80,100,220)' },
+  { label: 'Serve',     color: 'rgb(255,210,0)' },
+  { label: 'Slice',     color: 'rgb(160,60,220)' },
+] as const;
 
 interface HeatmapData {
   matchId: string;
@@ -16,6 +23,7 @@ interface HeatmapData {
   createdAt: string;
   bounceHeatmapUrl: string | null;
   playerHeatmapUrl: string | null;
+  playerShotMapUrl: string | null;
   bounceCount: number | null;
   shotCount: number | null;
   rallyCount: number | null;
@@ -41,8 +49,8 @@ const HeatMaps = () => {
       return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
     };
     return {
-      ball: make('No ball heatmap \u2014 analyze a match to generate one'),
-      player: make('No player heatmap \u2014 analyze a match to generate one'),
+      ball:   make('No ball heatmap \u2014 analyze a match to generate one'),
+      player: make('No shot positions \u2014 analyze a match to generate one'),
     };
   }, []);
 
@@ -72,11 +80,11 @@ const HeatMaps = () => {
   }, []);
 
   const urlForTab: Record<TabKey, string | null> = {
-    ball: heatmaps?.bounceHeatmapUrl ?? null,
-    player: heatmaps?.playerHeatmapUrl ?? null,
+    ball:   heatmaps?.bounceHeatmapUrl   ?? null,
+    player: heatmaps?.playerHeatmapUrl   ?? null,
   };
   const fallbackForTab: Record<TabKey, string> = {
-    ball: defaultHeatmapSvg.ball,
+    ball:   defaultHeatmapSvg.ball,
     player: defaultHeatmapSvg.player,
   };
 
@@ -146,9 +154,42 @@ const HeatMaps = () => {
           >
             <img
               src={activeUrl ?? activeFallback}
-              alt={`${activeTab === 'ball' ? 'Ball bounce' : 'Player position'} heatmap`}
+              alt={`${activeTab === 'ball' ? 'Ball bounce heatmap' : 'Player shot positions'}`}
               className="w-full block"
             />
+          </div>
+        )}
+
+        {/* Stroke type legend — shown for all tabs */}
+        {!loading && (
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-3 pb-1">
+            {STROKE_LEGEND.map(({ label, color }) => (
+              <div key={label} className="flex items-center gap-1.5">
+                <span
+                  className="block rounded-full shrink-0"
+                  style={{ width: 8, height: 8, background: color }}
+                />
+                <span className="text-[10px]" style={{ color: '#4A4A55' }}>{label}</span>
+              </div>
+            ))}
+            <div className="flex items-center gap-1.5">
+              <span
+                className="block shrink-0"
+                style={{
+                  width: 10, height: 10,
+                  background: 'transparent',
+                  position: 'relative',
+                  display: 'inline-block',
+                }}
+              >
+                {/* X marker for out-of-bounds */}
+                <svg width="10" height="10" viewBox="0 0 10 10">
+                  <line x1="1" y1="1" x2="9" y2="9" stroke="rgb(220,0,0)" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="9" y1="1" x2="1" y2="9" stroke="rgb(220,0,0)" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </span>
+              <span className="text-[10px]" style={{ color: '#4A4A55' }}>Out of bounds</span>
+            </div>
           </div>
         )}
       </div>

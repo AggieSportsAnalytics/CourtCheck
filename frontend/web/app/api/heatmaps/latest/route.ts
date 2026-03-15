@@ -46,6 +46,7 @@ export async function GET() {
 
     let bounceHeatmapUrl: string | null = null;
     let playerHeatmapUrl: string | null = null;
+    let playerShotMapUrl: string | null = null;
 
     if (latest.bounce_heatmap_path) {
       const { data: signed } = await supabaseAdmin.storage
@@ -61,6 +62,8 @@ export async function GET() {
       playerHeatmapUrl = signed?.signedUrl ?? null;
     }
 
+    // player_shot_map_path not yet in schema — skip gracefully
+
     return NextResponse.json({
       heatmaps: {
         matchId: latest.id,
@@ -68,6 +71,7 @@ export async function GET() {
         createdAt: latest.created_at,
         bounceHeatmapUrl,
         playerHeatmapUrl,
+        playerShotMapUrl,
         bounceCount: latest.bounce_count,
         shotCount: latest.shot_count,
         rallyCount: latest.rally_count,

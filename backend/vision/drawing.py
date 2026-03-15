@@ -104,103 +104,118 @@ def draw_ball_trace(
 
 def draw_court_keypoints_and_lines(frame, kps):
     """
-    Draw tennis court lines (green) and keypoints (red) on 'frame'.
+    Draw tennis court lines as a semi-transparent white overlay.
+    Keypoint dots and debug labels are intentionally omitted.
     """
-
     if kps is None:
         return frame
 
+    overlay = frame.copy()
     for start_name, end_name in court_lines:
         try:
             s_idx = keypoint_names.index(start_name)
             e_idx = keypoint_names.index(end_name)
             if kps[s_idx] is None or kps[e_idx] is None:
                 continue
-
             x1, y1 = map(int, kps[s_idx])
             x2, y2 = map(int, kps[e_idx])
-
-            cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.line(overlay, (x1, y1), (x2, y2), (255, 255, 255), 2, cv2.LINE_AA)
         except (ValueError, IndexError):
             continue
 
-    # Keypoints + labels
-    for i, pt in enumerate(kps):
-        if pt is None:
-            continue
-        x, y = map(int, pt)
-        
-        # kp
-        cv2.circle(frame, (x, y), 5, (0, 0, 255), -1)
-
-        # label
-        label = keypoint_names[i]
-        (tw, th), base = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.4, 1)
-        cv2.rectangle(
-            frame, (x - 5, y - th - 5), (x - 5 + tw, y - 5), (255, 255, 255), -1
-        )
-        cv2.putText(
-            frame, label, (x - 5, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 255), 1
-        )
-
+    cv2.addWeighted(overlay, 0.45, frame, 0.55, 0, frame)
     return frame
 
 # -----------------------------
 # Player drawing
 # -----------------------------
 
-def draw_players(frame, players):
+def draw_stroke_labels(frame, player_dict, frame_stroke_labels, frame_idx):
     """
-    players: list of (bbox, center, label)
+    Draw stroke classification label above each player's bbox when a swing
+    is active at this frame.
+
+    Args:
+        frame: Video frame (numpy array, BGR).
+        player_dict: {track_id: [x1, y1, x2, y2]} for this frame.
+        frame_stroke_labels: {frame_idx: {track_id: label}} built from swing events.
+        frame_idx: Current frame index.
+
+    Returns:
+        Annotated frame.
     """
-    for bbox, center, label in players:
+    labels_at_frame = frame_stroke_labels.get(frame_idx, {})
+    for track_id, label in labels_at_frame.items():
+        bbox = player_dict.get(track_id) if player_dict else None
         if bbox is None:
             continue
-        x1, y1, x2, y2 = map(int, bbox)
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)
 
-        if label:
-            cv2.putText(
-                frame,
-                label,
-                (x1, y1 - 5),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (255, 0, 0),
-                2,
-            )
+        x1, y1, x2, _y2 = map(int, bbox)
+        color = STROKE_COLORS_BGR.get(label, (255, 255, 255))
+
+        # Pill background
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        scale, thickness = 0.65, 2
+        (tw, th), _ = cv2.getTextSize(label, font, scale, thickness)
+        pad = 6
+        rx1, ry1 = x1, y1 - th - pad * 2 - 28
+        rx2, ry2 = x1 + tw + pad * 2, y1 - 28
+        cv2.rectangle(frame, (rx1, ry1), (rx2, ry2), color, -1)
+        cv2.putText(frame, label, (rx1 + pad, ry2 - pad), font, scale, (0, 0, 0), thickness, cv2.LINE_AA)
+
     return frame
 
 
-def draw_player_bboxes(frame, player_dict, color=(0, 255, 255)):
+# Per-player colors (BGR) — up to 4 tracked players
+_PLAYER_COLORS = [
+    (255, 180,  40),   # player 1 — amber
+    ( 80, 200, 255),   # player 2 — sky blue
+    (100, 255, 120),   # player 3 — mint
+    (200,  80, 255),   # player 4 — violet
+]
+
+
+def _player_color(track_id: int):
+    return _PLAYER_COLORS[(track_id - 1) % len(_PLAYER_COLORS)]
+
+
+def draw_player_bboxes(frame, player_dict, color=None):
     """
-    Draw player bounding boxes on a single frame
+    Draw clean player bounding boxes with a small pill label.
 
-    Args:
-        frame: Video frame (numpy array)
-        player_dict: {track_id: [x1, y1, x2, y2]}
-        color: BGR color tuple for bbox and label (default: yellow)
-
-    Returns:
-        frame: Frame with player bboxes drawn
+    color is ignored when player_dict has multiple players — each gets
+    its own color from _PLAYER_COLORS for easy differentiation.
     """
     if player_dict is None:
         return frame
 
-    for track_id, bbox in player_dict.items():
+    # Sort so rendering order is deterministic
+    for track_id, bbox in sorted(player_dict.items()):
         x1, y1, x2, y2 = map(int, bbox)
-        # Draw rectangle
-        cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
-        # Draw label
-        cv2.putText(
-            frame,
-            f"Player {track_id}",
-            (x1, y1 - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.9,
-            color,
-            2
-        )
+        c = color if color is not None else _player_color(track_id)
+
+        # Thin box with anti-aliasing
+        cv2.rectangle(frame, (x1, y1), (x2, y2), c, 1, cv2.LINE_AA)
+
+        # Small pill label at top-left corner of box
+        label = f"P{track_id}"
+        font, scale, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1
+        (tw, th), _ = cv2.getTextSize(label, font, scale, thickness)
+        pad = 4
+        lx1, ly1 = x1, y1 - th - pad * 2
+        lx2, ly2 = x1 + tw + pad * 2, y1
+
+        # Clamp label above frame edge
+        if ly1 < 0:
+            ly1, ly2 = y1, y1 + th + pad * 2
+
+        # Semi-transparent pill background
+        overlay = frame.copy()
+        cv2.rectangle(overlay, (lx1, ly1), (lx2, ly2), c, -1)
+        cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
+
+        cv2.putText(frame, label, (lx1 + pad, ly2 - pad), font, scale, (0, 0, 0), thickness, cv2.LINE_AA)
+
     return frame
 
 
@@ -208,44 +223,14 @@ def draw_player_bboxes(frame, player_dict, color=(0, 255, 255)):
 # Minimap drawing
 # -----------------------------
 
-def draw_minimap(
-    frame,
-    court_img,
-    homography_inv,
-    ball_xy,
-    players,
-    bounce=False,
-    size=(166, 350),
-):
-    if homography_inv is None:
-        return frame
+STROKE_COLORS_BGR: dict[str, tuple[int, int, int]] = {
+    "Forehand":       (0, 220, 80),    # green
+    "Backhand":       (220, 100, 0),   # blue
+    "Serve/Overhead": (0, 210, 255),   # yellow
+    "Slice":          (160, 60, 220),  # purple
+}
+_STROKE_BOUNCE_DEFAULT = (0, 220, 200)  # teal — unknown / None
 
-    minimap = court_img.copy()
-
-    # Draw ball on minimap
-    if ball_xy and ball_xy[0] is not None:
-        pt = np.array([[ball_xy]], dtype=np.float32)
-        mapped = cv2.perspectiveTransform(pt, homography_inv)
-        x, y = int(mapped[0, 0, 0]), int(mapped[0, 0, 1])
-        color = (0, 255, 255) if bounce else (0, 255, 0)
-        cv2.circle(minimap, (x, y), 6, color, -1)
-
-    # Draw players on minimap
-    for bbox, center, _ in players:
-        if center is None:
-            continue
-        pt = np.array([[center]], dtype=np.float32)
-        mapped = cv2.perspectiveTransform(pt, homography_inv)
-        x, y = int(mapped[0, 0, 0]), int(mapped[0, 0, 1])
-        cv2.circle(minimap, (x, y), 6, (255, 0, 0), -1)
-
-    # Resize + paste
-    minimap = cv2.resize(minimap, size)
-    h, w = frame.shape[:2]
-    mh, mw = size[1], size[0]
-    frame[30 : 30 + mh, w - 30 - mw : w - 30] = minimap
-
-    return frame
 
 def draw_minimap_ball_and_bounces(
     minimap,
@@ -256,6 +241,7 @@ def draw_minimap_ball_and_bounces(
     trace_length=7,
     trace_color=(255, 255, 0),
     bounce_color=(0, 255, 255),
+    frame_stroke_labels=None,
 ):
     """
     Draw ball trace and accumulated bounces on the minimap.
@@ -265,6 +251,10 @@ def draw_minimap_ball_and_bounces(
     ball_track: list of (x, y)
     frame_idx: current frame index
     bounces: set of frame indices where bounces occurred
+    frame_stroke_labels: dict[int, dict[int, str]] mapping frame_idx ->
+        {track_id -> stroke label}.  When provided, each bounce dot is
+        colored by the stroke type that produced it instead of the
+        uniform bounce_color.
     """
 
     if homography_inv is None:
@@ -321,12 +311,29 @@ def draw_minimap_ball_and_bounces(
         mx, my = int(mapped[0, 0, 0]), int(mapped[0, 0, 1])
 
         if 0 <= mx < minimap.shape[1] and 0 <= my < minimap.shape[0]:
+            # Determine color from stroke label, falling back to bounce_color
+            dot_color = bounce_color
+            if frame_stroke_labels is not None:
+                labels_at_bounce = frame_stroke_labels.get(bounce_idx, {})
+                # Use the first available player's label at the bounce frame
+                if labels_at_bounce:
+                    label = next(iter(labels_at_bounce.values()))
+                    dot_color = STROKE_COLORS_BGR.get(label, _STROKE_BOUNCE_DEFAULT)
+
             cv2.circle(
                 minimap,
                 (mx, my),
-                10,
-                bounce_color,
                 40,
+                dot_color,
+                -1,
+            )
+            # White outline ring for contrast
+            cv2.circle(
+                minimap,
+                (mx, my),
+                40,
+                (255, 255, 255),
+                3,
             )
 
     return minimap
@@ -336,35 +343,37 @@ def draw_minimap_players(
     minimap,
     homography_inv,
     player_dict,
-    color=(0, 0, 255),
+    color=None,
 ):
     """
     Draw player positions on the minimap using foot position projected through homography.
+    Each player gets a filled dot in their assigned color with a white outline ring.
 
     minimap: reference court image (modified in-place)
     homography_inv: frame -> reference court homography
     player_dict: {track_id: [x1, y1, x2, y2]}
-    color: BGR color for player dots
+    color: override BGR color (if None, uses per-player color)
     """
     if homography_inv is None or player_dict is None:
         return minimap
 
-    for track_id, bbox in player_dict.items():
+    for track_id, bbox in sorted(player_dict.items()):
         x1, y1, x2, y2 = bbox
-        # Foot position = bottom center of bbox
         foot_x = (x1 + x2) / 2
         foot_y = float(y2)
 
         pt = np.array([[[foot_x, foot_y]]], dtype=np.float32)
-
         try:
             mapped = cv2.perspectiveTransform(pt, homography_inv)
         except cv2.error:
             continue
 
         mx, my = int(mapped[0, 0, 0]), int(mapped[0, 0, 1])
+        if not (0 <= mx < minimap.shape[1] and 0 <= my < minimap.shape[0]):
+            continue
 
-        if 0 <= mx < minimap.shape[1] and 0 <= my < minimap.shape[0]:
-            cv2.circle(minimap, (mx, my), 30, color, -1)
+        c = color if color is not None else _player_color(track_id)
+        cv2.circle(minimap, (mx, my), 38, (255, 255, 255), 10)  # white ring
+        cv2.circle(minimap, (mx, my), 30, c, -1)                # filled dot
 
     return minimap

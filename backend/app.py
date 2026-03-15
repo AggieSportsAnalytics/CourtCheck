@@ -2,15 +2,19 @@ import os
 import tempfile
 import modal
 import requests
-from typing import Dict
 from fastapi import Request, HTTPException
 app = modal.App("tennis-modal")
 
 def download_model_weights():
     """Pre-download pretrained weights during image build so they're cached."""
     import torchvision
-    torchvision.models.inception_v3(weights=torchvision.models.Inception_V3_Weights.IMAGENET1K_V1)
+    from ultralytics import YOLO
+    # Court keypoint detector backbone
     torchvision.models.resnet50(weights=torchvision.models.ResNet50_Weights.IMAGENET1K_V1)
+    # Legacy stroke classifier backbone (kept in case stroke_classifier_weights.pth is present)
+    torchvision.models.inception_v3(weights=torchvision.models.Inception_V3_Weights.IMAGENET1K_V1)
+    # YOLOv8m-Pose for player tracking + keypoint extraction (~3x faster than yolov8x)
+    YOLO("yolov8m-pose.pt")  # auto-downloads to ultralytics cache
 
 image = (
     modal.Image.debian_slim(python_version="3.10")
@@ -26,6 +30,10 @@ image = (
     .add_local_dir(
         "backend/weights",
         remote_path="/root/backend/weights"
+    )
+    .add_local_dir(
+        "backend/calibration_frames",
+        remote_path="/root/backend/calibration_frames"
     )
 )
 
