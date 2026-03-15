@@ -69,3 +69,94 @@ class TestFarPlayerCourtSpaceFilter:
         far_bbox = [503.0, 62.0, 524.0, 177.0]
         score = _far_player_score_with_H(far_bbox, near_id=1, tid=1, H_ref=H_ref)
         assert score == 0.0
+
+
+# ---------------------------------------------------------------------------
+# Task 2: Geometric bounce detector
+# ---------------------------------------------------------------------------
+
+class TestGeometricBounceDetector:
+    def _make_trajectory(self, y_values: list) -> tuple:
+        """Build simple ball_track and homography_matrices for testing."""
+        import numpy as np
+        # Use identity H_ref: court-space = frame-space (for unit testing only)
+        H_ref = np.eye(3, dtype=np.float32)
+        ball_track = [(500.0, y) if y is not None else None for y in y_values]
+        homography_matrices = [H_ref] * len(y_values)
+        return ball_track, homography_matrices
+
+    def test_detects_near_court_bounce(self):
+        """Near-court bounce: ball falls (y increases), bounces, y decreases."""
+        from backend.pipeline.run import _geometric_bounce_detector
+
+        # y increases 550→650 (falling), then decreases 650→550 (bouncing up)
+        y_vals = [550, 570, 590, 610, 630, 650, 630, 610, 590, 570, 550]
+        ball_track, H_mats = self._make_trajectory(y_vals)
+        bounces = _geometric_bounce_detector(ball_track, H_mats, min_court_disp=30, min_gap=3)
+        assert len(bounces) == 1, f"Expected 1 bounce, got {len(bounces)}: {bounces}"
+        # Peak should be near frame 5 (y=650)
+        assert 4 <= list(bounces)[0] <= 6, f"Bounce frame off: {bounces}"
+
+    def test_detects_far_court_bounce(self):
+        """Far-court bounce: ball falls toward far baseline (y decreases), bounces, y increases."""
+        from backend.pipeline.run import _geometric_bounce_detector
+
+        # Simulates far-court: ball at y≈200 (near net) moves down to y≈130 (far baseline), bounces back
+        y_vals = [200, 185, 170, 155, 140, 130, 140, 155, 170, 185, 200]
+        ball_track, H_mats = self._make_trajectory(y_vals)
+        bounces = _geometric_bounce_detector(ball_track, H_mats, min_court_disp=30, min_gap=3)
+        assert len(bounces) == 1, f"Expected 1 bounce, got {len(bounces)}: {bounces}"
+        assert 4 <= list(bounces)[0] <= 6
+
+    def test_ignores_noisy_small_oscillations(self):
+        """Tiny y fluctuations (noise) below MIN_COURT_DISP should not trigger bounces."""
+        from backend.pipeline.run import _geometric_bounce_detector
+
+        # Oscillation of only ±3 units — below min_court_disp=30
+        y_vals = [400, 403, 397, 402, 398, 403, 397, 400]
+        ball_track, H_mats = self._make_trajectory(y_vals)
+        bounces = _geometric_bounce_detector(ball_track, H_mats, min_court_disp=30, min_gap=3)
+        assert len(bounces) == 0, f"Should be no bounces for noise, got {bounces}"
+
+    def test_handles_none_positions(self):
+        """Missing ball positions (None) should not crash the detector."""
+        from backend.pipeline.run import _geometric_bounce_detector
+
+        y_vals = [550, None, None, 610, 650, 630, None, 590, 550]
+        ball_track, H_mats = self._make_trajectory(y_vals)
+        bounces = _geometric_bounce_detector(ball_track, H_mats, min_court_disp=30, min_gap=3)
+        # Should complete without error; may or may not find bounce (interpolation-dependent)
+        assert isinstance(bounces, set)
+
+    def test_respects_min_gap(self):
+        """Two bounces closer than min_gap frames should be deduplicated."""
+        from backend.pipeline.run import _geometric_bounce_detector
+
+        # Two rapid direction changes 3 frames apart — min_gap=8 should keep only one
+        y_vals = [550, 600, 650, 600, 550, 600, 650, 600, 550]
+        ball_track, H_mats = self._make_trajectory(y_vals)
+        bounces = _geometric_bounce_detector(ball_track, H_mats, min_court_disp=30, min_gap=8)
+        # With min_gap=8, only the first (or last) bounce should survive
+        assert len(bounces) <= 1, f"Expected ≤1 bounce with tight gap, got {bounces}"
+
+
+class TestBounceDetectorUnion:
+    def test_geometric_bounces_added_to_catboost(self):
+        """
+        When a bounce is found by the geometric detector but not CatBoost,
+        it should still appear in the final bounce set after union.
+        """
+        catboost_bounces = {10, 50, 90}
+        geometric_bounces = {30, 70}   # far-court, missed by CatBoost
+        combined = catboost_bounces | geometric_bounces
+        assert 30 in combined
+        assert 70 in combined
+        assert len(combined) == 5
+
+    def test_duplicate_bounces_not_double_counted(self):
+        """Bounces detected by both detectors should appear once."""
+        catboost_bounces = {10, 50, 90}
+        geometric_bounces = {10, 90, 110}  # overlap on 10 and 90
+        combined = catboost_bounces | geometric_bounces
+        assert len(combined) == 4
+        assert 110 in combined

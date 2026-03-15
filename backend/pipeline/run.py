@@ -124,6 +124,97 @@ def _interpolate_player_detections(detections: list[dict]) -> list[dict]:
     return result
 
 
+def _geometric_bounce_detector(
+    ball_track: list,
+    homography_matrices: list,
+    min_court_disp: float = 80.0,
+    min_gap: int = 8,
+) -> set:
+    """
+    Perspective-invariant bounce detector using court-space geometry.
+
+    Projects ball positions to court-space via homography and detects
+    frames where the ball's y velocity changes sign (direction reversal = bounce).
+    Works on both near- and far-court equally because court-space coordinates
+    remove the perspective scaling that makes far-court y_diff smaller.
+
+    Args:
+        ball_track:         List of (x, y) tuples or None, one per frame.
+        homography_matrices: Per-frame H_ref matrices (frame → court-space).
+                             None entries use the last valid matrix.
+        min_court_disp:     Minimum total y-displacement (in court units) across
+                             the sign-change window to count as a real bounce.
+                             Prevents noise-triggered false positives.
+        min_gap:            Minimum frames between two accepted bounces.
+
+    Returns:
+        Set of frame indices where a bounce was detected.
+    """
+    n = len(ball_track)
+    if n == 0:
+        return set()
+
+    # Project all ball positions to court-space
+    court_y: list = [None] * n
+    last_H = None
+    for i, pos in enumerate(ball_track):
+        H = homography_matrices[i] if i < len(homography_matrices) else None
+        if H is not None:
+            last_H = H
+        if pos is None or last_H is None:
+            continue
+        bx, by = pos
+        if bx is None or by is None:
+            continue
+        pt = np.array([[[float(bx), float(by)]]], dtype=np.float32)
+        try:
+            mapped = cv2.perspectiveTransform(pt, last_H)
+            court_y[i] = float(mapped[0, 0, 1])
+        except cv2.error:
+            pass
+
+    # Build a list of (frame_idx, court_y_val) for non-None positions only
+    valid = [(i, cy) for i, cy in enumerate(court_y) if cy is not None]
+    if len(valid) < 4:
+        return set()
+
+    # Find sign reversals in the dy sequence over valid frames
+    bounces: set = set()
+    last_accepted = -min_gap
+
+    for j in range(1, len(valid) - 1):
+        i_prev, cy_prev = valid[j - 1]
+        i_curr, cy_curr = valid[j]
+        i_next, cy_next = valid[j + 1]
+
+        dy_before = cy_curr - cy_prev
+        dy_after  = cy_next - cy_curr
+
+        if dy_before == 0 or dy_after == 0:
+            continue
+
+        # Sign reversal: direction of y changed
+        if (dy_before > 0) == (dy_after > 0):
+            continue
+
+        # Require minimum displacement across the local window
+        lo = max(0, j - 3)
+        hi = min(len(valid) - 1, j + 3)
+        y_vals_window = [valid[k][1] for k in range(lo, hi + 1)]
+        disp = max(y_vals_window) - min(y_vals_window)
+        if disp < min_court_disp:
+            continue
+
+        # Enforce minimum gap
+        if i_curr - last_accepted < min_gap:
+            continue
+
+        bounces.add(i_curr)
+        last_accepted = i_curr
+
+    return bounces
+
+
 def _detect_court_once(
     frames: list,
     court_detector,
@@ -632,6 +723,25 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             else:
                 bounces_all = bounce_detector.predict(x_ball_raw, y_ball_raw, smooth=True)
             print(f"[Bounce] detected {len(bounces_all)} bounces (screen-space coords)")
+
+        # ---------- Geometric bounce detector (far-court supplement) ----------
+        # CatBoost operates in pixel-space and underdetects far-court bounces because
+        # the y_diff features are ~3x smaller there due to perspective foreshortening.
+        # The geometric detector projects to court-space (perspective-invariant) and
+        # catches those missed sign reversals.
+        if calibrated_H_ref is not None:
+            _H_for_geo = [calibrated_H_ref] * total_frames
+            geo_bounces = _geometric_bounce_detector(
+                ball_track,
+                _H_for_geo,
+                min_court_disp=80.0,
+                min_gap=8,
+            )
+            new_geo = geo_bounces - bounces_all
+            if new_geo:
+                print(f"[Bounce] geometric detector added {len(new_geo)} far-court bounces: {sorted(new_geo)[:10]}")
+            bounces_all = bounces_all | geo_bounces
+            print(f"[Bounce] total after geometric union: {len(bounces_all)}")
 
         shot_frames = detect_shot_frames(ball_track)
         shot_frames_set = set(shot_frames)
