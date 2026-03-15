@@ -57,9 +57,9 @@ def _far_player_score(bbox, near_id, tid) -> float:
 
 
 # Court-space Y range for a valid far player.
-# Far side: between far baseline (561) and net (1748), with 100-unit margin each side.
+# Far side: between far baseline (561) and net (1748).
 _FAR_COURT_Y_MIN = _COURT_TOP_Y - 100    # 461
-_FAR_COURT_Y_MAX = _COURT_NET_Y + 100    # 1848  (slight overlap over net handles mid-court)
+_FAR_COURT_Y_MAX = _COURT_NET_Y + 30     # 1778  (small margin for net players; avoid near-side false positives)
 
 
 def _far_player_score_with_H(bbox, near_id: int, tid: int, H_ref) -> float:
@@ -178,12 +178,12 @@ class PlayerTracker:
             The near player has a large, stable bbox and a reliable court-space
             projection — voting on track_id works well.
 
-        Far player: found PER FRAME using image-space bounds.
+        Far player: found PER FRAME using court-space projection (falls back to image-space if H_ref is None).
             YOLO track IDs for the small, distant far player fragment constantly
             (a new ID every few frames is normal). Locking onto any specific ID
             will miss the player in most frames. Instead, every frame we pick the
             single best qualifying detection — the largest bbox that passes the
-            image-space bounds and isn't the near player. No ID locking.
+            court-space projection and isn't the near player. No ID locking.
         """
         # --- Step 1: Find near player by track_id vote ---
         near_votes: dict[int, int] = {}
@@ -220,7 +220,7 @@ class PlayerTracker:
             if near_id is not None and near_id in frame:
                 new_frame[near_id] = frame[near_id]
 
-            # Pick best far-court candidate using court-space projection.
+            # Far player: per-frame best candidate by court-space projection + largest bbox area.
             # _far_player_score_with_H falls back to image-space if H_ref is None.
             best_tid, best_score = None, 0.0
             for tid, bbox in frame.items():
