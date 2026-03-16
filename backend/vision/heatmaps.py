@@ -189,7 +189,5 @@ def _save_heatmap_png(path, image, label):
 
     image = cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
     success = cv2.imwrite(path, image)
-    if success and os.path.exists(path):
-        print(f"[Heatmap] {label} heatmap saved: {path}")
-    else:
+    if not success:
         print(f"[Heatmap] ERROR saving {label} heatmap: {path}")

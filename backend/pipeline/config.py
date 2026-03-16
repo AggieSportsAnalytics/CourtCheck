@@ -30,7 +30,7 @@ class PipelineConfig:
     # YOLO inference resolution. Must match or exceed input video resolution for small object
     # detection. At imgsz=640 (default), far players at ~25-35px become ~12-18px at inference
     # — below YOLO's detection floor. imgsz=1280 preserves full 720p detail.
-    player_imgsz: int = 960
+    player_imgsz: int = 1280  # DEBUG: back to 1280 to maximize far player detection
 
     # ========== Detection Settings ==========
     # Number of frames at pipeline startup to try court detection on.
@@ -41,13 +41,17 @@ class PipelineConfig:
     # Legacy — retained for backwards compatibility but no longer used by the pipeline.
     court_detection_interval: int = 5
 
+    # YOLO detection confidence threshold. Lower = more detections (catches small
+    # far players) at the cost of more false positives filtered downstream.
+    player_conf: float = 0.05
+
     # Run YOLO player detection every Nth frame; interpolate bboxes between.
     # 1 = every frame (original behaviour). 3 = detect every 3rd frame (~3x speedup).
-    player_detection_interval: int = 3
+    player_detection_interval: int = 1  # DEBUG: every frame
 
     # Run ball detection every Nth frame; use previous result for skipped frames.
     # 1 = every frame. 2 = detect every 2nd frame (~2x throughput on TrackNet).
-    ball_detection_interval: int = 2
+    ball_detection_interval: int = 1
 
     # Far player detection thresholds (court-space projection, calibration required).
     # x_margin: how far beyond the court sideline (in court units) a foot projection

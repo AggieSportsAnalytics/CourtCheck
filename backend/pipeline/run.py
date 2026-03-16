@@ -26,20 +26,15 @@ def ensure_720p(input_path, intermediate_path, target_width=1280, target_height=
     cap.release()
 
     print(f"Original input: {width}x{height}, fps={fps:.2f}")
-    if (width == target_width) and (height == target_height) and fps <= 30:
+    if (width == target_width) and (height == target_height):
         print(f"Video is already {target_width}x{target_height} @ {fps:.0f}fps; using input directly.")
         return input_path
 
-    if fps > 30:
-        print(f"Resizing from ({width}x{height} @ {fps:.0f}fps) to ({target_width}x{target_height} @ 30fps) -> {intermediate_path}")
-    else:
-        print(f"Resizing from ({width}x{height}) to ({target_width}x{target_height}) -> {intermediate_path}")
+    print(f"Resizing from ({width}x{height} @ {fps:.0f}fps) to ({target_width}x{target_height} @ {fps:.0f}fps) -> {intermediate_path}")
     scale_filter = f"scale={target_width}:{target_height}"
 
     def _run(codec):
         cmd = ["ffmpeg", "-y", "-i", input_path, "-vf", scale_filter]
-        if fps > 30:
-            cmd += ["-r", "30"]
         cmd += ["-c:v", codec, "-preset", "fast", "-c:a", "copy", intermediate_path]
         result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return result.returncode == 0
@@ -142,6 +137,40 @@ def _interpolate_player_detections(detections: list[dict]) -> list[dict]:
             _last_frame = result[i]
         elif _last_frame:
             result[i] = dict(_last_frame)
+
+    return result
+
+
+def _interpolate_ball_track(ball_track: list, max_gap: int = 3) -> list:
+    """
+    Fill None entries in ball_track by linear interpolation between nearby
+    detected positions. Only gaps of <= max_gap frames are filled; longer gaps
+    stay as None so the bounce detector sees the ball as genuinely absent
+    (between serves, player holding ball, etc.).
+
+    max_gap=3 covers ball_detection_interval=2 skips (gap of 1) and normal
+    short tracker misses (2-3 frames), without synthesizing trajectories across
+    long ball-absent stretches that would create false bounce inflections.
+    """
+    n = len(ball_track)
+    result = list(ball_track)
+
+    anchors = [
+        i for i, p in enumerate(ball_track)
+        if p is not None and p[0] is not None and p[1] is not None
+    ]
+    if not anchors:
+        return result
+
+    for a_idx in range(len(anchors) - 1):
+        start, end = anchors[a_idx], anchors[a_idx + 1]
+        if end - start <= 1 or end - start > max_gap + 1:
+            continue
+        x0, y0 = result[start]
+        x1, y1 = result[end]
+        for frame_i in range(start + 1, end):
+            t = (frame_i - start) / (end - start)
+            result[frame_i] = (x0 + t * (x1 - x0), y0 + t * (y1 - y0))
 
     return result
 
@@ -417,7 +446,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
     """
     Main pipeline entry point (Modal-compatible).
     """
-    print("[PIPELINE v2 — stats-enabled] run_pipeline called")
+    print(f"[Pipeline] Starting — match_id={match_id[:8]}")
     try:
         if config is None:
             config = PipelineConfig()
@@ -445,24 +474,20 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         WEIGHTS_DIR = os.path.join(BASE_DIR, "weights")
 
-        print("ball detection")
         ball_detector = BallDetector(
             path_model=os.path.join(WEIGHTS_DIR, "tracknet_weights.pt"),
             device=device,
         )
 
-        print("court detection")
         # Lazy-load: only needed when calibration is absent
         court_detector = None
 
-        print("player tracking")
         player_model_path = os.path.join(WEIGHTS_DIR, config.player_model)
         if not os.path.exists(player_model_path):
             # Not in weights dir — pass name directly so ultralytics auto-downloads
             player_model_path = config.player_model
-        player_tracker = PlayerTracker(model_path=player_model_path, device=device, imgsz=config.player_imgsz)
+        player_tracker = PlayerTracker(model_path=player_model_path, device=device, imgsz=config.player_imgsz, conf=config.player_conf)
 
-        print("bounce detection")
         bounce_detector = BounceDetector(
             os.path.join(WEIGHTS_DIR, "bounce_detection_weights.cbm")
         )
@@ -473,7 +498,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         if os.path.exists(legacy_stroke_path):
             try:
                 stroke_model = ActionRecognition(model_saved_state=legacy_stroke_path)
-                print("stroke recognition (legacy LSTM)")
             except Exception as e:
                 print(f"Legacy stroke model load failed: {e}")
 
@@ -489,6 +513,9 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             velocity_threshold=config.swing_velocity_threshold,
             ball_proximity=config.swing_ball_proximity,
         )
+
+        stroke_mode = 'tcn' if tcn_weights_path else 'rule-based'
+        print(f"[Pipeline] Models: ball=tracknet, player={config.player_model.replace('.pt','')}@{config.player_imgsz}, bounce=catboost, stroke={stroke_mode}")
 
         homography_estimator = HomographyEstimator()
         court_ref = CourtReference()
@@ -512,12 +539,12 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             if cal_H_ref is not None:
                 calibrated_H_ref = cal_H_ref
                 calibrated_keypoints = cal_kps
-                print(f"[Pipeline] Using saved calibration for camera '{config.camera_id}' — skipping per-frame court detection")
+                print(f"[Pipeline] Calibration: {config.camera_id} loaded")
 
         # If no calibration was loaded, detect the court once on the first N frames.
         # This replaces per-frame detection in Pass 2 — the camera is fixed.
         if calibrated_H_ref is None:
-            print(f"[Pipeline] No calibration — detecting court on first {config.court_detection_startup_frames} frames")
+            print(f"[Pipeline] No calibration — running court detection on first {config.court_detection_startup_frames} frames")
             court_detector = CourtLineDetector(
                 model_path=os.path.join(WEIGHTS_DIR, "keypoints_model.pth"),
                 device=device,
@@ -555,7 +582,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             if i % config.ball_detection_interval == 0:
                 ball_pos = ball_detector.infer_single(frame)
             else:
-                ball_pos = ball_track[-1] if ball_track else (None, None)
+                ball_pos = None  # filled by _interpolate_ball_track after loop
             ball_track.append(ball_pos)
 
             if i % config.player_detection_interval == 0:
@@ -570,6 +597,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
 
         # Fill gaps between detection frames using linear bbox interpolation
         player_detections = _interpolate_player_detections(player_detections)
+        ball_track_raw = list(ball_track)          # raw detections — used for bounce detection
+        ball_track = _interpolate_ball_track(ball_track)  # smoothed — used for drawing
         # Pose keypoints: forward-fill, then backward-fill to cover frames before first detection
         _last_kps: dict = {}
         for i, kd in enumerate(pose_keypoints_per_frame):
@@ -594,6 +623,13 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         if H_ref_for_filter is None:
             print("[Pipeline] WARNING: No homography available — player filtering skipped. Load a calibration file.")
 
+        # Keep raw detections for visualization — draw ALL YOLO detections, not just filtered 2 players
+        player_detections_raw = [dict(d) for d in player_detections]
+
+        # DEBUG: log all raw track IDs before filtering
+        all_raw_tids = {tid for frame in player_detections for tid in frame}
+        print(f"[Player DEBUG] Raw YOLO IDs across all frames: {sorted(all_raw_tids)} ({len(all_raw_tids)} unique)")
+
         if H_ref_for_filter is not None and len(player_detections) > 0:
             player_detections, pose_keypoints_per_frame = player_tracker.choose_and_filter_players(
                 H_ref_for_filter,
@@ -611,13 +647,14 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
 
         bounces_all = set()
         if bounce_detector.model is not None:
-            # Feed screen-space pixel coordinates — the CatBoost model was trained on these.
-            # Court-space projection changes the y_diff scale (~10x) and breaks detection.
-            x_ball_raw = [float(p[0]) if p and p[0] is not None else None for p in ball_track]
-            y_ball_raw = [float(p[1]) if p and p[1] is not None else None for p in ball_track]
+            # Feed the RAW (pre-interpolation) ball track to the bounce detector.
+            # smooth_predictions inside the bounce detector handles gap-filling itself.
+            # Pre-interpolating before this call double-processes gaps and creates synthetic
+            # trajectory points that mimic bounce direction reversals.
+            x_ball_raw = [float(p[0]) if p and p[0] is not None else None for p in ball_track_raw]
+            y_ball_raw = [float(p[1]) if p and p[1] is not None else None for p in ball_track_raw]
 
             non_none_raw = sum(1 for x in x_ball_raw if x is not None)
-            print(f"[Bounce] total frames={len(x_ball_raw)}, non-None ball positions={non_none_raw}, fps={fps:.2f}")
 
             # Sub-sample to ~30fps if video is higher frame rate
             TARGET_FPS = 30.0
@@ -627,13 +664,11 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 sample_indices = [min(i, len(ball_track) - 1) for i in sample_indices]
                 x_sub = [x_ball_raw[i] for i in sample_indices]
                 y_sub = [y_ball_raw[i] for i in sample_indices]
-                non_none_sub = sum(1 for x in x_sub if x is not None)
-                print(f"[Bounce] subsampling: step={step:.2f}, sub frames={len(x_sub)}, non-None sub={non_none_sub}")
                 bounces_sub = bounce_detector.predict(x_sub, y_sub, smooth=True)
                 bounces_all = {sample_indices[b] for b in bounces_sub if b < len(sample_indices)}
             else:
                 bounces_all = bounce_detector.predict(x_ball_raw, y_ball_raw, smooth=True)
-            print(f"[Bounce] detected {len(bounces_all)} bounces (screen-space coords)")
+            print(f"[Bounce] {len(bounces_all)} bounces | ball tracked: {non_none_raw}/{len(x_ball_raw)} frames")
 
         shot_frames = detect_shot_frames(ball_track)
         shot_frames_set = set(shot_frames)
@@ -645,13 +680,11 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         frame_stroke_labels: dict[int, dict[int, str]] = {}
         swing_events = []
         if config.enable_stroke_recognition:
-            print("Detecting swings from pose keypoints...")
             swing_events = swing_detector.detect(
                 pose_keypoints_per_frame=pose_keypoints_per_frame,
                 ball_track=ball_track,
                 player_detections=player_detections,
             )
-            print(f"  {len(swing_events)} swing events detected")
             # frame_stroke_labels: {frame_idx: {track_id: label}}
             # Populated for the 30 frames after each swing peak so Pass 2 can draw it.
             frame_stroke_labels: dict[int, dict[int, str]] = {}
@@ -668,6 +701,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 display_end = min(total_frames - 1, event["peak_frame"] + 30)
                 for f in range(event["peak_frame"], display_end + 1):
                     frame_stroke_labels.setdefault(f, {})[event["track_id"]] = label
+            print(f"[Stroke] {len(swing_events)} swings → FH={pose_stroke_counts.get('Forehand',0)} BH={pose_stroke_counts.get('Backhand',0)} Srv={pose_stroke_counts.get('Serve/Overhead',0)}")
 
         update_progress(0.5)
 
@@ -696,7 +730,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             homography_matrices = [calibrated_H_ref] * total_frames
             last_H_ref = calibrated_H_ref
             last_kps = calibrated_keypoints  # use saved keypoints to draw court lines
-            print(f"[Pipeline] Homography matrices pre-filled from calibration")
 
         # Pre-compute static minimap background once — court reference never changes
         _minimap_raw = court_ref.build_court_reference()
@@ -718,9 +751,9 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                                      base_color=config.ball_trace_color)
             output = draw_court_keypoints_and_lines(output, kps)
 
-            if frame_idx < len(player_detections):
-                output = draw_player_bboxes(output, player_detections[frame_idx],
-                                            color=config.player_bbox_color)
+            if frame_idx < len(player_detections_raw):
+                # Draw ALL raw YOLO detections (unfiltered) — each track gets a unique color
+                output = draw_player_bboxes(output, player_detections_raw[frame_idx])
                 output = draw_stroke_labels(output, player_detections[frame_idx],
                                             frame_stroke_labels, frame_idx)
 
@@ -835,7 +868,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         local_shot_map_path = None
 
         if config.generate_heatmaps:
-            print("Generating heatmaps...")
             heatmap_dir = f"/tmp/{match_id}_heatmaps"
             local_bounce_path = os.path.join(heatmap_dir, "bounce_heatmap.png")
             local_player_path = os.path.join(heatmap_dir, "player_heatmap.png")
@@ -861,10 +893,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 output_path=local_shot_map_path,
             )
 
-            if local_mode:
-                print(f"   Bounce heatmap: {local_bounce_path}")
-                print(f"   Player heatmap: {local_player_path}")
-                print(f"   Player shot map: {local_shot_map_path}")
+            saved = [n for n, p in [("bounce", local_bounce_path), ("player", local_player_path), ("shot_map", local_shot_map_path)] if p and os.path.exists(p)]
+            print(f"[Heatmap] Saved: {', '.join(saved)}")
 
         # ---------- Make streamable + upload ----------
         streamable_output = make_streamable_mp4(local_output_path)
@@ -909,16 +939,11 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             if player_shot_map_path:
                 try:
                     supabase.table("matches").update({"player_shot_map_path": player_shot_map_path}).eq("id", match_id).execute()
-                except Exception as e:
-                    print(f"[STATS] Skipping player_shot_map_path (column may not exist yet): {e}")
-
-            print(f"\n[STATS] Saving to DB — match_id={match_id}")
-            print(f"[STATS]   bounces={len(bounces_all)}  shots={len(shot_frames)}  rallies={rally_count}")
-            print(f"[STATS]   in_bounds={in_bounds_bounces}  out_bounds={out_bounds_bounces}")
-            print(f"[STATS]   FH={final_forehand}  BH={final_backhand}  Srv={final_serve}  (pose swings={len(swing_events)})")
+                except Exception:
+                    pass  # column not yet migrated
 
             supabase.table("matches").update(update_data).eq("id", match_id).execute()
-            print(f"[STATS] DB update successful — status=done")
+            print(f"[Pipeline] Done — bounces={len(bounces_all)} shots={len(shot_frames)} rallies={rally_count} | in={in_bounds_bounces} out={out_bounds_bounces} | FH={final_forehand} BH={final_backhand} Srv={final_serve}")
         else:
             print(f"\n✅ Local processing complete!")
             print(f"   Output: {streamable_output}")

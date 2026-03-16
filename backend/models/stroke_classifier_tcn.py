@@ -114,9 +114,7 @@ class PoseStrokeClassifier:
 
         if not self._weights_available:
             print(
-                "[StrokeClassifier] TCN weights not found — using rule-based fallback.\n"
-                "  Set config.stroke_classifier_weights_tcn to enable the TCN model.\n"
-                "  Train with: python -m backend.tools.train_tcn --help"
+                "[Stroke] TCN weights absent — using rule-based fallback"
             )
 
     def _try_load(self, path: str) -> None:

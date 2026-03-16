@@ -76,24 +76,16 @@ class BounceDetector:
         return features, list(labels["frame"])
 
     def predict(self, x_ball, y_ball, smooth=True):
-        non_none = sum(1 for x in x_ball if x is not None)
-        print(f"[BounceDetector] input frames={len(x_ball)}, non-None ball positions={non_none}")
-
         if smooth:
             x_ball, y_ball = self.smooth_predictions(x_ball, y_ball)
-            non_none_post = sum(1 for x in x_ball if x is not None)
-            print(f"[BounceDetector] after smoothing: non-None ball positions={non_none_post}")
 
         features, num_frames = self.prepare_features(x_ball, y_ball)
-        print(f"[BounceDetector] features shape after prepare_features: {features.shape}")
 
         if features.empty:
             print("[BounceDetector] WARNING: features DataFrame is empty — no bounces can be detected")
             return set()
 
         preds = self.model.predict(features)
-        max_pred = float(np.max(preds)) if len(preds) > 0 else 0.0
-        print(f"[BounceDetector] predictions: count={len(preds)}, max={max_pred:.4f}, threshold={self.threshold}")
 
         ind_bounce = np.where(preds > self.threshold)[0]
         if len(ind_bounce) > 0:
@@ -106,13 +98,13 @@ class BounceDetector:
         x_ball = list(x_ball)
         y_ball = list(y_ball)
         is_none = [int(x is None) for x in x_ball]
-        interp = 3   # need 3 good frames before extrapolating (was 5)
+        interp = 5
         counter = 0
         for num in range(interp, len(x_ball) - 1):
             if (
                 x_ball[num] is None
                 and sum(is_none[num - interp : num]) == 0
-                and counter < 5   # fill up to 5 consecutive gaps (was 3)
+                and counter < 3
             ):
                 x_ext, y_ext = self.extrapolate(
                     x_ball[num - interp : num], y_ball[num - interp : num]

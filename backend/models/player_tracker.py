@@ -16,6 +16,7 @@ def _project_foot(bbox, H_ref):
 
 _FAR_MIN_HEIGHT = 20   # absolute minimum — smaller than this isn't a person
 _FAR_MIN_WIDTH  = 15
+_far_filter_logged: set[int] = set()  # tids already logged — cap noise to 1 line per tid
 
 
 def _far_player_score(bbox, near_id: int, tid: int, H_ref: np.ndarray, court_bounds: dict, x_margin: float = 500, max_height: int = 400) -> float:
@@ -50,17 +51,25 @@ def _far_player_score(bbox, near_id: int, tid: int, H_ref: np.ndarray, court_bou
 
     court_x, court_y = result
 
-    if not (court_bounds['left_x'] - x_margin <= court_x <= court_bounds['right_x'] + x_margin):
-        return 0.0
+    x_ok = court_bounds['left_x'] - x_margin <= court_x <= court_bounds['right_x'] + x_margin
+    y_ok = court_bounds['far_y_min'] <= court_y <= court_bounds['far_y_max']
 
-    if not (court_bounds['far_y_min'] <= court_y <= court_bounds['far_y_max']):
+    if not (x_ok and y_ok):
+        if tid not in _far_filter_logged:
+            _far_filter_logged.add(tid)
+            print(
+                f"[FAR FILTER] tid={tid} court=({court_x:.0f},{court_y:.0f}) "
+                f"x_ok={x_ok} y_ok={y_ok} "
+                f"x_range=[{court_bounds['left_x']-x_margin:.0f},{court_bounds['right_x']+x_margin:.0f}] "
+                f"y_range=[{court_bounds['far_y_min']:.0f},{court_bounds['far_y_max']:.0f}]"
+            )
         return 0.0
 
     return w * h
 
 
 class PlayerTracker:
-    def __init__(self, model_path='yolov8m-pose.pt', device='cuda', imgsz: int = 1280):
+    def __init__(self, model_path='yolov8m-pose.pt', device='cuda', imgsz: int = 1280, conf: float = 0.05):
         """
         Initialize player tracker with a YOLOv8-Pose model.
 
@@ -72,12 +81,14 @@ class PlayerTracker:
             device: 'cuda' or 'cpu'
             imgsz: YOLO inference resolution. Should match input video resolution
                    to avoid downscaling small far-player detections below threshold.
+            conf: Detection confidence threshold. Lower values surface more
+                  candidates (needed for small far-court players).
         """
         self.model = YOLO(model_path)
         self.imgsz = imgsz
+        self.conf = conf
         if device == 'cuda':
             self.model.to(device)
-        print(f"PlayerTracker initialized with model: {model_path} on {device}, imgsz={imgsz}")
 
     def detect_frame(self, frame) -> tuple[dict, dict]:
         """
@@ -92,7 +103,7 @@ class PlayerTracker:
                             columns are (x, y, confidence)
                             or None if the model did not return keypoints.
         """
-        results = self.model.track(frame, persist=True, verbose=False, conf=0.10, iou=0.45, half=True, imgsz=self.imgsz)[0]
+        results = self.model.track(frame, persist=True, verbose=False, conf=self.conf, iou=0.45, half=True, imgsz=self.imgsz)[0]
         id_name_dict = results.names
 
         player_dict: dict[int, list] = {}
@@ -177,10 +188,10 @@ class PlayerTracker:
 
         near_id = max(near_votes, key=near_votes.__getitem__) if near_votes else None
 
-        if near_id:
-            print(f"[PlayerTracker] Near player: track_id={near_id} ({near_votes[near_id]} frames)")
-        else:
-            print("[PlayerTracker] Near player: not found")
+        all_tids = {tid for frame in player_detections for tid in frame}
+        print(f"[Player] IDs seen: {len(all_tids)} unique {sorted(all_tids)[:10]}")
+
+        near_info = f"near={near_id} ({near_votes[near_id]} frames)" if near_id else "near=none"
 
         # --- Step 2: Filter frames ---
         # Near player: strict track_id match.
@@ -188,6 +199,7 @@ class PlayerTracker:
         #   No track_id locking — far player ID is too fragmented to be reliable.
         filtered_players: list[dict] = []
         far_count = 0
+        far_tid_votes: dict[int, int] = {}
 
         for frame in player_detections:
             new_frame: dict[int, list] = {}
@@ -207,10 +219,13 @@ class PlayerTracker:
             if best_tid is not None:
                 new_frame[best_tid] = frame[best_tid]
                 far_count += 1
+                far_tid_votes[best_tid] = far_tid_votes.get(best_tid, 0) + 1
 
             filtered_players.append(new_frame)
 
-        print(f"[PlayerTracker] Far player: detected in {far_count}/{len(player_detections)} frames (position-based, no ID lock)")
+        best_tid_overall = max(far_tid_votes, key=far_tid_votes.__getitem__) if far_tid_votes else None
+        far_info = f"far={best_tid_overall if far_count > 0 else 'none'} ({far_count}/{len(player_detections)} frames)"
+        print(f"[Player] {near_info} | {far_info}")
 
         # --- Step 3: Build filtered pose list ---
         if pose_keypoints_per_frame is None:
