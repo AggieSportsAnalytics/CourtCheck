@@ -443,9 +443,9 @@ def generate_scouting_report(stats: dict, fps: float, num_frames: int, spatial_s
 
 
 _OPPONENT_COURT_MAP = {
-    "2": "stmarys_court2",
-    "4": "stmarys_court4",
-    "6": "stmarys_court6",
+    "2": "uc_davis_court2",
+    "4": "uc_davis_court4",
+    "6": "uc_davis_court6",
 }
 
 
