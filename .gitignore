@@ -25,13 +25,16 @@ venv/
 *.cbm
 
 # Media and local data
+data/
 input_videos/
 backend/output_videos/
 backend/runs/
 backend/tracker_stubs/
 backend/analysis/
 backend/training/
+backend/calibration_frames/videos/
 *.mp4
+*.mov
 
 # Node / frontend artifacts
 **/node_modules/
