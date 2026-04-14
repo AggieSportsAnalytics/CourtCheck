@@ -442,6 +442,27 @@ def generate_scouting_report(stats: dict, fps: float, num_frames: int, spatial_s
         return None
 
 
+_OPPONENT_COURT_MAP = {
+    "2": "stmarys_court2",
+    "4": "stmarys_court4",
+    "6": "stmarys_court6",
+}
+
+
+def _resolve_camera_id(video_path: str) -> Optional[str]:
+    """
+    Infer camera_id from the video filename.
+    Matches filenames containing 'Court' followed by a court number (e.g. StMarys_Court2.mp4).
+    Returns None if no match — pipeline falls back to per-frame court detection.
+    """
+    import re
+    stem = Path(video_path).stem
+    match = re.search(r'[Cc]ourt(\d+)', stem)
+    if match:
+        return _OPPONENT_COURT_MAP.get(match.group(1))
+    return None
+
+
 def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, config: PipelineConfig = None):
     """
     Main pipeline entry point (Modal-compatible).
@@ -450,6 +471,15 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
     try:
         if config is None:
             config = PipelineConfig()
+
+        # Auto-resolve camera_id from filename unless explicitly set by caller
+        if config.camera_id == PipelineConfig.camera_id:
+            resolved = _resolve_camera_id(video_path)
+            config.camera_id = resolved
+            if resolved:
+                print(f"[Pipeline] Camera ID resolved from filename: {resolved}")
+            else:
+                print(f"[Pipeline] No Court# match in filename — using per-frame court detection")
 
         device = config.device
 
