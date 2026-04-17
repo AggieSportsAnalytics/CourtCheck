@@ -32,12 +32,12 @@ from backend.tools._swing_io import (
     get_supabase_client,
 )
 
-LABELS = ["forehand", "backhand", "serve", "slice", "unclear", "skip"]
+LABELS = ["forehand", "backhand", "serve", "volley", "unclear", "skip"]
 LABEL_ICONS = {
     "forehand": "🟢",
     "backhand": "🔵",
     "serve": "🔴",
-    "slice": "🟡",
+    "volley": "🟠",
     "unclear": "⚪",
     "skip": "⏭️",
 }
@@ -96,12 +96,12 @@ def main() -> None:
     with st.sidebar:
         st.title("Progress")
         total = len(df)
-        labeled = df["label"].isin(["forehand", "backhand", "serve", "slice", "unclear"]).sum()
+        labeled = df["label"].isin(["forehand", "backhand", "serve", "volley", "unclear"]).sum()
         st.metric("Labeled", f"{labeled} / {total}")
         st.progress(int(labeled) / total if total else 0)
         st.divider()
         st.write("**Per-class counts**")
-        for label in ["forehand", "backhand", "serve", "slice"]:
+        for label in ["forehand", "backhand", "serve", "volley"]:
             count = (df["label"] == label).sum()
             st.write(f"{LABEL_ICONS[label]} {label.capitalize()}: {count}")
         st.divider()
@@ -127,13 +127,23 @@ def main() -> None:
         f"Wrist velocity: {row['wrist_velocity']} px/fr"
     )
 
-    # Video player
+    # Video player — HTML embed is more reliable than st.video() with external URLs
     try:
         url = _signed_url(str(row.get("supabase_path", "")).strip())
         if url is None:
             st.warning(f"No supabase_path for clip `{row['clip_id']}` — skipping")
         else:
-            st.video(url, loop=True, autoplay=True)
+            st.components.v1.html(
+                f"""
+                <video
+                    src="{url}"
+                    autoplay loop muted playsinline
+                    style="width:100%; max-height:480px; background:#000;"
+                    controls
+                ></video>
+                """,
+                height=500,
+            )
     except Exception as e:
         st.error(f"Could not load clip `{row['clip_id']}`: {e}")
 

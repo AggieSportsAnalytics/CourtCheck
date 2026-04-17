@@ -48,14 +48,35 @@ def _pick_device() -> str:
 
 
 def _extract_clip(cap: cv2.VideoCapture, out_path: Path, start: int, end: int, fps: float, size: tuple) -> bool:
+    """Write clip as H.264 MP4 (browser-compatible).
+
+    OpenCV writes to a temp mp4v file first, then ffmpeg transcodes to H.264.
+    mp4v is the only codec OpenCV reliably writes on macOS; ffmpeg handles the
+    final encode so browsers can play it.
+    """
+    import subprocess
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp:
+        tmp_path = Path(tmp.name)
+
     cap.set(cv2.CAP_PROP_POS_FRAMES, start)
-    writer = cv2.VideoWriter(str(out_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, size)
+    writer = cv2.VideoWriter(str(tmp_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, size)
     for _ in range(end - start + 1):
         ret, frame = cap.read()
         if not ret:
             break
         writer.write(frame)
     writer.release()
+
+    # Transcode to H.264 so browsers can play it
+    subprocess.run([
+        "ffmpeg", "-y", "-i", str(tmp_path),
+        "-vcodec", "libx264", "-crf", "23", "-preset", "fast",
+        "-movflags", "+faststart",
+        str(out_path),
+    ], capture_output=True)
+    tmp_path.unlink(missing_ok=True)
     return out_path.exists() and out_path.stat().st_size > 0
 
 
