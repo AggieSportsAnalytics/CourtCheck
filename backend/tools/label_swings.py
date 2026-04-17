@@ -77,8 +77,19 @@ def main() -> None:
     st.set_page_config(page_title="CourtCheck Annotation", layout="wide")
     args = _parse_args()
 
+    # Annotator name — CLI arg takes precedence, otherwise prompt in sidebar
+    with st.sidebar:
+        st.title("CourtCheck")
+        if args.annotator != "unknown":
+            annotator = args.annotator
+            st.caption(f"Annotator: **{annotator}**")
+        else:
+            annotator = st.text_input("Your name", placeholder="e.g. kenny").strip().lower()
+            if not annotator:
+                st.warning("Enter your name to start.")
+                st.stop()
+
     # Fetch all rows every rerun so sidebar stats stay current across annotators.
-    # With 8 000 rows this takes ~1-2 s — acceptable between label clicks.
     with st.spinner("Loading queue…"):
         df = db_get_all(client=_supabase())
 
@@ -94,7 +105,8 @@ def main() -> None:
 
     # Sidebar — progress and class counts
     with st.sidebar:
-        st.title("Progress")
+        st.divider()
+        st.write("**Progress**")
         total = len(df)
         labeled = df["label"].isin(["forehand", "backhand", "serve", "volley", "unclear"]).sum()
         st.metric("Labeled", f"{labeled} / {total}")
@@ -105,7 +117,7 @@ def main() -> None:
             count = (df["label"] == label).sum()
             st.write(f"{LABEL_ICONS[label]} {label.capitalize()}: {count}")
         st.divider()
-        st.caption(f"Annotator: **{args.annotator}**")
+        st.caption(f"Annotator: **{annotator}**")
 
     if queue.empty:
         st.success(f"All {total} clips labeled!")
@@ -153,7 +165,7 @@ def main() -> None:
     for col, label in zip(cols, LABELS):
         icon = LABEL_ICONS[label]
         if col.button(f"{icon} {label.capitalize()}", use_container_width=True, key=label):
-            db_save_label(row["clip_id"], label, args.annotator, client=_supabase())
+            db_save_label(row["clip_id"], label, annotator, client=_supabase())
             st.session_state.idx += 1
             st.rerun()
 

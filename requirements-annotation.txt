@@ -1,0 +1,5 @@
+# Annotation app dependencies (Streamlit Community Cloud + local)
+streamlit>=1.32
+pandas>=2.0
+supabase>=2.0
+python-dotenv>=1.0
