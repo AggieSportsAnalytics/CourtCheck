@@ -10,11 +10,12 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]['key'];
 
+// Colors match STROKE_COLORS_BGR in backend/vision/drawing.py (converted BGR -> RGB)
 const STROKE_LEGEND = [
-  { label: 'Forehand',  color: 'rgb(80,220,80)' },
-  { label: 'Backhand',  color: 'rgb(80,100,220)' },
-  { label: 'Serve',     color: 'rgb(255,210,0)' },
-  { label: 'Slice',     color: 'rgb(160,60,220)' },
+  { label: 'Forehand',       color: 'rgb(80,220,0)' },
+  { label: 'Backhand',       color: 'rgb(0,100,220)' },
+  { label: 'Serve/Overhead', color: 'rgb(255,210,0)' },
+  { label: 'Slice',          color: 'rgb(220,60,160)' },
 ] as const;
 
 interface HeatmapData {
