@@ -56,3 +56,13 @@ pnpm-debug.log*
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Local-only docs — handoffs, PRDs, upgrade plans, internal session notes.
+# Kept on disk for reference but not pushed to GitHub.
+HANDOFF*.md
+PRD*.md
+upgrade-plan*.md
+docs/HANDOFF*.md
+docs/PRD*.md
+docs/upgrade-plan*.md
+docs/superpowers/
