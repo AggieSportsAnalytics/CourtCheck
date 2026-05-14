@@ -40,11 +40,14 @@ export async function GET(
     const { id } = await params;
 
     const FULL_COLS = "id, name, status, progress, processing_stage, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, player_shot_map_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, scouting_report, player_id, keypoints, notes, shots, coverage_grid, position_summary, net_approach_summary, error_summary, rallies, rally_summary";
-    // Pre-migration safety: if a column the API references hasn't been added to
-    // matches yet, Postgres returns "column does not exist" and the whole row
-    // 404s. Retry once without the optional columns so existing recordings
-    // stay viewable until the migration runs.
-    const OPTIONAL_COLS = [
+    // Pre-migration safety: if a column the API references hasn't been added
+    // to `matches` yet, Postgres returns "column matches.<name> does not
+    // exist". Retry up to N times, each time stripping ONLY the column named
+    // in the error so previously-migrated optional columns keep flowing.
+    // Earlier versions stripped a hard-coded OPTIONAL_COLS list on the first
+    // miss, which silently nulled out summaries the UI depended on (errors,
+    // net approach) the moment a newer column landed mid-deploy.
+    const OPTIONAL_COLS = new Set([
       "processing_stage",
       "shots",
       "coverage_grid",
@@ -53,29 +56,41 @@ export async function GET(
       "error_summary",
       "rallies",
       "rally_summary",
-    ];
+    ]);
     let { data, error } = await supabaseAdmin
       .from("matches")
       .select(FULL_COLS)
       .eq("id", id)
       .eq("user_id", user.id)
       .single();
-    if (error && typeof error.message === "string" && error.message.includes("does not exist")) {
-      const safeCols = FULL_COLS.split(", ")
-        .filter((c) => !OPTIONAL_COLS.includes(c))
-        .join(", ");
+    // If a column is missing, retry — but strip ONLY the column named in the
+    // error so previously-migrated optionals (error_summary, etc.) keep
+    // flowing. Earlier versions stripped a hard-coded OPTIONAL_COLS list on
+    // the first miss, which silently nulled out summaries the UI depended on
+    // the moment a newer column landed mid-deploy.
+    let activeCols = FULL_COLS.split(", ");
+    let attempt = 0;
+    while (error && typeof error.message === "string" && error.message.includes("does not exist") && attempt < OPTIONAL_COLS.size) {
+      const msg = error.message;
+      const match =
+        msg.match(/column [^.\s]+\.(\w+)/i) ||
+        msg.match(/column ['"`]?(\w+)['"`]?/i) ||
+        msg.match(/'([a-z_][\w]*)' column/i);
+      const missing = match?.[1];
+      if (!missing || !OPTIONAL_COLS.has(missing) || !activeCols.includes(missing)) break;
+      activeCols = activeCols.filter((c) => c !== missing);
       const retry = await supabaseAdmin
         .from("matches")
-        .select(safeCols)
+        .select(activeCols.join(", "))
         .eq("id", id)
         .eq("user_id", user.id)
         .single();
-      // safeCols is a runtime string, so postgrest-js can't infer a precise
-      // row type and falls back to GenericStringError. The runtime shape is
-      // a strict subset of FULL_COLS, so downstream `data.x ?? null` access
-      // is safe.
+      // Dynamic select() string can't be inferred by postgrest-js. Runtime
+      // shape is a strict subset of FULL_COLS, so downstream `data.x ?? null`
+      // accessors stay safe.
       data = retry.data as typeof data;
       error = retry.error;
+      attempt += 1;
     }
 
     if (error || !data) {
