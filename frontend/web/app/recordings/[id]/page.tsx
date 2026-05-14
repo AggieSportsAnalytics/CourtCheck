@@ -15,6 +15,10 @@ import CoachInsights, {
   type NetApproachSummary,
   type ErrorSummary,
 } from '@/components/recordings/CoachInsights';
+import RallyTable, {
+  type Rally,
+  type RallySummary,
+} from '@/components/recordings/RallyTable';
 import EditableName from '@/components/recordings/EditableName';
 
 /**
@@ -74,6 +78,8 @@ type Recording = {
   positionSummary: PositionSummary | null;
   netApproachSummary: NetApproachSummary | null;
   errorSummary: ErrorSummary | null;
+  rallies: Rally[];
+  rallySummary: RallySummary | null;
 };
 
 function fmtTs(sec: number): string {
@@ -402,8 +408,15 @@ export default function RecordingDetailPage() {
       ? Math.max(0, Math.round((recording.shotCount * (100 - inPct)) / 100 / 8))
       : null;
   const avgRally =
-    recording.rallyCount && recording.shotCount
-      ? (recording.shotCount / recording.rallyCount).toFixed(1)
+    recording.rallySummary && recording.rallySummary.total > 0
+      ? recording.rallySummary.avg_length.toFixed(1)
+      : null;
+  const ralliesWonTotal =
+    recording.rallySummary &&
+    recording.rallySummary.p1_wins + recording.rallySummary.p2_wins > 0
+      ? `${recording.rallySummary.p1_wins}/${
+          recording.rallySummary.p1_wins + recording.rallySummary.p2_wins
+        }`
       : null;
 
   return (
@@ -581,12 +594,20 @@ export default function RecordingDetailPage() {
         videoRef={videoRef}
       />
 
+      {/* Rally state-machine output — per-rally breakdown with drill-down. */}
+      <RallyTable
+        rallies={recording.rallies ?? []}
+        videoRef={videoRef}
+        fps={recording.fps}
+      />
+
       {/* Unified court viz card with 3-way mode toggle */}
       <VizPanel
         shots={recording.shots ?? []}
         coverageGrid={recording.coverageGrid ?? []}
         positionSummary={recording.positionSummary}
         recordingStatus={recording.status}
+        videoRef={videoRef}
       />
 
       {/* Shot breakdown (Mix | Accuracy) */}
@@ -601,8 +622,8 @@ export default function RecordingDetailPage() {
         tiles={[
           { label: 'Winners', value: winners ?? '—' },
           { label: 'Unforced errors', value: unforced ?? '—' },
-          { label: 'First serve in', value: inPct ?? '—', unit: inPct !== null ? '%' : undefined },
           { label: 'Avg rally length', value: avgRally ?? '—' },
+          { label: 'Rallies won', value: ralliesWonTotal ?? '—' },
         ]}
       />
     </div>
