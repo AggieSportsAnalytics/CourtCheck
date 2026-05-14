@@ -66,10 +66,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(function Vide
 
   const supportsPip = useMemo(() => {
     if (typeof document === 'undefined') return false;
-    return Boolean(
-      // @ts-expect-error pictureInPictureEnabled isn't in lib.dom for older TS
-      document.pictureInPictureEnabled,
-    );
+    return Boolean(document.pictureInPictureEnabled);
   }, []);
 
   const resetHideTimer = useCallback(() => {
@@ -238,7 +235,6 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(function Vide
         className="w-full h-full cursor-pointer"
         controlsList="nodownload noremoteplayback noplaybackrate"
         disablePictureInPicture={false}
-        // @ts-expect-error vendor attribute — Safari respects this to hide AirPlay
         x-webkit-airplay="deny"
         onClick={togglePlay}
         onPlay={() => setIsPlaying(true)}

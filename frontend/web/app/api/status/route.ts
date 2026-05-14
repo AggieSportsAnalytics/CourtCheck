@@ -61,7 +61,7 @@ export async function GET(req: Request) {
         .eq("id", match_id)
         .eq("user_id", user.id)
         .single();
-      data = retry.data;
+      data = retry.data as typeof data;
       error = retry.error;
     }
 

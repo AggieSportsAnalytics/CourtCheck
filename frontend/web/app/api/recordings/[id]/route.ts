@@ -68,7 +68,11 @@ export async function GET(
         .eq("id", id)
         .eq("user_id", user.id)
         .single();
-      data = retry.data;
+      // safeCols is a runtime string, so postgrest-js can't infer a precise
+      // row type and falls back to GenericStringError. The runtime shape is
+      // a strict subset of FULL_COLS, so downstream `data.x ?? null` access
+      // is safe.
+      data = retry.data as typeof data;
       error = retry.error;
     }
 
