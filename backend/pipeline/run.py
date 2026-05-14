@@ -14,6 +14,11 @@ from backend.vision.postprocess import detect_shot_frames
 
 from backend.pipeline.storage import upload_processed_video, upload_heatmap_png, get_supabase, make_streamable_mp4, upload_results_parallel
 from backend.pipeline.config import PipelineConfig
+from backend.pipeline.rallies import (
+    RALLY_GAP_SECONDS,
+    build_rallies,
+    build_rally_summary,
+)
 
 
 def ensure_720p(input_path, intermediate_path, target_width=1280, target_height=720):
@@ -63,7 +68,7 @@ def ensure_720p(input_path, intermediate_path, target_width=1280, target_height=
     return intermediate_path
 
 
-def calculate_rally_count(shot_frames, fps=30.0, gap_seconds=4):
+def calculate_rally_count(shot_frames, fps=30.0, gap_seconds=RALLY_GAP_SECONDS):
     """
     Group shot frames into rallies. A gap > gap_seconds between consecutive
     shots is treated as the start of a new rally.
@@ -889,15 +894,37 @@ def build_net_approach_summary(
     }
 
 
-def build_error_summary(bounces, ball_track, homography_matrices, court_ref, in_bounds_set, fps):
-    """Direction-only error breakdown (FH/BH overlay deferred per spec).
+def build_error_summary(
+    bounces,
+    ball_track,
+    homography_matrices,
+    court_ref,
+    in_bounds_set,
+    fps,
+    swing_events=None,
+    near_player_only: bool = True,
+):
+    """Direction-only error breakdown attributed to the near (P1) player.
 
-    An "error" is an out-of-bounds bounce. Classify each by direction:
+    Tennis convention: an error belongs to the player who failed to make the
+    shot. With a fixed near-side camera and only P1's strokes classified, a
+    bounce that lands on the FAR half (svg_y < 39) is P1's miss; one on the
+    NEAR half is P2's miss and irrelevant to the player we're coaching.
+
+    Net-line bounces (37 ≤ svg_y ≤ 41) are side-ambiguous because the bounce
+    is right at the divide. For these we fall back to swing-event pairing —
+    the swing whose peak_frame immediately precedes the bounce wins the
+    attribution. Net bounces with no nearby swing are dropped (better to
+    under-count than mis-attribute).
+
+    Each event carries ``player: 1`` so the frontend can later split out
+    opponent errors if/when we model them.
+
+    Classify each kept bounce by direction:
       - long: past either baseline (svg_y < 0 or svg_y > 78)
-      - wide: past either sideline (svg_x < 1 or svg_x > 26) but inside the
-              y range
-      - net: y near the net line (38..40) with low velocity — proxy for "hit
-             the net" since we don't track ball height directly
+      - wide: past either sideline (svg_x < 1 or svg_x > 26)
+      - net:  y near the net line (37..41) — proxy since we don't track
+              ball height directly
     """
     left_x   = court_ref.left_court_line[0][0]
     right_x  = court_ref.right_court_line[0][0]
@@ -907,10 +934,37 @@ def build_error_summary(bounces, ball_track, homography_matrices, court_ref, in_
     span_y = max(1.0, bottom_y - top_y)
     fps_f = float(fps) if fps else 30.0
 
+    # Strict-sequential bounce → swing pairing for net-line attribution.
+    # Each swing claims the next bounce that occurs after its peak_frame
+    # and before the following swing's peak_frame. Mirrors the first pass
+    # of build_shots' bounce_to_swing builder, scoped to net errors only.
+    bounce_to_swing: dict[int, dict] = {}
+    if swing_events:
+        sorted_swings = sorted(swing_events, key=lambda e: int(e.get("peak_frame", 0)))
+        sorted_bounces_for_pair = sorted(bounces)
+        cursor = 0
+        for i, swing in enumerate(sorted_swings):
+            pf = int(swing.get("peak_frame", -1))
+            if pf < 0:
+                continue
+            next_pf = (
+                int(sorted_swings[i + 1].get("peak_frame", -1))
+                if i + 1 < len(sorted_swings) else None
+            )
+            while cursor < len(sorted_bounces_for_pair) and sorted_bounces_for_pair[cursor] <= pf:
+                cursor += 1
+            if cursor >= len(sorted_bounces_for_pair):
+                break
+            candidate = sorted_bounces_for_pair[cursor]
+            if next_pf is not None and candidate >= next_pf:
+                continue
+            bounce_to_swing[candidate] = swing
+
     long_n = 0
     wide_n = 0
     net_n = 0
     events: list[dict] = []
+    skipped_far_player = 0  # opponent misses we intentionally dropped
 
     for bframe in sorted(bounces):
         if bframe in in_bounds_set:
@@ -930,8 +984,37 @@ def build_error_summary(bounces, ball_track, homography_matrices, court_ref, in_
         svg_x = (cx - left_x) / span_x * 27.0
         svg_y = (cy - top_y) / span_y * 78.0
 
-        # Net-error proxy: bounce projects right at the net line.
-        if 37.0 <= svg_y <= 41.0:
+        # ---- Plausibility gate ----
+        # The bounce detector occasionally flags transient ball-track noise as
+        # bounces — when projected through the homography these land tens of
+        # court units past the baselines (e.g. y=-65 = ~65 ft behind the far
+        # baseline, physically in the stands). Those aren't real misses and
+        # they were inflating the error count to 6 on clips with 0 actual
+        # P1 misses. Allow ~6 units past each baseline / ~3 past each
+        # sideline; anything farther is treated as detector noise.
+        if svg_y < -6.0 or svg_y > 84.0 or svg_x < -3.0 or svg_x > 30.0:
+            continue
+
+        # ---- Player attribution ----
+        is_net_zone = 37.0 <= svg_y <= 41.0
+        if is_net_zone:
+            paired = bounce_to_swing.get(int(bframe))
+            paired_tid = int(paired.get("track_id", 0)) if paired else 0
+            if near_player_only and paired_tid <= 0:
+                # Either no swing pairing, or the pairing is the far player.
+                # Drop rather than guess.
+                skipped_far_player += 1
+                continue
+        else:
+            # svg_y < 39 → ball landed on far half → P1 hit it (and missed)
+            # svg_y > 41 → ball landed on near half → P2 hit it (skip)
+            on_far_half = svg_y < 39.0
+            if near_player_only and not on_far_half:
+                skipped_far_player += 1
+                continue
+
+        # ---- Direction label ----
+        if is_net_zone:
             label = "net"
             net_n += 1
         elif svg_y < 0 or svg_y > 78:
@@ -951,14 +1034,80 @@ def build_error_summary(bounces, ball_track, homography_matrices, court_ref, in_
             "direction": label,
             "court_x": round(svg_x, 2),
             "court_y": round(svg_y, 2),
+            "player": 1,
         })
 
-    total = long_n + wide_n + net_n
+    # ---- Missed returns ----
+    # An opponent's ball lands IN-BOUNDS on the near (P1) side and P1 doesn't
+    # make a swing within a reasonable response window. That's a failure to
+    # return — distinct from the OOB errors above (where P1 hit but missed).
+    missed_return_n = 0
+    if swing_events:
+        p1_swings = sorted(
+            int(s.get("peak_frame", -1))
+            for s in swing_events
+            if int(s.get("track_id", 0)) > 0 and int(s.get("peak_frame", -1)) >= 0
+        )
+        # ±0.5s back / 1.5s forward — covers a P1 mishit (swing slightly
+        # before the bounce) AND a normal P1 return (swing 0.5-1.5s after
+        # opponent's bounce). Outside this window means P1 made no contact
+        # near this ball.
+        look_back = int(0.5 * fps_f)
+        look_forward = int(1.5 * fps_f)
+
+        for bframe in sorted(bounces):
+            if bframe not in in_bounds_set:
+                continue  # OOB bounces handled above
+            if bframe >= len(ball_track) or bframe >= len(homography_matrices):
+                continue
+            bp = ball_track[bframe]
+            H = homography_matrices[bframe]
+            if bp is None or H is None or bp[0] is None or bp[1] is None:
+                continue
+            pt = np.array([[[float(bp[0]), float(bp[1])]]], dtype=np.float32)
+            try:
+                mapped = cv2.perspectiveTransform(pt, H)
+            except cv2.error:
+                continue
+            cx, cy = float(mapped[0, 0, 0]), float(mapped[0, 0, 1])
+            svg_x = (cx - left_x) / span_x * 27.0
+            svg_y = (cy - top_y) / span_y * 78.0
+
+            if svg_y < -6.0 or svg_y > 84.0 or svg_x < -3.0 or svg_x > 30.0:
+                continue
+            if svg_y <= 41.0:
+                continue  # far half or right at the net — not P1 territory
+
+            has_p1_contact = any(
+                bframe - look_back <= pf <= bframe + look_forward
+                for pf in p1_swings
+            )
+            if has_p1_contact:
+                continue  # P1 swung at it (or near it) — not a missed return
+
+            missed_return_n += 1
+            events.append({
+                "frame": int(bframe),
+                "time_s": round(bframe / fps_f, 2),
+                "direction": "missed return",
+                "court_x": round(svg_x, 2),
+                "court_y": round(svg_y, 2),
+                "player": 1,
+            })
+
+    total = long_n + wide_n + net_n + missed_return_n
+    if skipped_far_player or missed_return_n:
+        print(
+            f"[Errors] near-player only: kept {total} "
+            f"(missed_return={missed_return_n}, oob={long_n + wide_n + net_n}); "
+            f"skipped {skipped_far_player} opponent/unattributed bounces"
+        )
     return {
         "total": total,
         "long": long_n,
         "wide": wide_n,
         "net_err": net_n,
+        "missed_return": missed_return_n,
         "events": events[:100],
     }
 
@@ -1228,6 +1377,11 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
     try:
         if config is None:
             config = PipelineConfig()
+
+        # Hold onto the original source path before ensure_720p potentially
+        # reassigns video_path to a resized intermediate. The streamable mp4
+        # step muxes audio from this so annotated playback isn't silent.
+        original_video_path = video_path
 
         # Auto-resolve camera_id from filename unless explicitly set by caller
         if config.camera_id == PipelineConfig.camera_id:
@@ -1639,12 +1793,13 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             last_kps = calibrated_keypoints  # use saved keypoints to draw court lines
 
         # Pre-compute static minimap background once — court reference never changes.
-        # Reverted to the original deep navy/brown tone after the clay/brown
-        # variant felt off against the live video frame. (BGR (52, 36, 18).)
+        # Lighter mid steel-blue so saturated bounce dots really pop. The
+        # previous deeper tone made colored dots disappear after the ~3.4×
+        # downscale. BGR(180, 145, 110) ≈ RGB(110, 145, 180).
         _minimap_raw = court_ref.build_court_reference()
         _minimap_raw = cv2.dilate(_minimap_raw, np.ones((10, 10), np.uint8))
-        minimap_bg = np.full((*_minimap_raw.shape, 3), (52, 36, 18), dtype=np.uint8)
-        minimap_bg[_minimap_raw.astype(bool)] = (235, 235, 235)
+        minimap_bg = np.full((*_minimap_raw.shape, 3), (180, 145, 110), dtype=np.uint8)
+        minimap_bg[_minimap_raw.astype(bool)] = (250, 250, 250)
 
         for i in tqdm(range(total_frames), desc="Pass 2: Drawing"):
             ret, frame = cap.read()
@@ -1787,10 +1942,30 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             court_ref=court_ref,
             in_bounds_set=in_bounds_set,
             fps=fps,
+            swing_events=swing_events,
+            near_player_only=True,
         )
         print(
             f"[Errors] total={error_summary['total']} long={error_summary['long']} "
             f"wide={error_summary['wide']} net={error_summary['net_err']}"
+        )
+
+        # ---------- Rally state machine ----------
+        rallies = build_rallies(
+            bounces=bounces_all,
+            ball_track=ball_track,
+            homography_matrices=homography_matrices,
+            swing_events=swing_events,
+            in_bounds_set=in_bounds_set,
+            court_ref=court_ref,
+            fps=fps,
+        )
+        rally_summary = build_rally_summary(rallies)
+        decisive = rally_summary["p1_wins"] + rally_summary["p2_wins"]
+        print(
+            f"[Rallies] {rally_summary['total']} rallies | "
+            f"avg_len={rally_summary['avg_length']} | "
+            f"P1 wins {rally_summary['p1_wins']}/{decisive}"
         )
 
         # ---------- Spatial zone stats (for scouting report) ----------
@@ -1868,7 +2043,10 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             print(f"[Heatmap] Saved: {', '.join(saved)}")
 
         # ---------- Make streamable + upload ----------
-        streamable_output = make_streamable_mp4(local_output_path)
+        streamable_output = make_streamable_mp4(
+            local_output_path,
+            source_audio_path=original_video_path,
+        )
         results_path = None
 
         if not local_mode:
@@ -1917,6 +2095,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 ("position_summary", position_summary),
                 ("net_approach_summary", net_approach_summary),
                 ("error_summary", error_summary),
+                ("rallies", rallies),
+                ("rally_summary", rally_summary),
             ):
                 try:
                     supabase.table("matches").update({col: payload}).eq("id", match_id).execute()
@@ -1991,6 +2171,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             ],
             "shots": shots_data,
             "coverage_grid": coverage_grid,
+            "rallies": rallies,
+            "rally_summary": rally_summary,
         }
 
         return {
