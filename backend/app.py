@@ -1,3 +1,4 @@
+import hmac
 import os
 import tempfile
 import time
@@ -58,7 +59,11 @@ image = (
 async def process_video(request: Request):
     auth_header = request.headers.get("Authorization", "")
     expected_secret = os.environ.get("MODAL_WEBHOOK_SECRET", "")
-    if not expected_secret or auth_header != f"Bearer {expected_secret}":
+    # hmac.compare_digest avoids the byte-by-byte short-circuit that lets a
+    # network-adjacent attacker enumerate the secret via response timing.
+    if not expected_secret or not hmac.compare_digest(
+        auth_header, f"Bearer {expected_secret}"
+    ):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     payload = await request.json()

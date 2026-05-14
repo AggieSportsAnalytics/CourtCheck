@@ -15,15 +15,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid url' }, { status: 400 });
   }
 
+  if (parsed.protocol !== 'https:') {
+    return NextResponse.json({ error: 'Only https is allowed' }, { status: 403 });
+  }
+
   if (!ALLOWED_HOSTS.some((h) => parsed.hostname === h || parsed.hostname.endsWith(`.${h}`))) {
     return NextResponse.json({ error: 'Host not allowed' }, { status: 403 });
   }
 
   try {
+    // redirect: 'manual' so an allowlisted host can't 302 us to an internal
+    // address (e.g. http://169.254.169.254/latest/meta-data on Vercel/AWS).
+    // The allowlisted CDNs serve images directly without redirecting, so 3xx
+    // is treated as upstream failure.
     const upstream = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
-      redirect: 'follow',
+      redirect: 'manual',
     });
+
+    if (upstream.status >= 300 && upstream.status < 400) {
+      return NextResponse.json({ error: 'Upstream redirect refused' }, { status: 502 });
+    }
 
     if (!upstream.ok) {
       return NextResponse.json({ error: 'Upstream error' }, { status: 502 });
