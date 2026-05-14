@@ -407,30 +407,21 @@ export default function RecordingDetailPage() {
     recording.shotCount !== null && inPct !== null
       ? Math.max(0, Math.round((recording.shotCount * (100 - inPct)) / 100 / 8))
       : null;
-  // Prefer the rally state machine's avg_length when populated; fall back
-  // to the legacy shot_count/rally_count derivation so the tile still shows
-  // a value for recordings processed before the rally state machine ran (or
-  // before the migration adds rally_summary).
+  // Avg rally length comes from the rally state machine (build_rallies in
+  // backend/pipeline/rallies.py). The legacy shot_count/rally_count
+  // derivation was unreliable — it counts CatBoost trajectory direction
+  // changes, which split one rally into multiple when the ball tracker
+  // briefly loses sight of the ball. Show "—" until reprocessed.
   const avgRally =
     recording.rallySummary && recording.rallySummary.total > 0
       ? recording.rallySummary.avg_length.toFixed(1)
-      : recording.rallyCount && recording.shotCount
-        ? (recording.shotCount / recording.rallyCount).toFixed(1)
-        : null;
-  // "Rallies won" needs the state machine's per-rally winner attribution.
-  // Fall back to total-rallies-played from the legacy column so the tile is
-  // never empty for older recordings.
+      : null;
   const decisiveTotal =
     (recording.rallySummary?.p1_wins ?? 0) + (recording.rallySummary?.p2_wins ?? 0);
-  const ralliesTile =
+  const ralliesWonTotal =
     decisiveTotal > 0
-      ? {
-          label: 'Rallies won',
-          value: `${recording.rallySummary!.p1_wins}/${decisiveTotal}`,
-        }
-      : recording.rallyCount !== null
-        ? { label: 'Total rallies', value: recording.rallyCount }
-        : { label: 'Rallies won', value: '—' as const };
+      ? `${recording.rallySummary!.p1_wins}/${decisiveTotal}`
+      : null;
 
   return (
     <div className="max-w-[1280px] mx-auto px-6 pt-7">
@@ -636,7 +627,7 @@ export default function RecordingDetailPage() {
           { label: 'Winners', value: winners ?? '—' },
           { label: 'Unforced errors', value: unforced ?? '—' },
           { label: 'Avg rally length', value: avgRally ?? '—' },
-          ralliesTile,
+          { label: 'Rallies won', value: ralliesWonTotal ?? '—' },
         ]}
       />
     </div>
