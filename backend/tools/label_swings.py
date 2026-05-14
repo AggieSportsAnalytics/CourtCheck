@@ -97,30 +97,48 @@ def main() -> None:
         st.error("No clips in the database. Run seed_swing_labels.py first.")
         return
 
+    # Each annotator sees their own assigned clips plus the shared pool
+    # (assigned_to == ""). Pool clips are first-come-first-serve once labeled.
+    has_assignments = "assigned_to" in df.columns and (df["assigned_to"] != "").any()
+    if has_assignments:
+        mine = df["assigned_to"] == annotator
+        pool = df["assigned_to"] == ""
+        # Pool rows already labeled by someone else are dropped so two people
+        # can't fight over the same clip.
+        pool_taken = pool & (df["label"] != "")
+        my_pool = df[mine | (pool & ~pool_taken)].reset_index(drop=True)
+    else:
+        my_pool = df
+
     queue = (
-        df[df["label"] == ""].reset_index(drop=True)
+        my_pool[my_pool["label"] == ""].reset_index(drop=True)
         if args.filter == "unlabeled"
-        else df.reset_index(drop=True)
+        else my_pool.reset_index(drop=True)
     )
 
-    # Sidebar — progress and class counts
+    # Sidebar — progress and class counts (scoped to this annotator)
     with st.sidebar:
         st.divider()
-        st.write("**Progress**")
-        total = len(df)
-        labeled = df["label"].isin(["forehand", "backhand", "serve", "volley", "unclear"]).sum()
-        st.metric("Labeled", f"{labeled} / {total}")
-        st.progress(int(labeled) / total if total else 0)
+        st.write("**Your progress**")
+        my_total = len(my_pool)
+        my_labeled = my_pool["label"].isin(
+            ["forehand", "backhand", "serve", "volley", "unclear"]
+        ).sum()
+        st.metric("Labeled", f"{my_labeled} / {my_total}")
+        st.progress(int(my_labeled) / my_total if my_total else 0)
         st.divider()
-        st.write("**Per-class counts**")
+        st.write("**Your label counts**")
         for label in ["forehand", "backhand", "serve", "volley"]:
-            count = (df["label"] == label).sum()
+            count = (my_pool["label"] == label).sum()
             st.write(f"{LABEL_ICONS[label]} {label.capitalize()}: {count}")
         st.divider()
+        if has_assignments and my_total == 0:
+            st.error(f"No clips assigned to **{annotator}**. Check your name.")
+            st.stop()
         st.caption(f"Annotator: **{annotator}**")
 
     if queue.empty:
-        st.success(f"All {total} clips labeled!")
+        st.success(f"All {my_total} clips labeled!")
         return
 
     # Session state tracks position in the queue
@@ -168,6 +186,12 @@ def main() -> None:
             db_save_label(row["clip_id"], label, annotator, client=_supabase())
             st.session_state.idx += 1
             st.rerun()
+
+    # Navigation
+    nav_cols = st.columns([1, 8])
+    if nav_cols[0].button("← Back", disabled=st.session_state.idx == 0):
+        st.session_state.idx -= 1
+        st.rerun()
 
 
 if __name__ == "__main__":

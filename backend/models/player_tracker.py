@@ -14,7 +14,7 @@ def _project_foot(bbox, H_ref):
         return None
 
 
-_FAR_MIN_HEIGHT = 20   # absolute minimum — smaller than this isn't a person
+_FAR_MIN_HEIGHT = 40   # min height to reject ball detections (~20px ball at 4x upscale)
 _FAR_MIN_WIDTH  = 15
 _far_filter_logged: set[int] = set()  # tids already logged — cap noise to 1 line per tid
 
@@ -43,6 +43,10 @@ def _far_player_score(bbox, near_id: int, tid: int, H_ref: np.ndarray, court_bou
     w = x2 - x1
     h = y2 - y1
     if w < _FAR_MIN_WIDTH or h < _FAR_MIN_HEIGHT or h > max_height:
+        return 0.0
+
+    # Reject non-person shapes: nets, banners, horizontal bars have h << w
+    if h < w * 0.3:
         return 0.0
 
     result = _project_foot(bbox, H_ref)
@@ -132,6 +136,100 @@ class PlayerTracker:
 
         return player_dict, keypoints_dict
 
+    # Far-court region in court-reference space.
+    # y=161 = 400 units above far baseline (catches players standing well behind it)
+    # y=1778 = net + 30 (small buffer past the net line)
+    _FAR_COURT_CORNERS = np.array([
+        [[286.0, 161.0]], [[1379.0, 161.0]],
+        [[286.0, 1778.0]], [[1379.0, 1778.0]],
+    ], dtype=np.float32)
+    _FAR_ROI_UPSCALE = 4.0      # upscale factor applied to the crop
+    _FAR_ROI_PAD = 60           # generous padding — far baseline is near top of image
+    _FAR_ROI_CONF = 0.005       # very low threshold: far player is tiny and blurry
+    _FAR_ROI_ID_OFFSET = -1000  # synthetic track IDs: -1000, -1001, …
+    _far_roi_logged = False     # log ROI bounds once per instantiation
+
+    def detect_frame_with_far_roi(
+        self,
+        frame: np.ndarray,
+        H_frame: np.ndarray,
+    ) -> tuple[dict, dict]:
+        """
+        Main detection pass + a second focused pass on the far-court region.
+
+        The far player is typically only 30-60 px tall in a 1080p zoomed frame.
+        Cropping the far-court strip (~100 px tall) and upscaling it 4x before
+        running YOLO gives the model a ~160 px target — well within its detection
+        range — without running the full model at 4× resolution.
+
+        Detections from the ROI pass are added to player_dict with synthetic
+        negative track IDs (-1000, -1001, …).  choose_and_filter_players handles
+        them correctly because:
+          - Negative IDs never win the near-player vote (they project to far side).
+          - Far-player selection is per-frame best-score, no ID locking needed.
+        """
+        player_dict, keypoints_dict = self.detect_frame(frame)
+
+        frame_h, frame_w = frame.shape[:2]
+
+        # Project far-court corners to image space
+        mapped = cv2.perspectiveTransform(self._FAR_COURT_CORNERS, H_frame)
+        xs = mapped[:, 0, 0]
+        ys = mapped[:, 0, 1]
+
+        x1 = max(0, int(np.min(xs)) - self._FAR_ROI_PAD)
+        y1 = max(0, int(np.min(ys)) - self._FAR_ROI_PAD)
+        x2 = min(frame_w, int(np.max(xs)) + self._FAR_ROI_PAD)
+        y2 = min(frame_h, int(np.max(ys)) + self._FAR_ROI_PAD)
+
+        if not self._far_roi_logged:
+            print(f"[ROI] Far-court crop in image space: ({x1},{y1}) -> ({x2},{y2})  size={x2-x1}x{y2-y1}")
+            self._far_roi_logged = True
+
+        crop = frame[y1:y2, x1:x2]
+        if crop.size == 0:
+            return player_dict, keypoints_dict
+
+        crop_h, crop_w = crop.shape[:2]
+        upscaled = cv2.resize(
+            crop,
+            (int(crop_w * self._FAR_ROI_UPSCALE), int(crop_h * self._FAR_ROI_UPSCALE)),
+            interpolation=cv2.INTER_LINEAR,
+        )
+
+        results = self.model.predict(upscaled, verbose=False, conf=self._FAR_ROI_CONF, imgsz=1280)[0]
+
+        n_persons = sum(
+            1 for box in (results.boxes or [])
+            if results.names[int(box.cls.item())] == "person"
+        )
+        if n_persons > 0:
+            print(f"[ROI] Frame detected {n_persons} person(s) in far-court crop")
+
+        if results.boxes is None or len(results.boxes) == 0:
+            return player_dict, keypoints_dict
+
+        id_name_dict = results.names
+        synthetic_id = self._FAR_ROI_ID_OFFSET
+        for box in results.boxes:
+            cls_name = id_name_dict[int(box.cls.item())]
+            if cls_name != "person":
+                continue
+
+            bx1, by1, bx2, by2 = box.xyxy[0].tolist()
+            # Map back to original frame coordinates
+            ox1 = x1 + bx1 / self._FAR_ROI_UPSCALE
+            oy1 = y1 + by1 / self._FAR_ROI_UPSCALE
+            ox2 = x1 + bx2 / self._FAR_ROI_UPSCALE
+            oy2 = y1 + by2 / self._FAR_ROI_UPSCALE
+
+            if synthetic_id not in player_dict:
+                player_dict[synthetic_id] = [ox1, oy1, ox2, oy2]
+                keypoints_dict[synthetic_id] = None
+            synthetic_id -= 1
+
+        return player_dict, keypoints_dict
+
     def choose_and_filter_players(
         self,
         H_ref: np.ndarray,
@@ -140,6 +238,8 @@ class PlayerTracker:
         court_ref=None,
         x_margin: float = 500,
         far_player_max_height: int = 400,
+        far_max_jump_px: float = 350,
+        far_hold_frames: int = 8,
     ) -> tuple[list[dict], list[dict]]:
         """
         Filter detections to the 2 actual players.
@@ -162,14 +262,15 @@ class PlayerTracker:
                 'bottom_y': court_ref.baseline_bottom[0][1],
                 'left_x':   court_ref.left_court_line[0][0],
                 'right_x':  court_ref.right_court_line[0][0],
-                'far_y_min': court_ref.baseline_top[0][1] - 100,
+                # 400-unit buffer above far baseline catches players standing behind it
+                'far_y_min': court_ref.baseline_top[0][1] - 400,
                 'far_y_max': court_ref.net[0][1] + 30,
             }
         else:
             court_bounds = {
                 'net_y': 1748, 'top_y': 561, 'bottom_y': 2935,
                 'left_x': 286, 'right_x': 1379,
-                'far_y_min': 461, 'far_y_max': 1778,
+                'far_y_min': 161, 'far_y_max': 1778,
             }
 
         # --- Step 1: Find near player by track_id vote ---
@@ -195,11 +296,21 @@ class PlayerTracker:
 
         # --- Step 2: Filter frames ---
         # Near player: strict track_id match.
-        # Far player: per-frame best candidate by court-space projection + largest bbox area.
-        #   No track_id locking — far player ID is too fragmented to be reliable.
+        # Far player: per-frame best candidate by court-space projection + largest bbox area,
+        #   with temporal stabilization:
+        #     - Proximity boost: candidates close to the last accepted position score higher.
+        #     - Jump rejection: implausibly large jumps are suppressed when miss streak < 3.
+        #     - Hold: last known bbox is carried forward during brief detection gaps.
+        #     - Anchor reset: after a prolonged absence the anchor clears entirely.
         filtered_players: list[dict] = []
         far_count = 0
         far_tid_votes: dict[int, int] = {}
+
+        # Temporal stabilizer state
+        far_last_bbox: list | None = None   # last accepted far player bbox (image px)
+        far_miss_streak: int = 0            # consecutive frames without an accepted far player
+        _PROXIMITY_DECAY_PX = 250.0         # distance at which proximity bonus decays to zero
+        _PROXIMITY_BOOST    = 2.5           # max score multiplier for on-target candidate
 
         for frame in player_detections:
             new_frame: dict[int, list] = {}
@@ -208,18 +319,61 @@ class PlayerTracker:
             if near_id is not None and near_id in frame:
                 new_frame[near_id] = frame[near_id]
 
-            # Far player: per-frame best candidate by court-space projection + largest bbox area.
+            # Far player: score all valid candidates, apply temporal preference.
             best_tid, best_score = None, 0.0
             for tid, bbox in frame.items():
                 score = _far_player_score(bbox, near_id, tid, H_ref, court_bounds, x_margin, far_player_max_height)
+                if score <= 0:
+                    continue
+
+                # Proximity boost: candidates near the last accepted position score higher.
+                if far_last_bbox is not None:
+                    lx1, ly1, lx2, ly2 = far_last_bbox
+                    bx1, by1, bx2, by2 = bbox
+                    dist = (
+                        ((bx1 + bx2) / 2 - (lx1 + lx2) / 2) ** 2
+                        + ((by1 + by2) / 2 - (ly1 + ly2) / 2) ** 2
+                    ) ** 0.5
+                    proximity_frac = max(0.0, 1.0 - dist / _PROXIMITY_DECAY_PX)
+                    score *= 1.0 + proximity_frac * _PROXIMITY_BOOST
+
                 if score > best_score:
                     best_score = score
                     best_tid = tid
 
+            # Jump rejection: if the winning candidate is implausibly far from the last
+            # accepted position AND the miss streak is short (i.e., the anchor is fresh),
+            # treat it as noise and skip this frame rather than relocating the far player.
+            if best_tid is not None and far_last_bbox is not None and far_miss_streak < 3:
+                lx1, ly1, lx2, ly2 = far_last_bbox
+                bx1, by1, bx2, by2 = frame[best_tid]
+                jump = (
+                    ((bx1 + bx2) / 2 - (lx1 + lx2) / 2) ** 2
+                    + ((by1 + by2) / 2 - (ly1 + ly2) / 2) ** 2
+                ) ** 0.5
+                if jump > far_max_jump_px:
+                    best_tid = None  # reject — suppress noisy relocation
+
             if best_tid is not None:
-                new_frame[best_tid] = frame[best_tid]
+                accepted = frame[best_tid]
+                # Always store under the canonical ID regardless of which synthetic
+                # detection ID won this frame (-1000, -1001, etc.).
+                new_frame[self._FAR_ROI_ID_OFFSET] = accepted
+                far_last_bbox = accepted
+                far_miss_streak = 0
                 far_count += 1
                 far_tid_votes[best_tid] = far_tid_votes.get(best_tid, 0) + 1
+
+            elif far_last_bbox is not None and far_miss_streak < far_hold_frames:
+                # Hold last known position during brief detection gaps (occlusion, blur).
+                new_frame[self._FAR_ROI_ID_OFFSET] = far_last_bbox
+                far_miss_streak += 1
+
+            else:
+                far_miss_streak += 1
+                # Reset anchor after prolonged absence (player left court, dead time).
+                if far_miss_streak > far_hold_frames * 4:
+                    far_last_bbox = None
 
             filtered_players.append(new_frame)
 

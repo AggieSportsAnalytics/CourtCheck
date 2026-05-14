@@ -9,11 +9,9 @@ Classes (label index):
     0 - Forehand
     1 - Backhand
     2 - Serve / Overhead
-    3 - Slice
 
 Architecture: TCN (dilated causal convolutions) — faster than LSTM and
-parallelisable. Designed to be pretrained on the THETIS dataset and then
-fine-tuned on UC Davis footage.
+parallelisable. Trained from scratch on UC Davis annotation clips.
 """
 from __future__ import annotations
 
@@ -24,8 +22,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-STROKE_LABELS = ["Forehand", "Backhand", "Serve/Overhead", "Slice"]
-INPUT_DIM = 34   # 17 keypoints x 2 coords (x, y)
+STROKE_LABELS = ["Forehand", "Backhand", "Serve/Overhead"]
+INPUT_DIM = 68   # 17 keypoints * 2 coords (x, y) * 2 (position + velocity)
+DERIVATIVE_ORDERS = 1  # number of temporal derivatives stacked onto position
 SEQ_LEN = 45     # fixed sequence length fed to the model
 
 
@@ -69,11 +68,11 @@ class StrokeTCN(nn.Module):
     def __init__(
         self,
         input_dim: int = INPUT_DIM,
-        n_classes: int = 4,
+        n_classes: int = 3,
         n_channels: int = 64,
         kernel_size: int = 3,
         n_levels: int = 4,
-        dropout: float = 0.2,
+        dropout: float = 0.3,
     ):
         super().__init__()
         self.input_proj = nn.Linear(input_dim, n_channels)
@@ -155,6 +154,10 @@ class PoseStrokeClassifier:
         return self._predict_heuristic(pose_sequence)
 
     def _predict_tcn(self, pose_sequence: np.ndarray) -> tuple[np.ndarray, str]:
+        # Add temporal derivatives if the model expects them.
+        if pose_sequence.shape[1] < INPUT_DIM:
+            from backend.training.features import temporal_derivatives
+            pose_sequence = temporal_derivatives(pose_sequence, orders=DERIVATIVE_ORDERS)
         x = torch.from_numpy(pose_sequence).unsqueeze(0).to(self.device)
         with torch.no_grad():
             logits = self._model(x)

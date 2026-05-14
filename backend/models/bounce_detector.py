@@ -10,9 +10,10 @@ class BounceDetector:
     """
     Detects ball bounce frames using a trained CatBoost regressor.
     """
-    def __init__(self, path_model=None):
+    def __init__(self, path_model=None, threshold=0.40, min_gap_frames=15):
         self.model = ctb.CatBoostRegressor()
-        self.threshold = 0.20
+        self.threshold = threshold
+        self.min_gap_frames = min_gap_frames
         if path_model:
             self.load_model(path_model)
 
@@ -134,10 +135,21 @@ class BounceDetector:
         return float(x_ext), float(y_ext)
 
     def postprocess(self, ind_bounce, preds):
-        ind_bounce_filtered = [ind_bounce[0]]
+        # Step 1: collapse consecutive-frame detections into the peak
+        deduped = [ind_bounce[0]]
         for i in range(1, len(ind_bounce)):
             if (ind_bounce[i] - ind_bounce[i - 1]) != 1:
-                ind_bounce_filtered.append(ind_bounce[i])
-            elif preds[ind_bounce[i]] > preds[ind_bounce[i - 1]]:
-                ind_bounce_filtered[-1] = ind_bounce[i]
-        return ind_bounce_filtered
+                deduped.append(ind_bounce[i])
+            elif preds[ind_bounce[i]] > preds[deduped[-1]]:
+                deduped[-1] = ind_bounce[i]
+
+        # Step 2: enforce minimum gap between bounces (ball physics constraint)
+        result = [deduped[0]]
+        for i in range(1, len(deduped)):
+            gap = deduped[i] - result[-1]
+            if gap >= self.min_gap_frames:
+                result.append(deduped[i])
+            elif preds[deduped[i]] > preds[result[-1]]:
+                # Same bounce window — keep the higher-confidence peak
+                result[-1] = deduped[i]
+        return result

@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
-import type { AuthContextType, AuthUser } from '@/types/auth';
+import type { AuthContextType, AuthUser, SignUpMetadata } from '@/types/auth';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [router, pathname]);
 
-  const signUp = async (email: string, password: string, metadata?: { name?: string }) => {
+  const signUp = async (email: string, password: string, metadata?: SignUpMetadata) => {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,

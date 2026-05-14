@@ -19,18 +19,28 @@ class PipelineConfig:
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
 
     # ========== Video Processing ==========
-    enforce_720p: bool = True
-    target_width: int = 1280
-    target_height: int = 720
+    enforce_720p: bool = False
+    target_width: int = 1920
+    target_height: int = 1080
 
     # ========== Model Settings ==========
     # YOLOv8 pose model for player detection + keypoint extraction.
     player_model: str = 'yolov8m-pose.pt'
 
+    # TrackNet weights for ball detection.
+    # tracknet_v2_official.pt = official NCTU tennis weights (36k broadcast frames, 9 court surfaces)
+    # tracknet_weights.pt = original bundled weights (provenance unknown)
+    ball_model_weights: str = 'tracknet_v2_official.pt'
+
+    # InpaintNet trajectory rectification — fills missed ball detections using learned trajectory physics.
+    # Runs after TrackNet inference, before linear interpolation. Off by default until validated.
+    enable_inpaint_net: bool = False
+    inpaint_net_weights: str = 'inpaint_net_weights.pt'
+
     # YOLO inference resolution. Must match or exceed input video resolution for small object
     # detection. At imgsz=640 (default), far players at ~25-35px become ~12-18px at inference
     # — below YOLO's detection floor. imgsz=1280 preserves full 720p detail.
-    player_imgsz: int = 1280  # DEBUG: back to 1280 to maximize far player detection
+    player_imgsz: int = 1920  # match input resolution so far player isn't downscaled below detection floor
 
     # ========== Detection Settings ==========
     # Number of frames at pipeline startup to try court detection on.
@@ -47,7 +57,7 @@ class PipelineConfig:
 
     # Run YOLO player detection every Nth frame; interpolate bboxes between.
     # 1 = every frame (original behaviour). 3 = detect every 3rd frame (~3x speedup).
-    player_detection_interval: int = 1  # DEBUG: every frame
+    player_detection_interval: int = 3
 
     # Run ball detection every Nth frame; use previous result for skipped frames.
     # 1 = every frame. 2 = detect every 2nd frame (~2x throughput on TrackNet).
@@ -56,10 +66,20 @@ class PipelineConfig:
     # Far player detection thresholds (court-space projection, calibration required).
     # x_margin: how far beyond the court sideline (in court units) a foot projection
     # may land and still count as a valid far player. Zoomed cameras project wider.
-    far_player_court_x_margin: float = 500
+    far_player_court_x_margin: float = 100
     # Max bbox pixel height for a far player. Near players are excluded by track_id,
     # but this filters non-player detections with oversized bboxes.
     far_player_max_height: int = 400
+
+    # ---- Temporal stabilizer ----
+    # Maximum pixel distance the far player center may jump between consecutive accepted
+    # frames before the candidate is treated as noise (when miss streak < 3).
+    # 350px handles fast lateral movement at 1080p without letting spectator detections
+    # "steal" the far player ID.
+    far_player_max_jump_px: float = 350
+    # Frames to hold the last known far player bbox when no valid detection is found.
+    # Covers brief occlusions, bad lighting, or serve motion blur (typically 3-8 frames).
+    far_player_hold_frames: int = 8
 
     # ========== Court Calibration ==========
     # Path to court_calibration.json produced by backend.tools.calibrate_court.
@@ -67,10 +87,19 @@ class PipelineConfig:
     calibration_path: Optional[str] = _DEFAULT_CALIBRATION_PATH
     camera_id: Optional[str] = 'uc_davis_court1_zoomed'
 
+    # ========== Bounce Detection ==========
+    # CatBoost regressor confidence threshold (0-1). Higher = fewer but more certain bounces.
+    # 0.20 = original (too permissive). 0.40 = calibrated for broadcast tennis footage.
+    bounce_threshold: float = 0.25
+
+    # Minimum frames between two accepted bounces. Enforces ball physics — a ball cannot
+    # bounce twice within < 0.5s (15 frames at 30fps). Filters duplicate detections per event.
+    bounce_min_gap_frames: int = 10
+
     # ========== Stroke Classifier ==========
     # Path to TCN weights trained on pose keypoints (THETIS dataset).
     # When None, stroke classification uses a simple rule-based heuristic.
-    stroke_classifier_weights_tcn: Optional[str] = None
+    stroke_classifier_weights_tcn: Optional[str] = "stroke_classifier_tcn.pt"
 
     # Swing trigger thresholds for the pose-based swing detector
     swing_velocity_threshold: float = 15.0   # pixels/frame at wrist
@@ -82,8 +111,15 @@ class PipelineConfig:
 
     # ========== Visualization ==========
     # Ball trace settings
-    trace_length: int = 7  # Number of frames to show in ball trace
-    ball_trace_color: Tuple[int, int, int] = (255, 255, 0)  # BGR: Cyan/Yellow
+    # Frames of comet tail behind the live ball. ~1.5s at 30fps. Was 10 (a
+    # ~0.3s glimpse), bumped so the minimap actually shows the recent
+    # trajectory and coaches can read the shot shape, not just the position.
+    trace_length: int = 45
+    ball_trace_color: Tuple[int, int, int] = (5, 250, 210)  # BGR: tennis ball neon yellow-green
+    # Floor opacity for the oldest dot in the trail. Below this the alpha
+    # falloff at trace_length=45 would render the far end of the tail
+    # invisible. Higher = more uniformly visible trail.
+    ball_trace_min_alpha: float = 0.3
 
     # Minimap settings
     minimap_width: int = 166
@@ -94,5 +130,6 @@ class PipelineConfig:
     player_bbox_color: Tuple[int, int, int] = (0, 0, 255)  # BGR: Red
 
     # ========== Progress Tracking ==========
-    # Number of progress updates to send (more = finer granularity)
-    progress_update_frequency: int = 5
+    # Number of progress updates to send per per-frame loop pass (more = finer
+    # granularity in the UI). Each update is a single supabase UPDATE — cheap.
+    progress_update_frequency: int = 40

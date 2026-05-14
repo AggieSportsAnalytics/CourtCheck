@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 
-from backend.models import BallDetector, CourtLineDetector, PlayerTracker, BounceDetector, ActionRecognition, PoseStrokeClassifier
+from backend.models import BallDetector, CourtLineDetector, PlayerTracker, BounceDetector, ActionRecognition, PoseStrokeClassifier, TrajectoryRectifier
 from backend.vision import HomographyEstimator, CourtReference, draw_ball_trace, draw_court_keypoints_and_lines, draw_minimap_ball_and_bounces, draw_minimap_players, draw_player_bboxes, draw_stroke_labels
 from backend.vision import SwingDetector, extract_pose_sequence
 from backend.vision.calibration import load_calibration
@@ -116,7 +116,11 @@ def _interpolate_player_detections(detections: list[dict]) -> list[dict]:
             continue  # adjacent anchors, nothing to fill
         start_bboxes = detections[start]
         end_bboxes = detections[end]
-        shared_ids = set(start_bboxes) & set(end_bboxes)
+        # Only interpolate stable YOLO track IDs (positive integers).
+        # Synthetic ROI IDs (< 0) are re-assigned each frame — interpolating them
+        # creates bogus paths between unrelated detections (e.g. ball in frame N,
+        # player in frame N+3) that confuse the temporal stabilizer.
+        shared_ids = {tid for tid in set(start_bboxes) & set(end_bboxes) if tid >= 0}
         for frame_i in range(start + 1, end):
             t = (frame_i - start) / (end - start)
             for tid in shared_ids:
@@ -211,6 +215,749 @@ def _detect_court_once(
         best_kp_count = valid_count
 
     return best_H_ref, best_kps
+
+
+def build_shots(
+    bounces,
+    ball_track,
+    homography_matrices,
+    swing_events,
+    player_detections,
+    court_ref,
+    in_bounds_set,
+    fps,
+):
+    """Build the per-shot record used by the frontend courtmaps.
+
+    For each bounce, pair it with the most recent preceding swing event (within
+    1.5s @ fps) to recover the stroke type + hitter. Project bounce, ball-at-
+    contact, and player-at-contact into 0-27 x 0-78 court units (net at y=39)
+    matching the locked viz SVG geometry from `docs/brand-drop/mocks/visuals.html`.
+    """
+    left_x   = court_ref.left_court_line[0][0]    # 286 px
+    right_x  = court_ref.right_court_line[0][0]   # 1379 px
+    top_y    = court_ref.baseline_top[0][1]        # 561 px
+    bottom_y = court_ref.baseline_bottom[0][1]     # 2935 px
+
+    span_x = max(1.0, right_x - left_x)
+    span_y = max(1.0, bottom_y - top_y)
+
+    def to_court(px, py):
+        """pixel court coords -> 0-27 x 0-78 SVG units."""
+        if px is None or py is None:
+            return None, None
+        return (
+            float((px - left_x) / span_x) * 27.0,
+            float((py - top_y) / span_y) * 78.0,
+        )
+
+    def project(frame_idx, x, y):
+        if x is None or y is None:
+            return None, None
+        if frame_idx >= len(homography_matrices):
+            return None, None
+        H = homography_matrices[frame_idx]
+        if H is None:
+            return None, None
+        pt = np.array([[[float(x), float(y)]]], dtype=np.float32)
+        try:
+            mapped = cv2.perspectiveTransform(pt, H)
+        except cv2.error:
+            return None, None
+        return float(mapped[0, 0, 0]), float(mapped[0, 0, 1])
+
+    def _is_swing_a_return(swing_event):
+        """Ball-approach gate: a swing only counts as a real return if the ball
+        is moving toward the hitter's baseline in the 8 frames leading up to
+        peak_frame.
+
+        - Player 1 (track_id > 0, near side): ball court_y must be INCREASING
+          (heading toward y=bottom_y / svg y=78).
+        - Player 2 (track_id < 0, far side): ball court_y must be DECREASING
+          (heading toward y=top_y / svg y=0).
+
+        Operates on pixel court coords (projected via homography) to avoid
+        redundant SVG-unit math. ~5 px/frame slope threshold is roughly
+        equivalent to ~0.16 SVG units/frame given span_y ~2374 px; tightened
+        below to 8 px/frame to suppress noise from idle wrist jitter.
+        """
+        try:
+            pf = int(swing_event.get("peak_frame", -1))
+        except (TypeError, ValueError):
+            return False
+        if pf < 0:
+            return False
+        try:
+            tid = int(swing_event.get("track_id", 1))
+        except (TypeError, ValueError):
+            return False
+
+        start = max(0, pf - 8)
+        end = min(len(ball_track), pf + 1)
+        if end - start < 4:
+            return False
+
+        ys = []
+        for f in range(start, end):
+            if f >= len(ball_track) or f >= len(homography_matrices):
+                continue
+            bp = ball_track[f]
+            if bp is None or bp[0] is None or bp[1] is None:
+                continue
+            H = homography_matrices[f]
+            if H is None:
+                continue
+            pt = np.array([[[float(bp[0]), float(bp[1])]]], dtype=np.float32)
+            try:
+                mapped = cv2.perspectiveTransform(pt, H)
+            except cv2.error:
+                continue
+            ys.append(float(mapped[0, 0, 1]))
+
+        if len(ys) < 4:
+            return False
+
+        # mean(last 3) - mean(first 3): positive = descending toward near
+        # player, negative = descending toward far player. Avg over ~6 frames
+        # span so a threshold of ~8 px (cumulative) is roughly ~1.3 px/frame
+        # in instantaneous terms, well above ball-at-rest noise.
+        head = sum(ys[:3]) / 3.0
+        tail = sum(ys[-3:]) / 3.0
+        delta = tail - head
+        threshold_px = 8.0
+
+        if tid > 0:
+            return delta > threshold_px
+        return delta < -threshold_px
+
+    # Sort swings by peak_frame; gate logged but doesn't filter.
+    all_swings_sorted = sorted(swing_events, key=lambda e: int(e.get("peak_frame", 0)))
+    gated_swings = [e for e in all_swings_sorted if _is_swing_a_return(e)]
+    total_swings = len(all_swings_sorted)
+    print(f"[Shots] {len(gated_swings)}/{total_swings} swings passed ball-approach gate (informational)")
+
+    # Mapped to lowercase frontend stroke keys.
+    STROKE_MAP = {
+        "Forehand": "forehand",
+        "Backhand": "backhand",
+        "Serve/Overhead": "serve",
+    }
+
+    # Two-pass pairing:
+    #   PASS 1 (strict, sequential) — each swing claims the first unclaimed
+    #   bounce between its peak_frame and the next swing's peak_frame. This is
+    #   the highest-confidence pairing (mirrors rally structure: swing → ball
+    #   travels → bounce → next swing).
+    #
+    #   PASS 2 (fallback, nearest within window) — any bounce still unpaired
+    #   gets the label of the NEAREST swing whose peak_frame is within
+    #   `FALLBACK_WINDOW` seconds, in either direction. This catches:
+    #     - bounces past the LAST swing (post-rally rolls, end-of-clip)
+    #     - second bounces of OOB shots that the sequential pass orphaned
+    #     - bounces between two swings that were too clustered for strict claim
+    #
+    # Bounces with NO swing inside the fallback window stay "unknown" (true
+    # warmup balls, dead time).
+    sorted_bounces = sorted(bounces)
+    bounce_to_swing: dict[int, dict] = {}
+
+    # ----- PASS 1: strict sequential -----
+    bounces_for_search = list(sorted_bounces)
+    claim_cursor = 0
+    for i, swing in enumerate(all_swings_sorted):
+        pf = int(swing.get("peak_frame", -1))
+        if pf < 0:
+            continue
+        next_pf = (
+            int(all_swings_sorted[i + 1].get("peak_frame", -1))
+            if i + 1 < len(all_swings_sorted)
+            else None
+        )
+        while claim_cursor < len(bounces_for_search) and bounces_for_search[claim_cursor] <= pf:
+            claim_cursor += 1
+        if claim_cursor >= len(bounces_for_search):
+            break
+        candidate = bounces_for_search[claim_cursor]
+        if next_pf is not None and candidate >= next_pf:
+            continue
+        bounce_to_swing[candidate] = swing
+        claim_cursor += 1
+    strict_paired = len(bounce_to_swing)
+
+    # ----- PASS 2: nearest-within-window fallback -----
+    FALLBACK_WINDOW_FRAMES = int(round(2.5 * (fps or 30.0)))
+    swing_peaks_with_event = [
+        (int(s.get("peak_frame", -1)), s)
+        for s in all_swings_sorted
+        if int(s.get("peak_frame", -1)) >= 0
+    ]
+    fallback_paired = 0
+    for bframe in sorted_bounces:
+        if bframe in bounce_to_swing:
+            continue
+        best_swing = None
+        best_dist = FALLBACK_WINDOW_FRAMES + 1
+        for pf, swing in swing_peaks_with_event:
+            d = abs(bframe - pf)
+            if d < best_dist:
+                best_dist = d
+                best_swing = swing
+        if best_swing is not None and best_dist <= FALLBACK_WINDOW_FRAMES:
+            bounce_to_swing[bframe] = best_swing
+            fallback_paired += 1
+
+    print(
+        f"[Shots] Paired {len(bounce_to_swing)}/{len(sorted_bounces)} bounces "
+        f"(strict={strict_paired}, fallback={fallback_paired}, "
+        f"orphan={len(sorted_bounces) - len(bounce_to_swing)})",
+        flush=True,
+    )
+
+    shots = []
+    # Diagnostic counters — surfaced in logs so we can tell from a Modal log
+    # exactly why bounces aren't producing shot-map dots.
+    skip_oob = 0
+    skip_no_ball = 0
+    skip_no_proj = 0
+    ok_count = 0
+
+    for bframe in sorted(bounces):
+        if bframe >= len(ball_track):
+            skip_oob += 1
+            continue
+        bpos = ball_track[bframe]
+        # The bounce detector predicts a bounce moment from CatBoost trajectory
+        # analysis over surrounding frames. The ball is often occluded AT the
+        # bounce frame itself (player body, shadow, hard contrast with court
+        # surface), so the interpolated ball_track may have None there even
+        # though the bounce really happened. Scan nearby frames for the
+        # closest valid detection so we still place the dot.
+        if bpos is None or bpos[0] is None:
+            BOUNCE_BALL_SCAN = 5
+            bpos = None
+            for delta in range(1, BOUNCE_BALL_SCAN + 1):
+                for f in (bframe - delta, bframe + delta):
+                    if 0 <= f < len(ball_track):
+                        cand = ball_track[f]
+                        if cand is not None and cand[0] is not None:
+                            bpos = cand
+                            break
+                if bpos is not None:
+                    break
+            if bpos is None:
+                skip_no_ball += 1
+                continue
+        bx, by = bpos
+        court_bx, court_by = project(bframe, bx, by)
+        if court_bx is None:
+            skip_no_proj += 1
+            continue
+        svg_x, svg_y = to_court(court_bx, court_by)
+        if svg_x is None:
+            skip_no_proj += 1
+            continue
+        ok_count += 1
+
+        ev = bounce_to_swing.get(bframe)
+        stroke = "unknown"
+        # When no stroke event is paired, infer the hitter from which half the
+        # ball landed in: bounce on far half (svg_y < 39) -> the near player
+        # (P1) hit it; bounce on near half -> the far player (P2) hit it. This
+        # is what lets the "every bounce" shot map render all bounces, not just
+        # the ones whose strokes were classified.
+        player = 1 if svg_y < 39.0 else 2
+        ball_svg_x, ball_svg_y = None, None
+        player_svg_x, player_svg_y = None, None
+        contact_frame = None
+
+        if ev is not None:
+            stroke = STROKE_MAP.get(ev.get("label", ""), "unknown")
+            tid = int(ev.get("track_id", 1))
+            player = 1 if tid > 0 else 2
+            peak_frame = int(ev["peak_frame"])
+
+            # Refine contact frame. peak_frame is peak wrist velocity, which is
+            # close to (but not exactly) racquet-meets-ball. We pick the frame
+            # in a *tight* window around peak where ball is closest to the
+            # player's bbox CENTER (not feet — racquet is up around chest
+            # height, projecting that to court coords would just add noise).
+            #
+            # Important: the search has to stay tight, because the ball tracker
+            # often loses the ball during contact (body occlusion) and
+            # re-acquires it mid-flight several frames later. A wide scan would
+            # pick up that mid-flight position and plot the ball halfway across
+            # the court — what the spacing viz was doing before the fix.
+            SCAN_HALF = 6  # frames; ~0.2s at 30fps — wider window catches the
+            # occlusion case where the ball tracker briefly loses the ball
+            # through racquet contact and re-acquires it 4-5 frames later.
+            # ~7 court units ≈ ~7 ft. Loose enough to admit a typical extended
+            # forehand contact, tight enough to reject "ball is now mid-rally"
+            # detections. With the chest-anchor change, the real-world
+            # player-to-ball distance at contact rarely exceeds 4 ft, so 7 ft
+            # leaves significant headroom for tracker noise.
+            CONTACT_MAX_COURT_UNITS = 7.0
+            contact_frame: int | None = None
+            contact_ball_court: tuple[float, float] | None = None
+            contact_player_court: tuple[float, float] | None = None
+
+            scan_start = max(0, peak_frame - SCAN_HALF)
+            scan_end = min(
+                len(ball_track),
+                len(player_detections),
+                peak_frame + SCAN_HALF + 1,
+            )
+            best_d2_court = float("inf")
+            for f in range(scan_start, scan_end):
+                bp = ball_track[f]
+                if bp is None or bp[0] is None:
+                    continue
+                dets_at_f = player_detections[f] or {}
+                bbox = dets_at_f.get(tid)
+                if bbox is None:
+                    continue
+                try:
+                    x1, y1, x2, y2 = bbox[:4]
+                except (TypeError, ValueError):
+                    continue
+
+                # Project both into court space so the distance check is in
+                # real-world units, not pixels (one pixel at the far baseline
+                # is several feet on court).
+                bx_court, by_court = project(f, float(bp[0]), float(bp[1]))
+                if bx_court is None:
+                    continue
+                # Anchor the player at CHEST height (~60% down the bbox) rather
+                # than feet for spacing. The ball at contact is ~2.5 ft off the
+                # ground and 2D homography projects it as if it were on the
+                # court plane, biasing it deeper into the court. Anchoring the
+                # player at the same approximate altitude as the ball cancels
+                # most of the resulting bias so the spacing distance reflects
+                # actual player↔ball reach, not camera-angle artifact.
+                anchor_px = (float(x1) + float(x2)) / 2.0
+                anchor_py = float(y1) + (float(y2) - float(y1)) * 0.6
+                px_court, py_court = project(f, anchor_px, anchor_py)
+                if px_court is None:
+                    continue
+                ball_svg = to_court(bx_court, by_court)
+                player_svg = to_court(px_court, py_court)
+                if ball_svg[0] is None or player_svg[0] is None:
+                    continue
+                d2_court = (ball_svg[0] - player_svg[0]) ** 2 + (ball_svg[1] - player_svg[1]) ** 2
+                if d2_court < best_d2_court:
+                    best_d2_court = d2_court
+                    contact_frame = f
+                    contact_ball_court = (ball_svg[0], ball_svg[1])
+                    contact_player_court = (player_svg[0], player_svg[1])
+
+            # Only accept the contact pair if the closest ball-player distance
+            # in the window is within the plausible-racquet-reach threshold.
+            if contact_frame is not None and best_d2_court <= CONTACT_MAX_COURT_UNITS ** 2:
+                ball_svg_x, ball_svg_y = contact_ball_court  # type: ignore[misc]
+                player_svg_x, player_svg_y = contact_player_court  # type: ignore[misc]
+            else:
+                # Couldn't find a frame where the ball was anywhere near the
+                # player — spacing viz will skip this shot, shot map keeps the
+                # bounce dot since that's a separate code path.
+                contact_frame = None
+                ball_svg_x = ball_svg_y = None
+                player_svg_x = player_svg_y = None
+
+        shots.append({
+            "frame": int(bframe),
+            "time_s": float(bframe / fps) if fps else None,
+            "stroke": stroke,
+            "player": int(player),
+            "court_x": round(svg_x, 3),
+            "court_y": round(svg_y, 3),
+            "in": bool(bframe in in_bounds_set),
+            "ball_court_x": round(ball_svg_x, 3) if ball_svg_x is not None else None,
+            "ball_court_y": round(ball_svg_y, 3) if ball_svg_y is not None else None,
+            "player_court_x": round(player_svg_x, 3) if player_svg_x is not None else None,
+            "player_court_y": round(player_svg_y, 3) if player_svg_y is not None else None,
+        })
+
+    print(
+        f"[Shots] Built {ok_count} shots from {len(sorted_bounces)} bounces "
+        f"(skipped: {skip_oob} out-of-range, {skip_no_ball} no ball detection in ±5 frames, "
+        f"{skip_no_proj} projection failed)",
+        flush=True,
+    )
+    return shots
+
+
+def build_coverage_grid(
+    player_detections,
+    homography_matrices,
+    court_ref,
+    rows: int = 12,
+    cols: int = 8,
+):
+    """Build the player-coverage occupancy grid for the bottom half-court.
+
+    For every frame, project each detected player's foot position into court
+    units (0-27 x 0-78, net at y=39). Bin all positions falling on the bottom
+    half (y in 39..78) into a `rows x cols` grid covering x=1..26, y=39..77,
+    matching the locked viz geometry in `components/viz/Coverage.tsx`. Normalize
+    so the hottest cell is 1.0.
+
+    Returns a `list[list[float]]` of shape (rows, cols), all values in [0, 1].
+    """
+    left_x   = court_ref.left_court_line[0][0]
+    right_x  = court_ref.right_court_line[0][0]
+    top_y    = court_ref.baseline_top[0][1]
+    bottom_y = court_ref.baseline_bottom[0][1]
+    span_x = max(1.0, right_x - left_x)
+    span_y = max(1.0, bottom_y - top_y)
+
+    # Grid lives in SVG coords: x in [1, 26] (cellW = 25/cols),
+    # y in [39, 77] (cellH = 38/rows). Same as Coverage.tsx.
+    x0, x1 = 1.0, 26.0
+    y0, y1 = 39.0, 77.0
+    cell_w = (x1 - x0) / cols
+    cell_h = (y1 - y0) / rows
+
+    counts = [[0 for _ in range(cols)] for _ in range(rows)]
+    n_frames = min(len(player_detections), len(homography_matrices))
+
+    for frame_idx in range(n_frames):
+        dets = player_detections[frame_idx]
+        if not dets:
+            continue
+        H = homography_matrices[frame_idx]
+        if H is None:
+            continue
+        for _tid, bbox in dets.items():
+            if bbox is None:
+                continue
+            try:
+                x1_px, _y1, x2_px, y2_px = bbox[:4]
+            except (TypeError, ValueError):
+                continue
+            foot_px = (float(x1_px) + float(x2_px)) / 2.0
+            foot_py = float(y2_px)
+            pt = np.array([[[foot_px, foot_py]]], dtype=np.float32)
+            try:
+                mapped = cv2.perspectiveTransform(pt, H)
+            except cv2.error:
+                continue
+            cx, cy = float(mapped[0, 0, 0]), float(mapped[0, 0, 1])
+            # Pixel court -> SVG units (0..27, 0..78)
+            svg_x = (cx - left_x) / span_x * 27.0
+            svg_y = (cy - top_y) / span_y * 78.0
+            # Drop far-half positions (not our player) but clamp behind-baseline
+            # and off-sideline into the nearest edge cell — players spend most
+            # of a rally 1-5 ft behind the baseline, which projects to svg_y > 77.
+            # Coverage.tsx renders an `extendBehind=10` strip for exactly this.
+            if svg_y < y0:
+                continue
+            if svg_x < x0:
+                c = 0
+            elif svg_x >= x1:
+                c = cols - 1
+            else:
+                c = int((svg_x - x0) / cell_w)
+            if svg_y >= y1:
+                r = rows - 1
+            else:
+                r = int((svg_y - y0) / cell_h)
+            if 0 <= r < rows and 0 <= c < cols:
+                counts[r][c] += 1
+
+    peak = max((counts[r][c] for r in range(rows) for c in range(cols)), default=0)
+    if peak <= 0:
+        return [[0.0] * cols for _ in range(rows)]
+    return [
+        [round(counts[r][c] / peak, 4) for c in range(cols)]
+        for r in range(rows)
+    ]
+
+
+def build_position_summary(player_detections, homography_matrices, court_ref):
+    """4-zone court-position breakdown for the near player (P1), per the
+    `coach-insights-spec.md`: inside baseline / on baseline / 5-10 ft behind /
+    10+ ft behind.
+
+    Court coords: near baseline svg_y = 78, ~1 court unit ≈ 1 ft. We work in
+    the same SVG units the frontend uses (0..27 width, 0..78 length).
+
+    Returns:
+        {
+            "inside_pct": float,
+            "on_pct": float,
+            "behind_5_10_pct": float,
+            "behind_10_plus_pct": float,
+            "n_frames": int,
+        }
+    All percentages are 0..100, rounded to 1 decimal place.
+    """
+    left_x   = court_ref.left_court_line[0][0]
+    right_x  = court_ref.right_court_line[0][0]
+    top_y    = court_ref.baseline_top[0][1]
+    bottom_y = court_ref.baseline_bottom[0][1]
+    span_x = max(1.0, right_x - left_x)
+    span_y = max(1.0, bottom_y - top_y)
+
+    BASELINE_SVG = 78.0
+    counts = {"inside": 0, "on": 0, "behind_5_10": 0, "behind_10_plus": 0}
+    n_frames = 0
+
+    for frame_idx in range(min(len(player_detections), len(homography_matrices))):
+        dets = player_detections[frame_idx]
+        H = homography_matrices[frame_idx]
+        if not dets or H is None:
+            continue
+        # Near player has positive track_id (set by YOLO); far player synthetic IDs
+        # are negative. Pick the largest-positive tid in the frame.
+        near_bbox = None
+        for tid, bbox in dets.items():
+            if bbox is None:
+                continue
+            try:
+                tid_int = int(tid)
+            except (TypeError, ValueError):
+                continue
+            if tid_int > 0:
+                near_bbox = bbox
+                break
+        if near_bbox is None:
+            continue
+        try:
+            x1, _y1, x2, y2 = near_bbox[:4]
+        except (TypeError, ValueError):
+            continue
+        foot_px = (float(x1) + float(x2)) / 2.0
+        foot_py = float(y2)
+        pt = np.array([[[foot_px, foot_py]]], dtype=np.float32)
+        try:
+            mapped = cv2.perspectiveTransform(pt, H)
+        except cv2.error:
+            continue
+        cy = float(mapped[0, 0, 1])
+        svg_y = (cy - top_y) / span_y * 78.0
+
+        # Distance behind baseline in court units (~ft).
+        behind = svg_y - BASELINE_SVG
+        if behind < -1.0:
+            counts["inside"] += 1
+        elif behind < 1.0:
+            counts["on"] += 1
+        elif behind < 10.0:
+            counts["behind_5_10"] += 1
+        else:
+            counts["behind_10_plus"] += 1
+        n_frames += 1
+
+    if n_frames == 0:
+        return {
+            "inside_pct": 0.0,
+            "on_pct": 0.0,
+            "behind_5_10_pct": 0.0,
+            "behind_10_plus_pct": 0.0,
+            "n_frames": 0,
+        }
+    return {
+        "inside_pct": round(counts["inside"] / n_frames * 100, 1),
+        "on_pct": round(counts["on"] / n_frames * 100, 1),
+        "behind_5_10_pct": round(counts["behind_5_10"] / n_frames * 100, 1),
+        "behind_10_plus_pct": round(counts["behind_10_plus"] / n_frames * 100, 1),
+        "n_frames": n_frames,
+    }
+
+
+def build_net_approach_summary(
+    player_detections,
+    homography_matrices,
+    court_ref,
+    bounces,
+    in_bounds_set,
+    fps,
+):
+    """Net-approach detector + heuristic outcome.
+
+    Approach: near player's foot svg_y crosses the service line (svg_y = 60)
+    and stays in front of it for >= 5 consecutive frames. Outcome heuristic:
+    rally ends (no bounce within 3s after the approach event) AND the most
+    recent bounce was OUT (= opponent's error) -> "won"; otherwise "lost".
+
+    This is intentionally simple; matches the spec's v1 pragmatic version.
+
+    Returns:
+        {
+            "approaches": int,
+            "wins": int,
+            "win_pct": float (0..100),
+            "events": [{"frame": int, "time_s": float, "outcome": "won"|"lost"}],
+        }
+    """
+    top_y = court_ref.baseline_top[0][1]
+    bottom_y = court_ref.baseline_bottom[0][1]
+    span_y = max(1.0, bottom_y - top_y)
+    SERVICE_LINE_SVG = 60.0
+    MIN_FRAMES_IN_FRONT = 5
+
+    n_frames = min(len(player_detections), len(homography_matrices))
+    in_front: list[bool] = []
+    for frame_idx in range(n_frames):
+        dets = player_detections[frame_idx]
+        H = homography_matrices[frame_idx]
+        if not dets or H is None:
+            in_front.append(False)
+            continue
+        near_bbox = None
+        for tid, bbox in dets.items():
+            if bbox is None:
+                continue
+            try:
+                tid_int = int(tid)
+            except (TypeError, ValueError):
+                continue
+            if tid_int > 0:
+                near_bbox = bbox
+                break
+        if near_bbox is None:
+            in_front.append(False)
+            continue
+        try:
+            x1, _y1, x2, y2 = near_bbox[:4]
+        except (TypeError, ValueError):
+            in_front.append(False)
+            continue
+        foot_px = (float(x1) + float(x2)) / 2.0
+        foot_py = float(y2)
+        pt = np.array([[[foot_px, foot_py]]], dtype=np.float32)
+        try:
+            mapped = cv2.perspectiveTransform(pt, H)
+        except cv2.error:
+            in_front.append(False)
+            continue
+        svg_y = (float(mapped[0, 0, 1]) - top_y) / span_y * 78.0
+        # In front = on net side of service line (smaller svg_y on near half).
+        in_front.append(svg_y < SERVICE_LINE_SVG)
+
+    # Detect contiguous "in front" runs >= MIN_FRAMES_IN_FRONT — each run is one approach.
+    approaches: list[int] = []
+    i = 0
+    while i < len(in_front):
+        if in_front[i]:
+            j = i
+            while j < len(in_front) and in_front[j]:
+                j += 1
+            if j - i >= MIN_FRAMES_IN_FRONT:
+                approaches.append(i)
+            i = j
+        else:
+            i += 1
+
+    # Classify outcome.
+    sorted_bounces = sorted(bounces)
+    fps_f = float(fps) if fps else 30.0
+    rally_end_window_frames = int(round(3.0 * fps_f))
+
+    events: list[dict] = []
+    wins = 0
+    for start_frame in approaches:
+        # Last bounce at or after the approach within the rally-end window
+        bounces_after = [b for b in sorted_bounces if start_frame <= b <= start_frame + rally_end_window_frames]
+        if not bounces_after:
+            # No bounce within 3s => rally died on the approach. Treat as "won" only if
+            # there was already an OUT-of-bounds bounce just before (opponent error
+            # forced the approach). Otherwise call it lost to be conservative.
+            preceding = [b for b in sorted_bounces if start_frame - rally_end_window_frames <= b < start_frame]
+            preceding_out = any(b not in in_bounds_set for b in preceding)
+            outcome = "won" if preceding_out else "lost"
+        else:
+            last_bounce = bounces_after[-1]
+            outcome = "won" if last_bounce not in in_bounds_set else "lost"
+        if outcome == "won":
+            wins += 1
+        events.append({
+            "frame": int(start_frame),
+            "time_s": round(start_frame / fps_f, 2),
+            "outcome": outcome,
+        })
+
+    total = len(approaches)
+    win_pct = round(wins / total * 100, 1) if total > 0 else 0.0
+    return {
+        "approaches": total,
+        "wins": wins,
+        "win_pct": win_pct,
+        "events": events[:50],  # cap to keep payload reasonable
+    }
+
+
+def build_error_summary(bounces, ball_track, homography_matrices, court_ref, in_bounds_set, fps):
+    """Direction-only error breakdown (FH/BH overlay deferred per spec).
+
+    An "error" is an out-of-bounds bounce. Classify each by direction:
+      - long: past either baseline (svg_y < 0 or svg_y > 78)
+      - wide: past either sideline (svg_x < 1 or svg_x > 26) but inside the
+              y range
+      - net: y near the net line (38..40) with low velocity — proxy for "hit
+             the net" since we don't track ball height directly
+    """
+    left_x   = court_ref.left_court_line[0][0]
+    right_x  = court_ref.right_court_line[0][0]
+    top_y    = court_ref.baseline_top[0][1]
+    bottom_y = court_ref.baseline_bottom[0][1]
+    span_x = max(1.0, right_x - left_x)
+    span_y = max(1.0, bottom_y - top_y)
+    fps_f = float(fps) if fps else 30.0
+
+    long_n = 0
+    wide_n = 0
+    net_n = 0
+    events: list[dict] = []
+
+    for bframe in sorted(bounces):
+        if bframe in in_bounds_set:
+            continue
+        if bframe >= len(ball_track) or bframe >= len(homography_matrices):
+            continue
+        bp = ball_track[bframe]
+        H = homography_matrices[bframe]
+        if bp is None or H is None or bp[0] is None or bp[1] is None:
+            continue
+        pt = np.array([[[float(bp[0]), float(bp[1])]]], dtype=np.float32)
+        try:
+            mapped = cv2.perspectiveTransform(pt, H)
+        except cv2.error:
+            continue
+        cx, cy = float(mapped[0, 0, 0]), float(mapped[0, 0, 1])
+        svg_x = (cx - left_x) / span_x * 27.0
+        svg_y = (cy - top_y) / span_y * 78.0
+
+        # Net-error proxy: bounce projects right at the net line.
+        if 37.0 <= svg_y <= 41.0:
+            label = "net"
+            net_n += 1
+        elif svg_y < 0 or svg_y > 78:
+            label = "long"
+            long_n += 1
+        elif svg_x < 1 or svg_x > 26:
+            label = "wide"
+            wide_n += 1
+        else:
+            # Inside the boundary box but flagged OOB by count_in_out_bounces — rare
+            # rounding case; lump with "wide" for simplicity.
+            label = "wide"
+            wide_n += 1
+        events.append({
+            "frame": int(bframe),
+            "time_s": round(bframe / fps_f, 2),
+            "direction": label,
+            "court_x": round(svg_x, 2),
+            "court_y": round(svg_y, 2),
+        })
+
+    total = long_n + wide_n + net_n
+    return {
+        "total": total,
+        "long": long_n,
+        "wide": wide_n,
+        "net_err": net_n,
+        "events": events[:100],
+    }
 
 
 def count_in_out_bounces(bounces, ball_track, homography_matrices, court_ref):
@@ -449,7 +1196,7 @@ _OPPONENT_COURT_MAP = {
 }
 
 
-def _resolve_camera_id(video_path: str) -> Optional[str]:
+def _resolve_camera_id(video_path: str) -> str | None:
     """
     Infer camera_id from the video filename.
     Matches filenames containing 'Court' followed by a court number (e.g. StMarys_Court2.mp4).
@@ -467,7 +1214,14 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
     """
     Main pipeline entry point (Modal-compatible).
     """
-    print(f"[Pipeline] Starting — match_id={match_id[:8]}")
+    import sys
+    # Belt-and-suspenders in case the Modal Image env var doesn't take.
+    try:
+        sys.stdout.reconfigure(line_buffering=True)
+    except Exception:
+        pass
+
+    print(f"[Pipeline] Starting — match_id={match_id[:8]}", flush=True)
     try:
         if config is None:
             config = PipelineConfig()
@@ -477,35 +1231,72 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             resolved = _resolve_camera_id(video_path)
             config.camera_id = resolved
             if resolved:
-                print(f"[Pipeline] Camera ID resolved from filename: {resolved}")
+                print(f"[Pipeline] Camera ID resolved from filename: {resolved}", flush=True)
             else:
-                print(f"[Pipeline] No Court# match in filename — using per-frame court detection")
+                print(f"[Pipeline] No Court# match in filename — using per-frame court detection", flush=True)
 
         device = config.device
 
         supabase = None
         if not local_mode:
             supabase = get_supabase()
-            supabase.table("matches").update({
-                "status": "processing"
-            }).eq("id", match_id).execute()
-
-        def update_progress(value: float):
-            if supabase:
+            # Heartbeat write — happens BEFORE any model loading so the
+            # frontend's processing pane reaches a non-zero progress value the
+            # moment Modal enters run_pipeline. Was previously delayed until
+            # `update_progress(0.01, "Loading models")` AFTER ~10s of model
+            # imports / weight loads, so users saw STARTING for 30-60s.
+            try:
                 supabase.table("matches").update({
-                    "progress": round(float(value), 3)
+                    "status": "processing",
+                    "progress": 0.002,
+                    "processing_stage": "Starting pipeline",
                 }).eq("id", match_id).execute()
-            else:
-                print(f"Progress: {round(float(value) * 100, 1)}%")
+                print(f"[Heartbeat] Wrote status=processing progress=0.002 to {match_id[:8]}", flush=True)
+            except Exception as e:
+                # If processing_stage column missing, retry without it.
+                try:
+                    supabase.table("matches").update({
+                        "status": "processing",
+                        "progress": 0.002,
+                    }).eq("id", match_id).execute()
+                    print(f"[Heartbeat] Wrote status=processing progress=0.002 (no stage col)", flush=True)
+                except Exception as e2:
+                    print(f"[Heartbeat] FAILED: {e2}", flush=True)
 
-        update_progress(0.01)
+        def update_progress(value: float, stage: "str | None" = None):
+            pct = round(float(value) * 100, 1)
+            payload: dict = {"progress": round(float(value), 3)}
+            if stage is not None:
+                payload["processing_stage"] = stage
+            label = f" — {stage}" if stage else ""
+            if supabase:
+                try:
+                    resp = supabase.table("matches").update(payload).eq("id", match_id).execute()
+                    if hasattr(resp, "data") and resp.data is not None and len(resp.data) == 0:
+                        print(f"[Progress] WARNING {pct}%{label} updated 0 rows (match_id={match_id} not found?)", flush=True)
+                    else:
+                        print(f"[Progress] {pct}%{label}", flush=True)
+                except Exception as e:
+                    if "processing_stage" in payload:
+                        payload.pop("processing_stage")
+                        try:
+                            supabase.table("matches").update(payload).eq("id", match_id).execute()
+                            print(f"[Progress] {pct}%{label} (stage column missing — wrote progress only)", flush=True)
+                        except Exception as e2:
+                            print(f"[Progress] supabase update failed: {e2}", flush=True)
+                    else:
+                        print(f"[Progress] supabase update failed: {e}", flush=True)
+            else:
+                print(f"Progress: {pct}%{label}", flush=True)
+
+        update_progress(0.01, "Loading models")
 
         # ---------- Initialize models ----------
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         WEIGHTS_DIR = os.path.join(BASE_DIR, "weights")
 
         ball_detector = BallDetector(
-            path_model=os.path.join(WEIGHTS_DIR, "tracknet_weights.pt"),
+            path_model=os.path.join(WEIGHTS_DIR, config.ball_model_weights),
             device=device,
         )
 
@@ -519,7 +1310,9 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         player_tracker = PlayerTracker(model_path=player_model_path, device=device, imgsz=config.player_imgsz, conf=config.player_conf)
 
         bounce_detector = BounceDetector(
-            os.path.join(WEIGHTS_DIR, "bounce_detection_weights.cbm")
+            os.path.join(WEIGHTS_DIR, "bounce_detection_weights.cbm"),
+            threshold=config.bounce_threshold,
+            min_gap_frames=config.bounce_min_gap_frames,
         )
 
         # Legacy stroke model (kept for fallback)
@@ -559,15 +1352,17 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 target_width=config.target_width,
                 target_height=config.target_height
             )
-        update_progress(0.05)
+        update_progress(0.05, "Calibrating the court")
 
         # ---------- Court calibration (skip per-frame detection if available) ----------
         calibrated_H_ref = None
+        calibrated_H_frame = None
         calibrated_keypoints = None
         if config.calibration_path and config.camera_id:
-            cal_H_ref, _cal_H_frame, cal_kps = load_calibration(config.calibration_path, config.camera_id)
+            cal_H_ref, cal_H_frame, cal_kps = load_calibration(config.calibration_path, config.camera_id)
             if cal_H_ref is not None:
                 calibrated_H_ref = cal_H_ref
+                calibrated_H_frame = cal_H_frame
                 calibrated_keypoints = cal_kps
                 print(f"[Pipeline] Calibration: {config.camera_id} loaded")
 
@@ -616,18 +1411,41 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             ball_track.append(ball_pos)
 
             if i % config.player_detection_interval == 0:
-                player_dict, kps_dict = player_tracker.detect_frame(frame)
+                if calibrated_H_frame is not None:
+                    player_dict, kps_dict = player_tracker.detect_frame_with_far_roi(frame, calibrated_H_frame)
+                else:
+                    player_dict, kps_dict = player_tracker.detect_frame(frame)
             else:
                 player_dict, kps_dict = {}, {}
             player_detections.append(player_dict)
             pose_keypoints_per_frame.append(kps_dict)
 
             if i % max(1, total_frames // config.progress_update_frequency) == 0:
-                update_progress(0.05 + 0.4 * (i / total_frames))
+                update_progress(0.05 + 0.4 * (i / total_frames), "Following the ball and players")
 
         # Fill gaps between detection frames using linear bbox interpolation
         player_detections = _interpolate_player_detections(player_detections)
         ball_track_raw = list(ball_track)          # raw detections — used for bounce detection
+
+        # InpaintNet trajectory rectification — fills missed detections using learned physics.
+        # Runs on raw detections before linear interpolation.
+        # Bounce detector keeps ball_track_raw (pre-rectification) to avoid false inflections.
+        if config.enable_inpaint_net:
+            inpaint_weights_path = os.path.join(WEIGHTS_DIR, config.inpaint_net_weights)
+            if os.path.exists(inpaint_weights_path):
+                rectifier = TrajectoryRectifier(
+                    weights_path=inpaint_weights_path,
+                    frame_w=frame_w,
+                    frame_h=frame_h,
+                    device=device,
+                )
+                ball_track = rectifier.rectify(ball_track)
+                print(f"[InpaintNet] Rectified trajectory: "
+                      f"{sum(1 for p in ball_track_raw if p is not None)} -> "
+                      f"{sum(1 for p in ball_track if p is not None)} detected frames")
+            else:
+                print(f"[InpaintNet] Weights not found at {inpaint_weights_path}, skipping")
+
         ball_track = _interpolate_ball_track(ball_track)  # smoothed — used for drawing
         # Pose keypoints: forward-fill, then backward-fill to cover frames before first detection
         _last_kps: dict = {}
@@ -653,7 +1471,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         if H_ref_for_filter is None:
             print("[Pipeline] WARNING: No homography available — player filtering skipped. Load a calibration file.")
 
-        # Keep raw detections for visualization — draw ALL YOLO detections, not just filtered 2 players
+        # Keep raw detections for visualization — include all detections (ROI synthetic IDs too for debugging)
         player_detections_raw = [dict(d) for d in player_detections]
 
         # DEBUG: log all raw track IDs before filtering
@@ -668,6 +1486,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 court_ref=court_ref,
                 x_margin=config.far_player_court_x_margin,
                 far_player_max_height=config.far_player_max_height,
+                far_max_jump_px=config.far_player_max_jump_px,
+                far_hold_frames=config.far_player_hold_frames,
             )
 
         # ---------- Bounce + shot detection ----------
@@ -706,7 +1526,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
 
         # ---------- Pose-based swing detection + TCN stroke classification ----------
         # New 4-class stroke counts (replaces legacy 3-class counts when TCN runs)
-        pose_stroke_counts = {"Forehand": 0, "Backhand": 0, "Serve/Overhead": 0, "Slice": 0}
+        pose_stroke_counts = {"Forehand": 0, "Backhand": 0, "Serve/Overhead": 0}
         frame_stroke_labels: dict[int, dict[int, str]] = {}
         swing_events = []
         if config.enable_stroke_recognition:
@@ -726,6 +1546,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                     window_end=event["window_end"],
                 )
                 _probs, label = pose_stroke_classifier.predict(seq)
+                event["label"] = label
                 pose_stroke_counts[label] = pose_stroke_counts.get(label, 0) + 1
                 # Show label from peak frame for 30 frames
                 display_end = min(total_frames - 1, event["peak_frame"] + 30)
@@ -733,7 +1554,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                     frame_stroke_labels.setdefault(f, {})[event["track_id"]] = label
             print(f"[Stroke] {len(swing_events)} swings → FH={pose_stroke_counts.get('Forehand',0)} BH={pose_stroke_counts.get('Backhand',0)} Srv={pose_stroke_counts.get('Serve/Overhead',0)}")
 
-        update_progress(0.5)
+        update_progress(0.5, "Detecting bounce points and stroke types")
 
         # ---------- Pass 2: Drawing ----------
         cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
@@ -781,9 +1602,9 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                                      base_color=config.ball_trace_color)
             output = draw_court_keypoints_and_lines(output, kps)
 
-            if frame_idx < len(player_detections_raw):
-                # Draw ALL raw YOLO detections (unfiltered) — each track gets a unique color
-                output = draw_player_bboxes(output, player_detections_raw[frame_idx])
+            if frame_idx < len(player_detections):
+                # Draw only the 2 filtered players (near + far) — no coaches, nets, spectators
+                output = draw_player_bboxes(output, player_detections[frame_idx])
                 output = draw_stroke_labels(output, player_detections[frame_idx],
                                             frame_stroke_labels, frame_idx)
 
@@ -806,6 +1627,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 minimap=minimap, homography_inv=H_ref, ball_track=ball_track,
                 frame_idx=frame_idx, bounces=bounces_all,
                 trace_length=config.trace_length,
+                trace_color=config.ball_trace_color,
+                trace_min_alpha=config.ball_trace_min_alpha,
                 frame_stroke_labels=frame_stroke_labels,
             )
             if frame_idx < len(player_detections):
@@ -841,15 +1664,75 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
 
             frame_idx += 1
             if i % max(1, total_frames // config.progress_update_frequency) == 0:
-                update_progress(0.50 + 0.45 * (i / total_frames))
+                update_progress(0.50 + 0.45 * (i / total_frames), "Rendering your annotated recording")
 
-        update_progress(0.95)
+        update_progress(0.95, "Generating heatmaps and scouting report")
         cap.release()
         out.release()
 
         # ---------- In-bounds / out-of-bounds bounce classification ----------
         in_bounds_bounces, out_bounds_bounces, in_bounds_set = count_in_out_bounces(
             bounces_all, ball_track, homography_matrices, court_ref
+        )
+
+        # ---------- Per-shot courtmap data (court coords + stroke type) ----------
+        shots_data = build_shots(
+            bounces=bounces_all,
+            ball_track=ball_track,
+            homography_matrices=homography_matrices,
+            swing_events=swing_events,
+            player_detections=player_detections,
+            court_ref=court_ref,
+            in_bounds_set=in_bounds_set,
+            fps=fps,
+        )
+        print(f"[Shots] Built {len(shots_data)} courtmap records")
+
+        # ---------- 12x8 occupancy grid for the Coverage viz ----------
+        coverage_grid = build_coverage_grid(
+            player_detections=player_detections,
+            homography_matrices=homography_matrices,
+            court_ref=court_ref,
+        )
+        cov_nonzero = sum(1 for row in coverage_grid for v in row if v > 0)
+        print(f"[Coverage] Built 12x8 grid, {cov_nonzero}/96 cells populated")
+
+        # ---------- Coach insights: position / net approach / errors ----------
+        position_summary = build_position_summary(
+            player_detections=player_detections,
+            homography_matrices=homography_matrices,
+            court_ref=court_ref,
+        )
+        print(
+            f"[Position] inside={position_summary['inside_pct']}% on={position_summary['on_pct']}% "
+            f"5-10ft={position_summary['behind_5_10_pct']}% 10ft+={position_summary['behind_10_plus_pct']}% "
+            f"(n={position_summary['n_frames']})"
+        )
+
+        net_approach_summary = build_net_approach_summary(
+            player_detections=player_detections,
+            homography_matrices=homography_matrices,
+            court_ref=court_ref,
+            bounces=bounces_all,
+            in_bounds_set=in_bounds_set,
+            fps=fps,
+        )
+        print(
+            f"[NetApproach] approaches={net_approach_summary['approaches']} "
+            f"wins={net_approach_summary['wins']} ({net_approach_summary['win_pct']}%)"
+        )
+
+        error_summary = build_error_summary(
+            bounces=bounces_all,
+            ball_track=ball_track,
+            homography_matrices=homography_matrices,
+            court_ref=court_ref,
+            in_bounds_set=in_bounds_set,
+            fps=fps,
+        )
+        print(
+            f"[Errors] total={error_summary['total']} long={error_summary['long']} "
+            f"wide={error_summary['wide']} net={error_summary['net_err']}"
         )
 
         # ---------- Spatial zone stats (for scouting report) ----------
@@ -960,6 +1843,27 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 "serve_count": final_serve,
                 "scouting_report": scouting_report,
             }
+            # shots column requires the 20260513_add_shots migration — skip gracefully
+            try:
+                supabase.table("matches").update({"shots": shots_data}).eq("id", match_id).execute()
+            except Exception:
+                pass
+            # coverage_grid requires the 20260513_add_coverage_grid migration — skip gracefully
+            try:
+                supabase.table("matches").update({"coverage_grid": coverage_grid}).eq("id", match_id).execute()
+            except Exception:
+                pass
+            # Coach-insight summaries require the 20260513_add_coach_insights migration.
+            # Each is wrapped independently so a partial migration still persists what it can.
+            for col, payload in (
+                ("position_summary", position_summary),
+                ("net_approach_summary", net_approach_summary),
+                ("error_summary", error_summary),
+            ):
+                try:
+                    supabase.table("matches").update({col: payload}).eq("id", match_id).execute()
+                except Exception:
+                    pass
             if bounce_heatmap_path:
                 update_data["bounce_heatmap_path"] = bounce_heatmap_path
             if player_heatmap_path:
@@ -974,6 +1878,33 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
 
             supabase.table("matches").update(update_data).eq("id", match_id).execute()
             print(f"[Pipeline] Done — bounces={len(bounces_all)} shots={len(shot_frames)} rallies={rally_count} | in={in_bounds_bounces} out={out_bounds_bounces} | FH={final_forehand} BH={final_backhand} Srv={final_serve}")
+
+            # ---------- Storage cleanup: drop the raw upload ----------
+            # Once the processed video and metadata are persisted, the raw clip
+            # in `raw-videos` is dead weight — the live app reads from `results`.
+            # Keeps storage cost roughly halved (raw ≈ processed in size).
+            # Skipped on failed runs so the user can retry without re-uploading.
+            # Set DELETE_RAW_AFTER_PROCESS=0 in the Modal env to keep raws.
+            if os.environ.get("DELETE_RAW_AFTER_PROCESS", "1") != "0":
+                # `input_path` on the matches row is the raw-videos key. Look it
+                # up rather than threading it through every callsite, so the
+                # cleanup stays correct even if the key was rewritten.
+                try:
+                    raw_key_row = (
+                        supabase.table("matches")
+                        .select("input_path")
+                        .eq("id", match_id)
+                        .single()
+                        .execute()
+                    )
+                    raw_key = (raw_key_row.data or {}).get("input_path")
+                    if raw_key and results_path:
+                        supabase.storage.from_("raw-videos").remove([raw_key])
+                        print(f"[Storage] Removed raw upload {raw_key}")
+                except Exception as e:
+                    # Non-fatal — log and move on; the recording is already
+                    # marked done and the processed video is live.
+                    print(f"[Storage] Could not remove raw upload: {e}")
         else:
             print(f"\n✅ Local processing complete!")
             print(f"   Output: {streamable_output}")
@@ -984,10 +1915,31 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             if len(swing_events) > 0:
                 print(f"   (Pose-based: {len(swing_events)} swing events detected)")
 
+        events_export = {
+            "fps": float(fps),
+            "total_frames": int(total_frames),
+            "strokes": [
+                {
+                    "frame": int(e["peak_frame"]),
+                    "player": 1 if int(e["track_id"]) > 0 else 2,
+                    "track_id": int(e["track_id"]),
+                    "label": e.get("label", "Unknown"),
+                }
+                for e in swing_events
+            ],
+            "bounces": [
+                {"frame": int(b), "in_bounds": b in in_bounds_set}
+                for b in sorted(bounces_all)
+            ],
+            "shots": shots_data,
+            "coverage_grid": coverage_grid,
+        }
+
         return {
             "status": "done",
             "results_path": results_path,
             "output_file": streamable_output,
+            "events": events_export,
             "meta": {
                 "fps": fps,
                 "num_frames": total_frames,

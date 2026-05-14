@@ -21,15 +21,15 @@ export async function GET() {
       }
     );
 
-    const { data: authData } = await supabase.auth.getClaims();
-    if (!authData?.claims) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { data, error } = await supabaseAdmin
       .from('matches')
       .select('id, name, input_path, created_at, status, bounce_heatmap_path, player_heatmap_path, bounce_count, shot_count, rally_count')
-      .eq('user_id', authData.claims.sub)
+      .eq('user_id', user.id)
       .eq('status', 'done')
       .order('created_at', { ascending: false })
       .limit(1);

@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CourtCheck · Players</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream:#F4F0E6; --paper:#FBF8F1; --surface:#FFFFFF; --shade:#ECE6D5;
+      --line:#DDD7C5; --line-soft:#EAE4D2;
+      --ink:#1A1815; --ink-soft:#43403A; --ink-mute:#837F77;
+      --court:#2E5341; --court-deep:#1F3D2E; --court-light:#6E8C7C;
+      --clay:#B05B36; --clay-soft:#D08866;
+      --lime:#BFC846; --plum:#7B4E6E; --amber:#C8923A; --slate:#5C6B7A;
+      --bg-grad-1:rgba(176,91,54,0.06); --bg-grad-2:rgba(46,83,65,0.07);
+      --court-surface:#A85E3A;
+      --radius-lg:14px;
+      --shadow:0 1px 0 rgba(26,24,21,0.04), 0 18px 48px -24px rgba(26,24,21,0.16);
+      --ease-out:cubic-bezier(0.2, 0.8, 0.2, 1);
+      --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
+      --dur-quick:160ms; --dur-base:240ms; --dur-reveal:480ms;
+    }
+    body.dark {
+      --cream:#07080F; --paper:#1F2940; --surface:#2B374F; --shade:#11161F;
+      --line:#2F3B52; --line-soft:#1E2735;
+      --ink:#F4F0E6; --ink-soft:#A8B0C0; --ink-mute:#6B7388;
+      --court:#6FA88B; --court-deep:#4A8268; --court-light:#9FC6B0;
+      --clay:#E07A52; --clay-soft:#F0A07F;
+      --lime:#DDE970;
+      --court-surface:#6B3A24;
+      --bg-grad-1:rgba(176,91,54,0.08); --bg-grad-2:rgba(111,168,139,0.06);
+      --plum:#B584A6; --amber:#DDB166; --slate:#889DB3;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: var(--cream); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      font-size: 16px; line-height: 1.55; letter-spacing: -0.005em;
+      -webkit-font-smoothing: antialiased;
+      background-image:
+        radial-gradient(1200px 600px at 92% -10%, var(--bg-grad-1), transparent 60%),
+        radial-gradient(900px 700px at -10% 110%, var(--bg-grad-2), transparent 65%);
+      background-attachment: fixed;
+      transition: background-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .display { font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 72; font-weight: 500; letter-spacing: -0.022em; line-height: 1.0; }
+    .ital { color: var(--clay); font-style: italic; font-weight: 400; }
+    .num     { font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 72; font-weight: 500; font-feature-settings: 'tnum'; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--court);
+    }
+    .eyebrow::before { content: ""; width: 6px; height: 6px; background: var(--clay); border-radius: 50%; }
+
+    .container { max-width: 1320px; margin: 0 auto; padding: 0 56px; }
+
+    .brand-mark { display: flex; align-items: center; gap: 12px; }
+    .brand-mark .logo { height: 56px; width: auto; display: block; }
+    .brand-mark .logo-dark { display: none; }
+    body.dark .brand-mark .logo-light { display: none; }
+    body.dark .brand-mark .logo-dark { display: block; }
+    .brand-mark .name {
+      font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 60;
+      font-weight: 500; font-size: 1.25rem; letter-spacing: -0.018em;
+    }
+    .theme-toggle {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--line); background: var(--paper);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--ink); padding: 0;
+      transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+    }
+    .theme-toggle:hover { transform: rotate(20deg); border-color: var(--ink); }
+    .theme-toggle svg { width: 16px; height: 16px; }
+    .theme-toggle .moon { display: block; } .theme-toggle .sun  { display: none; }
+    body.dark .theme-toggle .moon { display: none; } body.dark .theme-toggle .sun { display: block; }
+    .nav-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--court); color: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 0.95rem;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal { opacity: 0; transform: translateY(8px); animation: rin var(--dur-reveal) var(--ease-out) forwards; }
+      .reveal-1 { animation-delay: 80ms; }
+      .reveal-2 { animation-delay: 160ms; }
+      .reveal-3 { animation-delay: 240ms; }
+    }
+    @keyframes rin { to { opacity: 1; transform: translateY(0); } }
+
+    /* === Page head === */
+    .page-head { padding: 52px 0 28px; }
+    .page-head h1 {
+      font-size: clamp(40px, 4.6vw, 64px);
+      margin: 14px 0 8px;
+    }
+    .page-head .h1-meta { color: var(--ink-soft); font-size: 1rem; }
+    .head-actions { display: flex; gap: 10px; align-items: end; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 20px; border-radius: 100px;
+      font-weight: 500; font-size: 0.95rem; cursor: pointer; border: none;
+      transition: transform var(--dur-quick) var(--ease-spring), background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+    }
+    .btn-primary { background: var(--ink); color: var(--cream); }
+    body.dark .btn-primary { background: var(--court-deep); }
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    .btn-ghost:hover { border-color: var(--ink); }
+    .btn svg { width: 16px; height: 16px; }
+
+    .head-row {
+      display: flex; align-items: end; justify-content: space-between;
+      gap: 24px; flex-wrap: wrap;
+    }
+
+    /* Filter pills */
+    .filter-row {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+    .filter-chip {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 16px; border-radius: 100px;
+      background: var(--paper); border: 1px solid var(--line);
+      font-family: inherit; font-size: 0.88rem; font-weight: 500;
+      color: var(--ink-soft); cursor: pointer;
+      transition: border-color var(--dur-quick) var(--ease-out), color var(--dur-quick) var(--ease-out);
+    }
+    .filter-chip:hover { color: var(--ink); border-color: var(--ink-mute); }
+    .filter-chip.active { color: var(--ink); border-color: var(--ink); font-weight: 600; }
+
+    /* Player grid */
+    .player-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+      margin-bottom: 36px;
+    }
+    @media (max-width: 1100px) { .player-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 700px)  { .player-grid { grid-template-columns: 1fr; } }
+
+    .player-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      cursor: pointer;
+      transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    .player-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--ink-mute);
+      box-shadow: var(--shadow);
+    }
+
+    .player-card-head {
+      display: flex; align-items: center; gap: 16px;
+    }
+    .player-avatar {
+      width: 56px; height: 56px; border-radius: 50%;
+      color: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Newsreader', serif; font-weight: 500;
+      font-size: 1.45rem; letter-spacing: -0.012em;
+      flex-shrink: 0;
+    }
+    .player-card-id { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .player-card .player-name {
+      font-family: 'Newsreader', serif; font-weight: 500;
+      font-size: 1.4rem; letter-spacing: -0.014em;
+      line-height: 1.05;
+    }
+    .player-card .player-meta {
+      font-size: 0.85rem; color: var(--ink-soft);
+    }
+
+    /* Stats row inside the card */
+    .player-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 14px 16px;
+      background: var(--shade);
+      border-radius: 10px;
+    }
+    body.dark .player-stats { background: var(--surface); }
+    .player-stat {
+      display: flex; flex-direction: column; gap: 1px;
+    }
+    .player-stat .stat-num {
+      font-family: 'Newsreader', serif; font-weight: 500;
+      font-size: 1.3rem; letter-spacing: -0.012em;
+      font-feature-settings: 'tnum';
+      line-height: 1.05;
+    }
+    .player-stat .stat-num .unit { font-size: 0.62em; color: var(--ink-mute); margin-left: 2px; }
+    .player-stat .stat-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+
+    /* Recent matches mini-list */
+    .player-recent {
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .player-recent .recent-head {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    .recent-row {
+      display: grid; grid-template-columns: auto 1fr auto;
+      gap: 12px; align-items: center;
+      font-size: 0.88rem;
+    }
+    .recent-row .ts {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem; color: var(--ink-mute);
+      font-feature-settings: 'tnum';
+    }
+    .recent-row .opp {
+      color: var(--ink-soft);
+    }
+    .recent-row .recent-result {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase;
+      font-weight: 600;
+      padding: 2px 8px; border-radius: 100px;
+    }
+    .recent-row .recent-result.win { background: rgba(46,83,65,0.10); color: var(--court); }
+    .recent-row .recent-result.loss { background: rgba(176,91,54,0.10); color: var(--clay); }
+    body.dark .recent-row .recent-result.win { background: rgba(176,91,54,0.16); color: var(--court-light); }
+    body.dark .recent-row .recent-result.loss { background: rgba(224,122,82,0.15); color: var(--clay-soft); }
+
+    .player-card-foot {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid var(--line-soft);
+    }
+    .player-card-foot .foot-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    .player-card-foot .arrow {
+      color: var(--ink-mute);
+      transition: transform var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+    }
+    .player-card:hover .arrow { transform: translateX(4px); color: var(--ink); }
+
+    footer { padding: 60px 0 40px; border-top: 1px solid var(--line-soft); margin-top: 60px; }
+    footer .container {
+      display: flex; justify-content: space-between;
+      font-size: 0.82rem; color: var(--ink-mute);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* === BRAND-MARK HOVER VIDEO === */
+    .brand-mark { position: relative; }
+    .brand-mark .logo-video {
+      display: none;
+      height: 56px;
+      width: auto;
+      background: transparent;
+    }
+    body.dark .brand-mark .logo-video {
+      filter: invert(1) hue-rotate(180deg);
+    }
+    .brand-mark:hover .logo-light,
+    .brand-mark:hover .logo-dark { display: none; }
+    .brand-mark:hover .logo-video { display: block; }
+    body.dark .brand-mark:hover .logo-light,
+    body.dark .brand-mark:hover .logo-dark { display: none; }
+    body.dark .brand-mark:hover .logo-video { display: block; }
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    /* === APP SIDEBAR (in-product nav; replaces the top bar on internal routes) === */
+    body { padding-left: 200px; transition: padding-left 220ms var(--ease-out); }
+    .app-sidebar {
+      position: fixed; top: 0; left: 0;
+      width: 200px; height: 100vh;
+      background: var(--paper);
+      border-right: 1px solid var(--line-soft);
+      display: flex; flex-direction: column;
+      padding: 22px 14px;
+      z-index: 50;
+      box-sizing: border-box;
+      transition: width 220ms var(--ease-out), padding 220ms var(--ease-out);
+    }
+    .app-sidebar .sidebar-brand {
+      position: relative;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 76px;
+      padding: 8px 4px 16px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    /* Logo fills the sidebar width and scales tall; max-height caps growth at ~64px */
+    .app-sidebar .sidebar-brand .logo {
+      width: 100%; height: auto;
+      max-width: 100%; max-height: 64px;
+      display: block;
+      object-fit: contain;
+    }
+    .app-sidebar .sidebar-brand .logo-dark { display: none; }
+    .app-sidebar .sidebar-brand .logo-video {
+      display: none;
+      width: 100%; height: auto; max-height: 64px;
+      object-fit: contain; background: transparent;
+    }
+    /* Checkmark-only WebM — shown when sidebar is collapsed (no wordmark room) */
+    .app-sidebar .sidebar-brand .logo-checkmark {
+      display: none;
+      width: auto; height: auto;
+      max-width: 100%; max-height: 48px;
+      object-fit: contain; background: transparent;
+    }
+    body.dark .app-sidebar .sidebar-brand .logo-light { display: none; }
+    body.dark .app-sidebar .sidebar-brand .logo-dark { display: block; }
+    body.dark .app-sidebar .sidebar-brand .logo-video { filter: invert(1) hue-rotate(180deg); }
+    body.dark .app-sidebar .sidebar-brand .logo-checkmark { filter: invert(1) hue-rotate(180deg); }
+    .app-sidebar .sidebar-brand:hover .logo-light,
+    .app-sidebar .sidebar-brand:hover .logo-dark { display: none; }
+    .app-sidebar .sidebar-brand:hover .logo-video { display: block; }
+    body.dark .app-sidebar .sidebar-brand:hover .logo-light,
+    body.dark .app-sidebar .sidebar-brand:hover .logo-dark { display: none; }
+    body.dark .app-sidebar .sidebar-brand:hover .logo-video { display: block; }
+    .app-sidebar .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .app-sidebar .sidebar-link {
+      position: relative;
+      display: flex; align-items: center; gap: 12px;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: var(--ink-soft);
+      font-size: 0.92rem; font-weight: 500;
+      transition: background var(--dur-quick) var(--ease-out),
+                  color var(--dur-quick) var(--ease-out);
+    }
+    .app-sidebar .sidebar-link svg { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; }
+    .app-sidebar .sidebar-link:hover { background: var(--shade); color: var(--ink); }
+    .app-sidebar .sidebar-link:focus-visible { outline: 2px solid var(--court); outline-offset: 2px; }
+    .app-sidebar .sidebar-link.active { background: var(--shade); color: var(--ink); font-weight: 600; }
+    /* Active route accent rail — supplements color/weight so meaning isn't color-only */
+    .app-sidebar .sidebar-link.active::before {
+      content: ''; position: absolute; left: -14px; top: 8px; bottom: 8px;
+      width: 3px; border-radius: 0 3px 3px 0; background: var(--court);
+    }
+    body.dark .app-sidebar .sidebar-link.active::before { background: var(--court-light); }
+    body.dark .app-sidebar .sidebar-link:hover,
+    body.dark .app-sidebar .sidebar-link.active { background: var(--surface); }
+    .app-sidebar .sidebar-foot {
+      display: flex; align-items: center; justify-content: flex-start; gap: 10px;
+      padding: 14px 6px 4px;
+      border-top: 1px solid var(--line-soft);
+    }
+    /* Collapse toggle (chevron). Sits absolute in the top-right corner of the sidebar
+       so it doesn't crowd the brand-mark or the foot row. Stays in place when collapsed. */
+    .sidebar-collapse {
+      position: absolute; top: 14px; right: 8px;
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1px solid var(--line); background: var(--paper);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--ink-mute); padding: 0;
+      z-index: 51;
+      transition: background var(--dur-base) var(--ease-out),
+                  border-color var(--dur-base) var(--ease-out),
+                  color var(--dur-base) var(--ease-out);
+    }
+    .sidebar-collapse:hover { border-color: var(--ink); color: var(--ink); }
+    .sidebar-collapse svg { width: 13px; height: 13px; transition: transform 220ms var(--ease-out); }
+    body.sidebar-collapsed .sidebar-collapse svg { transform: rotate(180deg); }
+
+    /* === COLLAPSED state — applied by user toggle OR by narrow viewport === */
+    body.sidebar-collapsed { padding-left: 72px; }
+    body.sidebar-collapsed .app-sidebar { width: 72px; padding: 22px 8px; }
+    /* Show ONLY the checkmark webm in collapsed mode (no room for the wordmark) */
+    body.sidebar-collapsed .app-sidebar .sidebar-brand {
+      min-height: 56px; padding: 4px 0 14px; margin-bottom: 8px;
+    }
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-light,
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-dark,
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-video { display: none; }
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-checkmark { display: block; }
+    body.sidebar-collapsed .app-sidebar .sidebar-brand:hover .logo-checkmark { display: block; }
+    body.sidebar-collapsed .app-sidebar .sidebar-link { justify-content: center; padding: 12px; }
+    body.sidebar-collapsed .app-sidebar .sidebar-link.active::before { left: -8px; }
+    body.sidebar-collapsed .app-sidebar .sidebar-label { display: none; }
+    body.sidebar-collapsed .app-sidebar .sidebar-foot { flex-direction: column; gap: 12px; padding: 14px 0 4px; }
+
+    @media (max-width: 1100px) {
+      body { padding-left: 72px; }
+      .app-sidebar { width: 72px; padding: 22px 8px; }
+      .app-sidebar .sidebar-brand { min-height: 56px; padding: 4px 0 14px; margin-bottom: 8px; }
+      .app-sidebar .sidebar-brand .logo-light,
+      .app-sidebar .sidebar-brand .logo-dark,
+      .app-sidebar .sidebar-brand .logo-video { display: none; }
+      .app-sidebar .sidebar-brand .logo-checkmark { display: block; }
+      .app-sidebar .sidebar-link { justify-content: center; padding: 12px; }
+      .app-sidebar .sidebar-link.active::before { left: -8px; }
+      .app-sidebar .sidebar-label { display: none; }
+      .app-sidebar .sidebar-foot { flex-direction: column; gap: 12px; padding: 14px 0 4px; }
+    }
+
+    /* === USER MENU (pops up from the avatar in sidebar-foot) === */
+    .user-menu-wrap { position: relative; }
+    button.avatar {
+      background: var(--court); color: var(--cream);
+      border: none; cursor: pointer; padding: 0;
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 0.95rem;
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform var(--dur-quick) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+    }
+    button.avatar:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+    button.avatar:focus-visible { outline: 2px solid var(--court); outline-offset: 2px; }
+    body.dark button.avatar { background: var(--court-deep); }
+
+    /* Menu pops UP from the avatar, left-aligned to the avatar (which sits next to the
+       night-mode toggle on the left side of the foot row). Stays clear of main content
+       on the right and grows upward into the sidebar. */
+    .user-menu {
+      position: absolute;
+      bottom: calc(100% + 12px);
+      left: 0;
+      width: 248px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow-hover);
+      padding: 6px;
+      z-index: 60;
+      opacity: 0; transform: translateY(8px); pointer-events: none;
+      transition: opacity var(--dur-quick) var(--ease-out), transform var(--dur-quick) var(--ease-out);
+    }
+    .user-menu.is-open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .user-menu-head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 10px 12px;
+      min-width: 0;
+    }
+    .user-menu-head .user-menu-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--court); color: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+    body.dark .user-menu-head .user-menu-avatar { background: var(--court-deep); }
+    .user-menu-head .user-menu-id { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+    .user-menu-head .user-menu-name {
+      font-family: 'Newsreader', serif; font-weight: 500;
+      font-size: 0.96rem; letter-spacing: -0.012em;
+      color: var(--ink); line-height: 1.1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-menu-head .user-menu-email {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem; letter-spacing: 0.04em;
+      color: var(--ink-mute);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-menu-divider {
+      height: 1px; background: var(--line-soft); margin: 4px 0;
+    }
+    .user-menu-item {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; text-align: left;
+      padding: 9px 10px;
+      background: transparent; border: none;
+      border-radius: 8px;
+      font-family: inherit; font-size: 0.9rem; font-weight: 500;
+      color: var(--ink);
+      cursor: pointer;
+      transition: background var(--dur-quick) var(--ease-out);
+    }
+    .user-menu-item svg { width: 15px; height: 15px; stroke: currentColor; flex-shrink: 0; color: var(--ink-mute); }
+    .user-menu-item:hover { background: var(--shade); }
+    body.dark .user-menu-item:hover { background: var(--surface); }
+    .user-menu-item:hover svg { color: var(--ink); }
+    .user-menu-item-danger { color: var(--clay); }
+    .user-menu-item-danger svg { color: var(--clay); }
+    .user-menu-item-danger:hover { background: rgba(176,91,54,0.10); }
+    body.dark .user-menu-item-danger { color: var(--clay-soft); }
+    body.dark .user-menu-item-danger:hover { background: rgba(224,122,82,0.15); }
+    body.dark .user-menu-item-danger svg { color: var(--clay-soft); }
+
+    /* === END APP SIDEBAR === */
+  </style>
+</head>
+<body>
+
+  <!-- app sidebar (begin) -->
+  <aside class="app-sidebar" aria-label="Primary navigation">
+    <button class="sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" aria-expanded="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <a class="brand-mark sidebar-brand" href="dashboard.html" aria-label="CourtCheck home">
+      <img class="logo logo-light" src="../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+      <img class="logo logo-dark" src="../logo/CourtCheckLogoDark.png" alt="CourtCheck">
+      <video class="logo logo-video" muted playsinline preload="metadata" aria-hidden="true"><source src="../logo/CourtCheckAnimation.webm" type="video/webm"><source src="../logo/CourtCheckAnimation.mp4" type="video/mp4"></video>
+      <video class="logo logo-checkmark" muted playsinline preload="metadata" aria-hidden="true"><source src="../logo/CourtCheckCheckmark.webm" type="video/webm"></video>
+    </a>
+    <div class="sidebar-nav" role="navigation">
+      <a class="sidebar-link" href="dashboard.html" title="Dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span class="sidebar-label">Dashboard</span>
+      </a>
+      <a class="sidebar-link active" href="players-list.html" title="Players" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="sidebar-label">Players</span>
+      </a>
+      <a class="sidebar-link" href="upload-flow.html" title="Upload video">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span class="sidebar-label">Upload video</span>
+      </a>
+      <a class="sidebar-link" href="matches-list.html" title="Recordings">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 14h4M17 9h4M17 14h4"/></svg>
+        <span class="sidebar-label">Recordings</span>
+      </a>
+    </div>
+    <div class="sidebar-foot">
+      <div class="user-menu-wrap">
+        <button class="avatar" id="userMenuToggle" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false">BL</button>
+        <div class="user-menu" id="userMenu" role="menu" aria-hidden="true">
+          <div class="user-menu-head">
+            <div class="user-menu-avatar">BL</div>
+            <div class="user-menu-id">
+              <span class="user-menu-name">Coach B. Le</span>
+              <span class="user-menu-email">brian@ucdavistennis.com</span>
+            </div>
+          </div>
+          <div class="user-menu-divider"></div>
+          <button class="user-menu-item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>Account settings</span>
+          </button>
+          <button class="user-menu-item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Team settings</span>
+          </button>
+          <button class="user-menu-item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>Help &amp; feedback</span>
+          </button>
+          <div class="user-menu-divider"></div>
+          <button class="user-menu-item user-menu-item-danger" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span>Sign out</span>
+          </button>
+        </div>
+      </div>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      </button>
+    </div>
+  </aside>
+  <script>
+    (function () {
+      const KEY = 'cc-sidebar-collapsed';
+      if (localStorage.getItem(KEY) === '1') document.body.classList.add('sidebar-collapsed');
+      const collapseBtn = document.getElementById('sidebarCollapse');
+      if (collapseBtn) {
+        collapseBtn.addEventListener('click', () => {
+          const collapsed = document.body.classList.toggle('sidebar-collapsed');
+          localStorage.setItem(KEY, collapsed ? '1' : '0');
+          collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+          collapseBtn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        });
+      }
+      // User menu — click avatar to toggle, click outside or Esc to close
+      const menuToggle = document.getElementById('userMenuToggle');
+      const menu = document.getElementById('userMenu');
+      if (menuToggle && menu) {
+        function closeMenu() {
+          menu.classList.remove('is-open');
+          menuToggle.setAttribute('aria-expanded', 'false');
+          menu.setAttribute('aria-hidden', 'true');
+        }
+        menuToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = menu.classList.toggle('is-open');
+          menuToggle.setAttribute('aria-expanded', String(isOpen));
+          menu.setAttribute('aria-hidden', String(!isOpen));
+        });
+        document.addEventListener('click', (e) => {
+          if (!menu.contains(e.target) && e.target !== menuToggle) closeMenu();
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') closeMenu();
+        });
+      }
+      // Checkmark webm (visible only when sidebar is collapsed): still at rest, plays on hover
+      const checkmark = document.querySelector('.app-sidebar .logo-checkmark');
+      if (checkmark) {
+        checkmark.pause();
+        try { checkmark.currentTime = 0; } catch (e) {}
+        const brand = checkmark.closest('.sidebar-brand');
+        if (brand) {
+          brand.addEventListener('mouseenter', () => {
+            try { checkmark.currentTime = 0; checkmark.play(); } catch (e) {}
+          });
+          brand.addEventListener('mouseleave', () => {
+            checkmark.pause();
+            try { checkmark.currentTime = 0; } catch (e) {}
+          });
+        }
+      }
+    })();
+  </script>
+  <!-- app sidebar (end) -->
+
+
+  
+
+
+  
+
+
+  
+
+
+  
+
+
+  
+
+  
+
+<main class="container">
+
+    <div class="page-head reveal reveal-1">
+      <div class="head-row">
+        <div>
+          <span class="eyebrow">Roster</span>
+          <h1 class="display">Your <span class="ital">team</span>.</h1>
+          <p class="h1-meta"><span class="num">7</span> players · <span class="num">14</span> recordings analyzed this season</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-ghost">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export roster
+          </button>
+          <button class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Add player
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTER ROW -->
+    <div class="filter-row reveal reveal-2">
+      <button class="filter-chip active">All players</button>
+      <button class="filter-chip">Singles</button>
+      <button class="filter-chip">Doubles</button>
+      <button class="filter-chip">Seniors</button>
+      <button class="filter-chip">Juniors</button>
+      <button class="filter-chip">Sophomores</button>
+      <button class="filter-chip">Freshmen</button>
+    </div>
+
+    <!-- PLAYER GRID -->
+    <div class="player-grid reveal reveal-3">
+
+      <div class="player-card">
+        <div class="player-card-head">
+          <div class="player-avatar" style="background: linear-gradient(140deg, var(--court), var(--court-deep));">ML</div>
+          <div class="player-card-id">
+            <span class="player-name">Maya <span class="ital">Lin</span></span>
+            <span class="player-meta">Junior · Singles 1 · Right-handed</span>
+          </div>
+        </div>
+        <div class="player-stats">
+          <div class="player-stat">
+            <span class="stat-num">78<span class="unit">%</span></span>
+            <span class="stat-label">Baseline</span>
+          </div>
+          <div class="player-stat">
+            <span class="stat-num">67<span class="unit">%</span></span>
+            <span class="stat-label">Net win</span>
+          </div>
+          <div class="player-stat">
+            <span class="stat-num">68<span class="unit">%</span></span>
+            <span class="stat-label">1st serve</span>
+          </div>
+        </div>
+        <div class="player-recent">
+          <span class="recent-head">Last 3 recordings</span>
+          <div class="recent-row">
+            <span class="ts">Apr 28</span>
+            <span class="opp">vs D. Park · Stanford</span>
+            <span class="recent-result win">W</span>
+          </div>
+          <div class="recent-row">
+            <span class="ts">Apr 21</span>
+            <span class="opp">vs S. Cho · Cal</span>
+            <span class="recent-result win">W</span>
+          </div>
+          <div class="recent-row">
+            <span class="ts">Apr 15</span>
+            <span class="opp">vs R. Patel · UCLA</span>
+            <span class="recent-result loss">L</span>
+          </div>
+        </div>
+        <div class="player-card-foot">
+          <span class="foot-meta">22.4 hrs recorded</span>
+          <span class="arrow">→</span>
+        </div>
+      </div>
+
+      <div class="player-card">
+        <div class="player-card-head">
+          <div class="player-avatar" style="background: linear-gradient(140deg, var(--clay), var(--clay-soft));">JR</div>
+          <div class="player-card-id">
+            <span class="player-name">Jordan <span class="ital">Rivera</span></span>
+            <span class="player-meta">Sophomore · Singles 3 · Left-handed</span>
+          </div>
+        </div>
+        <div class="player-stats">
+          <div class="player-stat">
+            <span class="stat-num">72<span class="unit">%</span></span>
+            <span class="stat-label">Baseline</span>
+          </div>
+          <div class="player-stat">
+            <span class="stat-num">58<span class="unit">%</span></span>
+            <span class="stat-label">Net win</span>
+          </div>
+          <div class="player-stat">
+            <span class="stat-num">58<span class="unit">%</span></span>
+            <span class="stat-label">1st serve</span>
+          </div>
+        </div>
+        <div class="player-recent">
+          <span class="recent-head">Last 3 recordings</span>
+          <div class="recent-row">
+            <span class="ts">Apr 26</span>
+            <span class="opp">vs S. Cho · Cal</span>
+            <span class="recent-result loss">L</span>
+          </div>
+          <div class="recent-row">
+            <span class="ts">Apr 10</span>
+            <span class="opp">vs A. Vargas · SDSU</span>
+            <span class="recent-result win">W</span>
+          </div>
+          <div class="recent-row">
+            <span class="ts">Apr 3</span>
+            <span class="opp">vs T. Martinez · UCSB</span>
+            <span class="recent-result win">W</span>
+          </div>
+        </div>
+        <div class="player-card-foot">
+          <span class="foot-meta">17.8 hrs recorded</span>
+          <span class="arrow">→</span>
+        </div>
+      </div>
+
+      <div class="player-card">
+        <div class="player-card-head">
+          <div class="player-avatar" style="background: linear-gradient(140deg, var(--plum), #5C3852);">AT</div>
+          <div class="player-card-id">
+            <span class="player-name">Aspen <span class="ital">Tran</span></span>
+            <span class="player-meta">Senior · Singles 2 · Right-handed</span>
+          </div>
+        </div>
+        <div class="player-stats">
+          <div class="player-stat">
+            <span class="stat-num">84<span class="unit">%</span></span>
+            <span class="stat-label">Baseline</span>
+          </div>
+          <div class="player-stat">
+            <span class="stat-num">71<span class="unit">%</span></span>
+            <span class="stat-label">Net win</span>
+          </div>
+          <div class="player-stat">
+            <span class="stat-num">64<span class="unit">%</span></span>
+            <span class="stat-label">1st serve</span>
+          </div>
+        </div>
+        <div class="player-recent">
+          <span class="recent-head">Last 3 recordings</span>
+          <div class="recent-row">
+            <span class="ts">Apr 27</span>
+            <span class="opp">vs J. Park · Stanford</span>
+            <span class="recent-result win">W</span>
+          </div>
+          <div class="recent-row">
+            <span class="ts">Apr 12</span>
+            <span class="opp">vs L. Russo · Cal</span>
+            <span class="recent-result win">W</span>
+          </div>
+          <div class="recent-row">
+            <span class="ts">Mar 29</span>
+            <span class="opp">vs N. Wong · UCLA</span>
+            <span class="recent-result win">W</span>
+          </div>
+        </div>
+        <div class="player-card-foot">
+          <span class="foot-meta">25.1 hrs recorded</span>
+          <span class="arrow">→</span>
+        </div>
+      </div>
+
+      <div class="player-card">
+        <div class="player-card-head">
+          <div class="player-avatar" style="background: linear-gradient(140deg, var(--slate), #3E4A56);">DW</div>
+          <div class="player-card-id">
+            <span class="player-name">Daniel <span class="ital">Walker</span></span>
+            <span class="player-meta">Junior · Singles 4 · Left-handed</span>
+          </div>
+        </div>
+        <div class="player-stats">
+          <div class="player-stat">
+            <span class="stat-num">81<span class="unit">%</span></span>
+            <span class="stat-label">Baseline</span>
+          </div>
+          <div class="player-stat">
+            <span class="stat-num">62<span class="unit">%</span></span>
+            <span class="stat-label">Net win</span>
+          </div>
+          <div class="player-stat">
+            <span class="stat-num">62<span class="unit">%</span></span>
+            <span class="stat-label">1st serve</span>
+          </div>
+        </div>
+        <div class="player-recent">
+          <span class="recent-head">Last 3 recordings</span>
+          <div class="recent-row">
+            <span class="ts">Apr 25</span>
+            <span class="opp">vs T. Diaz · Stanford</span>
+            <span class="recent-result win">W</span>
+          </div>
+          <div class="recent-row">
+            <span class="ts">Apr 11</span>
+            <span class="opp">vs P. Singh · Cal</span>
+            <span class="recent-result win">W</span>
+          </div>
+          <div class="recent-row">
+            <span class="ts">Mar 27</span>
+            <span class="opp">vs O. Brown · UCLA</span>
+            <span class="recent-result loss">L</span>
+          </div>
+        </div>
+        <div class="player-card-foot">
+          <span class="foot-meta">18.6 hrs recorded</span>
+          <span class="arrow">→</span>
+        </div>
+      </div>
+
+      <div class="player-card">
+        <div class="player-card-head">
+          <div class="player-avatar" style="background: linear-gradient(140deg, var(--amber), #9A6E20);">SP</div>
+          <div class="player-card-id">
+            <span class="player-name">Sophie <span class="ital">Park</span></span>
+            <span class="player-meta">Freshman · Singles 5 · Right-handed</span>
+          </div>
+        </div>
+        <div class="player-stats">
+          <div class="player-stat">
+            <span class="stat-num">65<span class="unit">%</span></span>
+            <span class="stat-label">Baseline</span>
+          </div>
+          <div class="player-stat">
+            <span class="stat-num">49<span class="unit">%</span></span>
+            <span class="stat-label">Net win</span>
+          </div>
+          <div class="player-stat">
+            <span class="stat-num">55<span class="unit">%</span></span>
+            <span class="stat-label">1st serve</span>
+          </div>
+        </div>
+        <div class="player-recent">
+          <span class="recent-head">Last 3 recordings</span>
+          <div class="recent-row">
+            <span class="ts">Apr 22</span>
+            <span class="opp">vs M. Cho · Cal</span>
+            <span class="recent-result loss">L</span>
+          </div>
+          <div class="recent-row">
+            <span class="ts">Apr 8</span>
+            <span class="opp">vs E. Tran · UCLA</span>
+            <span class="recent-result loss">L</span>
+          </div>
+          <div class="recent-row">
+            <span class="ts">Mar 25</span>
+            <span class="opp">vs K. Reyes · USC</span>
+            <span class="recent-result loss">L</span>
+          </div>
+        </div>
+        <div class="player-card-foot">
+          <span class="foot-meta">12.3 hrs recorded</span>
+          <span class="arrow">→</span>
+        </div>
+      </div>
+
+      <div class="player-card">
+        <div class="player-card-head">
+          <div class="player-avatar" style="background: linear-gradient(140deg, var(--court-light), var(--court));">KN</div>
+          <div class="player-card-id">
+            <span class="player-name">Khalil <span class="ital">Nguyen</span></span>
+            <span class="player-meta">Sophomore · Singles 6 · Right-handed</span>
+          </div>
+        </div>
+        <div class="player-stats">
+          <div class="player-stat">
+            <span class="stat-num">76<span class="unit">%</span></span>
+            <span class="stat-label">Baseline</span>
+          </div>
+          <div class="player-stat">
+            <span class="stat-num">55<span class="unit">%</span></span>
+            <span class="stat-label">Net win</span>
+          </div>
+          <div class="player-stat">
+            <span class="stat-num">60<span class="unit">%</span></span>
+            <span class="stat-label">1st serve</span>
+          </div>
+        </div>
+        <div class="player-recent">
+          <span class="recent-head">Last 3 recordings</span>
+          <div class="recent-row">
+            <span class="ts">Apr 29</span>
+            <span class="opp">vs C. Lee · Stanford</span>
+            <span class="recent-result loss">L</span>
+          </div>
+          <div class="recent-row">
+            <span class="ts">Apr 14</span>
+            <span class="opp">vs J. Costa · USC</span>
+            <span class="recent-result win">W</span>
+          </div>
+          <div class="recent-row">
+            <span class="ts">Apr 1</span>
+            <span class="opp">vs M. Davis · UCLA</span>
+            <span class="recent-result win">W</span>
+          </div>
+        </div>
+        <div class="player-card-foot">
+          <span class="foot-meta">15.9 hrs recorded</span>
+          <span class="arrow">→</span>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <span>CourtCheck · Players</span>
+      <span>v0.1 · brand mock</span>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      const toggle = document.getElementById('themeToggle');
+      const body = document.body;
+      const stored = localStorage.getItem('cc-theme');
+      if (stored === 'dark') body.classList.add('dark');
+      toggle.addEventListener('click', () => {
+        body.classList.toggle('dark');
+        localStorage.setItem('cc-theme', body.classList.contains('dark') ? 'dark' : 'light');
+      });
+    })();
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+      });
+    });
+  </script>
+
+  <script>
+    // brand-mark hover-to-play splash animation
+    (function () {
+      const marks = document.querySelectorAll('.brand-mark');
+      marks.forEach(mark => {
+        const video = mark.querySelector('video');
+        if (!video) return;
+        mark.addEventListener('mouseenter', () => {
+          try { video.currentTime = 0; video.play(); } catch (e) {}
+        });
+        mark.addEventListener('mouseleave', () => {
+          video.pause();
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>

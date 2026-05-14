@@ -41,7 +41,7 @@ from backend.vision.homography import HomographyEstimator
 from backend.vision.calibration import save_calibration, visualize_keypoints
 
 
-TARGET_W, TARGET_H = 1280, 720
+TARGET_W, TARGET_H = 1920, 1080
 
 
 def extract_frame(video_path: str, frame_number: int) -> np.ndarray:

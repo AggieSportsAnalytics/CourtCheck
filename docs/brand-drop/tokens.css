@@ -1,0 +1,214 @@
+@import 'tailwindcss';
+@plugin "@tailwindcss/typography";
+
+/* Class-based dark mode (mocks toggle .dark on body) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* === BRAND COLOR TOKENS (light defaults) === */
+  --color-cream: #F4F0E6;
+  --color-paper: #FBF8F1;
+  --color-surface: #FFFFFF;
+  --color-shade: #ECE6D5;
+  --color-line: #DDD7C5;
+  --color-line-soft: #EAE4D2;
+
+  --color-ink: #1A1815;
+  --color-ink-soft: #43403A;
+  --color-ink-mute: #837F77;
+
+  --color-court: #2E5341;
+  --color-court-deep: #1F3D2E;
+  --color-court-light: #6E8C7C;
+  --color-court-surface: #A85E3A;
+
+  --color-clay: #B05B36;
+  --color-clay-soft: #D08866;
+
+  --color-lime: #BFC846;
+  --color-plum: #7B4E6E;
+  --color-amber: #C8923A;
+  --color-slate: #5C6B7A;
+
+  /* Categorical (stroke types) */
+  --color-stroke-forehand: #2E5341;
+  --color-stroke-backhand: #7B4E6E;
+  --color-stroke-serve: #C8923A;
+  --color-stroke-volley: #B05B36;
+
+  /* === SHADCN SEMANTIC ALIASES (mapped to brand) === */
+  --color-background: #F4F0E6;
+  --color-foreground: #1A1815;
+  --color-card: #FBF8F1;
+  --color-card-foreground: #1A1815;
+  --color-popover: #FBF8F1;
+  --color-popover-foreground: #1A1815;
+  --color-primary: #2E5341;
+  --color-primary-foreground: #F4F0E6;
+  --color-secondary: #ECE6D5;
+  --color-secondary-foreground: #1A1815;
+  --color-muted: #ECE6D5;
+  --color-muted-foreground: #837F77;
+  --color-accent: #B05B36;
+  --color-accent-foreground: #F4F0E6;
+  --color-destructive: #B05B36;
+  --color-destructive-foreground: #F4F0E6;
+  --color-border: #DDD7C5;
+  --color-input: #DDD7C5;
+  --color-ring: #2E5341;
+
+  /* === FONTS === */
+  --font-display: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* === MOTION === */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --duration-quick: 160ms;
+  --duration-base: 240ms;
+  --duration-reveal: 480ms;
+  --duration-hero: 800ms;
+
+  /* === RADIUS === */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+
+  /* === SHADOW === */
+  --shadow-card: 0 1px 0 rgba(26, 24, 21, 0.04), 0 18px 48px -24px rgba(26, 24, 21, 0.16);
+  --shadow-pop: 0 1px 0 rgba(26, 24, 21, 0.06), 0 24px 60px -28px rgba(26, 24, 21, 0.22);
+}
+
+/* === DARK MODE OVERRIDES (Stadium-at-Night) — synced 2026-05-12 with the canonical mocks palette.
+   Cool navy surfaces with wider elevation deltas (cream → paper jumps ~30 luminance units so
+   adjacent sections read as distinct planes). Court stays GREEN (was incorrectly flipped to blue
+   in the original drop). Plum / amber / slate / court-surface added so dark mode mirrors the
+   full light-mode chromatic palette. */
+.dark {
+  --color-cream: #07080F;
+  --color-paper: #1F2940;
+  --color-surface: #2B374F;
+  --color-shade: #11161F;
+  --color-line: #2F3B52;
+  --color-line-soft: #1E2735;
+
+  --color-ink: #F4F0E6;
+  --color-ink-soft: #A8B0C0;
+  --color-ink-mute: #6B7388;
+
+  --color-court: #6FA88B;
+  --color-court-deep: #4A8268;
+  --color-court-light: #9FC6B0;
+  --color-court-surface: #6B3A24;
+
+  --color-clay: #E07A52;
+  --color-clay-soft: #F0A07F;
+
+  --color-lime: #DDE970;
+  --color-plum: #B584A6;
+  --color-amber: #DDB166;
+  --color-slate: #889DB3;
+
+  --color-stroke-forehand: #6FA88B;
+  --color-stroke-backhand: #B584A6;
+  --color-stroke-serve: #DDB166;
+  --color-stroke-volley: #E07A52;
+
+  /* Shadcn alias overrides */
+  --color-background: #07080F;
+  --color-foreground: #F4F0E6;
+  --color-card: #1F2940;
+  --color-card-foreground: #F4F0E6;
+  --color-popover: #2B374F;
+  --color-popover-foreground: #F4F0E6;
+  --color-primary: #6FA88B;
+  --color-primary-foreground: #07080F;
+  --color-secondary: #11161F;
+  --color-secondary-foreground: #F4F0E6;
+  --color-muted: #11161F;
+  --color-muted-foreground: #6B7388;
+  --color-accent: #E07A52;
+  --color-accent-foreground: #F4F0E6;
+  --color-destructive: #E07A52;
+  --color-destructive-foreground: #F4F0E6;
+  --color-border: #2F3B52;
+  --color-input: #2F3B52;
+  --color-ring: #6FA88B;
+
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.4), 0 18px 48px -24px rgba(0, 0, 0, 0.55);
+  --shadow-pop: 0 1px 0 rgba(0, 0, 0, 0.5), 0 24px 60px -28px rgba(0, 0, 0, 0.7);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  html.dark,
+  .dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-cream text-ink font-sans antialiased;
+    font-size: 16px;
+    line-height: 1.55;
+    letter-spacing: -0.005em;
+    background-image:
+      radial-gradient(1400px 900px at 88% -10%, color-mix(in srgb, var(--color-clay) 8%, transparent), transparent 55%),
+      radial-gradient(900px 800px at -10% 80%, color-mix(in srgb, var(--color-court) 9%, transparent), transparent 60%);
+    background-attachment: fixed;
+    transition: background-color var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-court) 20%, transparent);
+    color: var(--color-ink);
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-ink) 12%, transparent);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--color-ink) 22%, transparent);
+  }
+
+  /* Tabular nums for any element using the num primitive */
+  .num,
+  [data-num] {
+    font-feature-settings: 'tnum';
+  }
+}
+
+/* === SONNER TOAST CLASSES (per notifications.md) === */
+@layer components {
+  .cc-toast {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+    box-shadow: var(--shadow-card);
+    font-family: var(--font-sans);
+  }
+  .cc-toast-success {
+    border-color: color-mix(in srgb, var(--color-court) 30%, var(--color-line));
+  }
+  .cc-toast-info {
+    border-color: var(--color-line);
+  }
+  .cc-toast-warn,
+  .cc-toast-error {
+    border-color: color-mix(in srgb, var(--color-clay) 35%, var(--color-line));
+  }
+}

@@ -1,0 +1,9 @@
+tracker_type: bytetrack
+
+# Lowered thresholds to surface small/low-confidence far-court player detections.
+# Default bytetrack thresholds (0.5 / 0.1 / 0.6) reject far players detected at 5-15% confidence.
+track_high_thresh: 0.05   # was 0.5 — all YOLO detections above conf threshold qualify
+track_low_thresh: 0.01    # was 0.1
+new_track_thresh: 0.05    # was 0.6 — allow new tracks for low-confidence far players
+track_buffer: 30
+match_thresh: 0.8

@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CourtCheck · Upload</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream:        #F4F0E6;
+      --paper:        #FBF8F1;
+      --surface:      #FFFFFF;
+      --shade:        #ECE6D5;
+      --line:         #DDD7C5;
+      --line-soft:    #EAE4D2;
+      --ink:          #1A1815;
+      --ink-soft:     #43403A;
+      --ink-mute:     #837F77;
+      --court:        #2E5341;
+      --court-deep:   #1F3D2E;
+      --court-light:  #6E8C7C;
+      --clay:         #B05B36;
+      --clay-soft:    #D08866;
+      --lime:         #BFC846;
+      --lime-soft:    #E1E7A6;
+      --plum:         #7B4E6E;
+      --amber:        #C8923A;
+      --slate:        #5C6B7A;
+      --bg-grad-1:    rgba(176,91,54,0.06);
+      --bg-grad-2:    rgba(46,83,65,0.07);
+      --court-surface: #A85E3A;
+      --radius:       2px;
+      --radius-lg:    14px;
+      --shadow:       0 1px 0 rgba(26,24,21,0.04), 0 18px 48px -24px rgba(26,24,21,0.16);
+
+      --ease-out:     cubic-bezier(0.2, 0.8, 0.2, 1);
+      --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+      --dur-quick:    160ms;
+      --dur-base:     240ms;
+      --dur-reveal:   480ms;
+    }
+
+    body.dark {
+      --cream:        #07080F;
+      --paper:        #1F2940;
+      --surface:      #2B374F;
+      --shade:        #11161F;
+      --line:         #2F3B52;
+      --line-soft:    #1E2735;
+      --ink:          #F4F0E6;
+      --ink-soft:     #A8B0C0;
+      --ink-mute:     #6B7388;
+      --court:        #6FA88B;
+      --court-deep:   #4A8268;
+      --court-light:  #9FC6B0;
+      --clay:         #E07A52;
+      --clay-soft:    #F0A07F;
+      --lime:         #DDE970;
+      --court-surface: #6B3A24;
+      --bg-grad-1:    rgba(176,91,54,0.08);
+      --bg-grad-2:    rgba(111,168,139,0.06);
+      --plum:#B584A6; --amber:#DDB166; --slate:#889DB3;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: var(--cream); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.55;
+      letter-spacing: -0.005em;
+      -webkit-font-smoothing: antialiased;
+      background-image:
+        radial-gradient(1200px 600px at 92% -10%, var(--bg-grad-1), transparent 60%),
+        radial-gradient(900px 700px at -10% 110%, var(--bg-grad-2), transparent 65%);
+      background-attachment: fixed;
+      transition: background-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .display { font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 72; font-weight: 500; letter-spacing: -0.022em; line-height: 1.0; }
+    .ital { color: var(--clay); font-style: italic; font-weight: 400; }
+    .num     { font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 72; font-weight: 500; font-feature-settings: 'tnum'; }
+
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--court);
+    }
+    .eyebrow::before { content: ""; width: 6px; height: 6px; background: var(--clay); border-radius: 50%; }
+
+    .container { max-width: 720px; margin: 0 auto; padding: 0 32px; }
+
+    .brand-mark { display: flex; align-items: center; gap: 12px; }
+    .brand-mark .logo { height: 56px; width: auto; display: block; }
+    .brand-mark .logo-dark { display: none; }
+    body.dark .brand-mark .logo-light { display: none; }
+    body.dark .brand-mark .logo-dark { display: block; }
+    .brand-mark .name {
+      font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 60;
+      font-weight: 500; font-size: 1.25rem; letter-spacing: -0.018em;
+    }
+    .theme-toggle {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--line); background: var(--paper);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--ink); padding: 0;
+      transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+    }
+    .theme-toggle:hover { transform: rotate(20deg); border-color: var(--ink); }
+    .theme-toggle svg { width: 16px; height: 16px; }
+    .theme-toggle .moon { display: block; } .theme-toggle .sun  { display: none; }
+    body.dark .theme-toggle .moon { display: none; } body.dark .theme-toggle .sun { display: block; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--court); color: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 0.95rem;
+    }
+
+    /* Dev toggle (mock-only, would be removed in production) */
+    .dev-toggle {
+      margin: 32px auto 0;
+      max-width: 720px;
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 16px;
+      background: var(--paper);
+      border: 1px dashed var(--line);
+      border-radius: 100px;
+    }
+    .dev-toggle .label {
+      color: var(--ink-mute);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
+      margin-right: 4px;
+    }
+    .dev-toggle button {
+      padding: 6px 14px; border-radius: 100px; border: none;
+      background: transparent; color: var(--ink-soft);
+      font-size: 0.82rem; font-weight: 500; cursor: pointer;
+      transition: background var(--dur-quick) var(--ease-out), color var(--dur-quick) var(--ease-out);
+    }
+    .dev-toggle button:hover { color: var(--ink); }
+    .dev-toggle button.active { background: var(--ink); color: var(--cream); }
+
+    /* Page head */
+    .page-head { padding: 56px 0 36px; }
+    .page-head h1 { font-size: clamp(40px, 5.2vw, 64px); margin: 18px 0 12px; }
+    .page-head .lede { color: var(--ink-soft); font-size: 1.1rem; max-width: 56ch; }
+
+    /* Form */
+    .match-form { display: grid; gap: 18px; margin-bottom: 28px; }
+    .field { display: grid; gap: 6px; }
+    .field label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    .field input, .field select {
+      width: 100%; padding: 12px 14px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-family: inherit; font-size: 0.95rem; color: var(--ink);
+      transition: border-color var(--dur-quick) var(--ease-out), background var(--dur-quick) var(--ease-out);
+    }
+    .field input:focus, .field select:focus {
+      outline: none; border-color: var(--ink); background: var(--surface);
+    }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+
+    /* Upload card (state container) */
+    .upload-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: border-color var(--dur-base) var(--ease-out);
+    }
+    .upload-card[data-state="idle"] { border-style: dashed; }
+
+    .state-pane { display: none; padding: 56px 32px; text-align: center; }
+    .upload-card[data-state="idle"]       .state-idle       { display: block; }
+    .upload-card[data-state="uploading"]  .state-uploading  { display: block; }
+    .upload-card[data-state="processing"] .state-processing { display: block; }
+    .upload-card[data-state="done"]       .state-done       { display: block; }
+
+    /* Idle */
+    .upload-glyph {
+      width: 56px; height: 56px;
+      margin: 0 auto 22px;
+      border-radius: 16px;
+      background: var(--shade);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--court);
+    }
+    body.dark .upload-glyph { background: var(--surface); color: var(--court-light); }
+    .upload-glyph svg { width: 24px; height: 24px; }
+    .state-idle h3 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 60;
+      font-weight: 500; font-size: 1.6rem;
+      letter-spacing: -0.014em;
+      margin-bottom: 8px;
+    }
+    .state-idle .browse-line { font-size: 0.95rem; color: var(--ink-soft); margin-bottom: 16px; }
+    .state-idle .browse-link { color: var(--court); font-weight: 500; border-bottom: 1px solid var(--court); cursor: pointer; }
+    .state-idle .file-types {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-mute);
+    }
+
+    /* Uploading */
+    .state-uploading h3 {
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 1.4rem;
+      letter-spacing: -0.014em; margin-bottom: 22px;
+      max-width: 28ch; margin-left: auto; margin-right: auto;
+    }
+    .file-pill {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 8px 14px; background: var(--shade);
+      border-radius: 100px; margin-bottom: 28px;
+      font-size: 0.85rem; max-width: 100%;
+    }
+    body.dark .file-pill { background: var(--surface); }
+    .file-pill .filename { font-weight: 500; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-pill .filesize { color: var(--ink-mute); font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; }
+
+    .progress {
+      max-width: 360px; margin: 0 auto;
+      height: 4px; background: var(--shade);
+      border-radius: 100px; overflow: hidden;
+    }
+    body.dark .progress { background: var(--surface); }
+    .progress-fill {
+      height: 100%; border-radius: 100px;
+      background: var(--court);
+      width: 0;
+      transition: width var(--dur-base) var(--ease-out);
+    }
+    .progress-meta {
+      display: flex; justify-content: space-between;
+      max-width: 360px; margin: 10px auto 0;
+      font-size: 0.78rem; color: var(--ink-mute);
+    }
+    .progress-meta .pct { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+
+    /* Processing: bounce loader replaces former rally animation */
+    .state-processing h3 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 72;
+      font-weight: 500; font-size: 1.5rem;
+      letter-spacing: -0.014em;
+      margin-bottom: 8px; min-height: 1.5em;
+      transition: opacity var(--dur-base) var(--ease-out);
+    }
+    .state-processing .stage-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-mute); margin-bottom: 28px;
+    }
+    .processing-foot {
+      margin-top: 22px;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; color: var(--ink-mute);
+      letter-spacing: 0.1em;
+    }
+
+    /* Done: checkmark + confetti live in .celebration block at bottom of stylesheet */
+    .state-done h3 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 72;
+      font-weight: 500; font-size: 2rem;
+      letter-spacing: -0.018em; margin-bottom: 6px;
+    }
+    .state-done .lede-line { color: var(--ink-soft); font-size: 1rem; margin-bottom: 28px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 12px 22px; border-radius: 100px;
+      font-weight: 500; font-size: 0.95rem;
+      cursor: pointer; border: none;
+      transition: transform var(--dur-quick) var(--ease-spring), background var(--dur-base) var(--ease-out);
+    }
+    .btn-primary { background: var(--ink); color: var(--cream); }
+    body.dark .btn-primary { background: var(--court-deep); color: var(--cream); }
+    .btn-primary:hover { transform: translateY(-1px); }
+
+    /* Features */
+    .features {
+      margin-top: 36px;
+      padding: 28px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+    }
+    .features-head {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-mute); margin-bottom: 22px;
+    }
+    .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+    @media (max-width: 600px) { .feature-grid { grid-template-columns: 1fr; } }
+    .feature { display: flex; gap: 14px; align-items: flex-start; }
+    .feature-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: color-mix(in srgb, var(--court) 8%, transparent);
+      color: var(--court);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    body.dark .feature-icon {
+      background: color-mix(in srgb, var(--court-light) 14%, transparent);
+      color: var(--court-light);
+    }
+    .feature-icon svg { width: 16px; height: 16px; }
+    .feature h5 {
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 1.05rem;
+      letter-spacing: -0.01em; margin-bottom: 2px;
+    }
+    .feature p { color: var(--ink-soft); font-size: 0.88rem; line-height: 1.5; }
+
+    footer { padding: 60px 0 40px; }
+    footer .container {
+      display: flex; justify-content: space-between;
+      font-size: 0.82rem; color: var(--ink-mute);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* === Processing state: bounce loader === */
+    /* The hand-drawn court-bounce loop is the brand's waiting signal.
+       Anytime a coach is waiting on the backend, this video plays. */
+    .bounce-loader {
+      width: 560px;
+      max-width: 90%;
+      margin: 0 auto 28px;
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent;
+    }
+    .bounce-loader video {
+      width: 100%; height: auto; display: block;
+    }
+    .bounce-loader-sm { width: 380px; max-width: 80%; margin-bottom: 22px; }
+
+    /* === Complete state: celebration ===
+       The locked CourtCheck logo animation (ball traces the checkmark, wordmark
+       inks in) IS the brand's checkmark moment. Use it directly instead of an
+       abstract SVG tick. Confetti still bursts behind it for the Robinhood feel. */
+    .celebration {
+      position: relative;
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 1 / 1;
+      margin: 0 auto 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .confetti-canvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .check-mark {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 1 / 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .check-mark video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+      background: transparent;
+      filter: drop-shadow(0 8px 20px rgba(191, 200, 70, 0.18));
+    }
+    body.dark .check-mark video {
+      filter: invert(1) hue-rotate(180deg) drop-shadow(0 8px 20px rgba(221, 233, 112, 0.20));
+    }
+    /* Scale-pop on entry to the done state so the logo lands with brand confidence */
+    .upload-card[data-state="done"] .check-mark {
+      animation: cc-logo-pop 460ms var(--ease-spring) both;
+    }
+    @keyframes cc-logo-pop {
+      0%   { transform: scale(0.92); opacity: 0; }
+      60%  { transform: scale(1.04); opacity: 1; }
+      100% { transform: scale(1.0);  opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .check-mark { animation: none !important; }
+      .confetti-canvas { display: none; }
+      .bounce-loader video { display: none; }
+      .bounce-loader::after {
+        content: "Loading...";
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--ink-mute);
+        padding: 32px 0;
+      }
+    }
+
+    /* === BRAND-MARK HOVER VIDEO === */
+    .brand-mark { position: relative; }
+    .brand-mark .logo-video {
+      display: none;
+      height: 56px;
+      width: auto;
+      background: transparent;
+    }
+    body.dark .brand-mark .logo-video {
+      filter: invert(1) hue-rotate(180deg);
+    }
+    .brand-mark:hover .logo-light,
+    .brand-mark:hover .logo-dark { display: none; }
+    .brand-mark:hover .logo-video { display: block; }
+    body.dark .brand-mark:hover .logo-light,
+    body.dark .brand-mark:hover .logo-dark { display: none; }
+    body.dark .brand-mark:hover .logo-video { display: block; }
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    /* === APP SIDEBAR (in-product nav; replaces the top bar on internal routes) === */
+    body { padding-left: 200px; transition: padding-left 220ms var(--ease-out); }
+    .app-sidebar {
+      position: fixed; top: 0; left: 0;
+      width: 200px; height: 100vh;
+      background: var(--paper);
+      border-right: 1px solid var(--line-soft);
+      display: flex; flex-direction: column;
+      padding: 22px 14px;
+      z-index: 50;
+      box-sizing: border-box;
+      transition: width 220ms var(--ease-out), padding 220ms var(--ease-out);
+    }
+    .app-sidebar .sidebar-brand {
+      position: relative;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 76px;
+      padding: 8px 4px 16px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    /* Logo fills the sidebar width and scales tall; max-height caps growth at ~64px */
+    .app-sidebar .sidebar-brand .logo {
+      width: 100%; height: auto;
+      max-width: 100%; max-height: 64px;
+      display: block;
+      object-fit: contain;
+    }
+    .app-sidebar .sidebar-brand .logo-dark { display: none; }
+    .app-sidebar .sidebar-brand .logo-video {
+      display: none;
+      width: 100%; height: auto; max-height: 64px;
+      object-fit: contain; background: transparent;
+    }
+    /* Checkmark-only WebM — shown when sidebar is collapsed (no wordmark room) */
+    .app-sidebar .sidebar-brand .logo-checkmark {
+      display: none;
+      width: auto; height: auto;
+      max-width: 100%; max-height: 48px;
+      object-fit: contain; background: transparent;
+    }
+    body.dark .app-sidebar .sidebar-brand .logo-light { display: none; }
+    body.dark .app-sidebar .sidebar-brand .logo-dark { display: block; }
+    body.dark .app-sidebar .sidebar-brand .logo-video { filter: invert(1) hue-rotate(180deg); }
+    body.dark .app-sidebar .sidebar-brand .logo-checkmark { filter: invert(1) hue-rotate(180deg); }
+    .app-sidebar .sidebar-brand:hover .logo-light,
+    .app-sidebar .sidebar-brand:hover .logo-dark { display: none; }
+    .app-sidebar .sidebar-brand:hover .logo-video { display: block; }
+    body.dark .app-sidebar .sidebar-brand:hover .logo-light,
+    body.dark .app-sidebar .sidebar-brand:hover .logo-dark { display: none; }
+    body.dark .app-sidebar .sidebar-brand:hover .logo-video { display: block; }
+    .app-sidebar .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .app-sidebar .sidebar-link {
+      position: relative;
+      display: flex; align-items: center; gap: 12px;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: var(--ink-soft);
+      font-size: 0.92rem; font-weight: 500;
+      transition: background var(--dur-quick) var(--ease-out),
+                  color var(--dur-quick) var(--ease-out);
+    }
+    .app-sidebar .sidebar-link svg { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; }
+    .app-sidebar .sidebar-link:hover { background: var(--shade); color: var(--ink); }
+    .app-sidebar .sidebar-link:focus-visible { outline: 2px solid var(--court); outline-offset: 2px; }
+    .app-sidebar .sidebar-link.active { background: var(--shade); color: var(--ink); font-weight: 600; }
+    /* Active route accent rail — supplements color/weight so meaning isn't color-only */
+    .app-sidebar .sidebar-link.active::before {
+      content: ''; position: absolute; left: -14px; top: 8px; bottom: 8px;
+      width: 3px; border-radius: 0 3px 3px 0; background: var(--court);
+    }
+    body.dark .app-sidebar .sidebar-link.active::before { background: var(--court-light); }
+    body.dark .app-sidebar .sidebar-link:hover,
+    body.dark .app-sidebar .sidebar-link.active { background: var(--surface); }
+    .app-sidebar .sidebar-foot {
+      display: flex; align-items: center; justify-content: flex-start; gap: 10px;
+      padding: 14px 6px 4px;
+      border-top: 1px solid var(--line-soft);
+    }
+    /* Collapse toggle (chevron). Sits absolute in the top-right corner of the sidebar
+       so it doesn't crowd the brand-mark or the foot row. Stays in place when collapsed. */
+    .sidebar-collapse {
+      position: absolute; top: 14px; right: 8px;
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1px solid var(--line); background: var(--paper);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--ink-mute); padding: 0;
+      z-index: 51;
+      transition: background var(--dur-base) var(--ease-out),
+                  border-color var(--dur-base) var(--ease-out),
+                  color var(--dur-base) var(--ease-out);
+    }
+    .sidebar-collapse:hover { border-color: var(--ink); color: var(--ink); }
+    .sidebar-collapse svg { width: 13px; height: 13px; transition: transform 220ms var(--ease-out); }
+    body.sidebar-collapsed .sidebar-collapse svg { transform: rotate(180deg); }
+
+    /* === COLLAPSED state — applied by user toggle OR by narrow viewport === */
+    body.sidebar-collapsed { padding-left: 72px; }
+    body.sidebar-collapsed .app-sidebar { width: 72px; padding: 22px 8px; }
+    /* Show ONLY the checkmark webm in collapsed mode (no room for the wordmark) */
+    body.sidebar-collapsed .app-sidebar .sidebar-brand {
+      min-height: 56px; padding: 4px 0 14px; margin-bottom: 8px;
+    }
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-light,
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-dark,
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-video { display: none; }
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-checkmark { display: block; }
+    body.sidebar-collapsed .app-sidebar .sidebar-brand:hover .logo-checkmark { display: block; }
+    body.sidebar-collapsed .app-sidebar .sidebar-link { justify-content: center; padding: 12px; }
+    body.sidebar-collapsed .app-sidebar .sidebar-link.active::before { left: -8px; }
+    body.sidebar-collapsed .app-sidebar .sidebar-label { display: none; }
+    body.sidebar-collapsed .app-sidebar .sidebar-foot { flex-direction: column; gap: 12px; padding: 14px 0 4px; }
+
+    @media (max-width: 1100px) {
+      body { padding-left: 72px; }
+      .app-sidebar { width: 72px; padding: 22px 8px; }
+      .app-sidebar .sidebar-brand { min-height: 56px; padding: 4px 0 14px; margin-bottom: 8px; }
+      .app-sidebar .sidebar-brand .logo-light,
+      .app-sidebar .sidebar-brand .logo-dark,
+      .app-sidebar .sidebar-brand .logo-video { display: none; }
+      .app-sidebar .sidebar-brand .logo-checkmark { display: block; }
+      .app-sidebar .sidebar-link { justify-content: center; padding: 12px; }
+      .app-sidebar .sidebar-link.active::before { left: -8px; }
+      .app-sidebar .sidebar-label { display: none; }
+      .app-sidebar .sidebar-foot { flex-direction: column; gap: 12px; padding: 14px 0 4px; }
+    }
+
+    /* === USER MENU (pops up from the avatar in sidebar-foot) === */
+    .user-menu-wrap { position: relative; }
+    button.avatar {
+      background: var(--court); color: var(--cream);
+      border: none; cursor: pointer; padding: 0;
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 0.95rem;
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform var(--dur-quick) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+    }
+    button.avatar:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+    button.avatar:focus-visible { outline: 2px solid var(--court); outline-offset: 2px; }
+    body.dark button.avatar { background: var(--court-deep); }
+
+    /* Menu pops UP from the avatar, left-aligned to the avatar (which sits next to the
+       night-mode toggle on the left side of the foot row). Stays clear of main content
+       on the right and grows upward into the sidebar. */
+    .user-menu {
+      position: absolute;
+      bottom: calc(100% + 12px);
+      left: 0;
+      width: 248px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow-hover);
+      padding: 6px;
+      z-index: 60;
+      opacity: 0; transform: translateY(8px); pointer-events: none;
+      transition: opacity var(--dur-quick) var(--ease-out), transform var(--dur-quick) var(--ease-out);
+    }
+    .user-menu.is-open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .user-menu-head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 10px 12px;
+      min-width: 0;
+    }
+    .user-menu-head .user-menu-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--court); color: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+    body.dark .user-menu-head .user-menu-avatar { background: var(--court-deep); }
+    .user-menu-head .user-menu-id { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+    .user-menu-head .user-menu-name {
+      font-family: 'Newsreader', serif; font-weight: 500;
+      font-size: 0.96rem; letter-spacing: -0.012em;
+      color: var(--ink); line-height: 1.1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-menu-head .user-menu-email {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem; letter-spacing: 0.04em;
+      color: var(--ink-mute);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-menu-divider {
+      height: 1px; background: var(--line-soft); margin: 4px 0;
+    }
+    .user-menu-item {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; text-align: left;
+      padding: 9px 10px;
+      background: transparent; border: none;
+      border-radius: 8px;
+      font-family: inherit; font-size: 0.9rem; font-weight: 500;
+      color: var(--ink);
+      cursor: pointer;
+      transition: background var(--dur-quick) var(--ease-out);
+    }
+    .user-menu-item svg { width: 15px; height: 15px; stroke: currentColor; flex-shrink: 0; color: var(--ink-mute); }
+    .user-menu-item:hover { background: var(--shade); }
+    body.dark .user-menu-item:hover { background: var(--surface); }
+    .user-menu-item:hover svg { color: var(--ink); }
+    .user-menu-item-danger { color: var(--clay); }
+    .user-menu-item-danger svg { color: var(--clay); }
+    .user-menu-item-danger:hover { background: rgba(176,91,54,0.10); }
+    body.dark .user-menu-item-danger { color: var(--clay-soft); }
+    body.dark .user-menu-item-danger:hover { background: rgba(224,122,82,0.15); }
+    body.dark .user-menu-item-danger svg { color: var(--clay-soft); }
+
+    /* === END APP SIDEBAR === */
+  </style>
+</head>
+<body>
+
+  <!-- app sidebar (begin) -->
+  <aside class="app-sidebar" aria-label="Primary navigation">
+    <button class="sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" aria-expanded="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <a class="brand-mark sidebar-brand" href="dashboard.html" aria-label="CourtCheck home">
+      <img class="logo logo-light" src="../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+      <img class="logo logo-dark" src="../logo/CourtCheckLogoDark.png" alt="CourtCheck">
+      <video class="logo logo-video" muted playsinline preload="metadata" aria-hidden="true"><source src="../logo/CourtCheckAnimation.webm" type="video/webm"><source src="../logo/CourtCheckAnimation.mp4" type="video/mp4"></video>
+      <video class="logo logo-checkmark" muted playsinline preload="metadata" aria-hidden="true"><source src="../logo/CourtCheckCheckmark.webm" type="video/webm"></video>
+    </a>
+    <div class="sidebar-nav" role="navigation">
+      <a class="sidebar-link" href="dashboard.html" title="Dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span class="sidebar-label">Dashboard</span>
+      </a>
+      <a class="sidebar-link" href="players-list.html" title="Players">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="sidebar-label">Players</span>
+      </a>
+      <a class="sidebar-link active" href="upload-flow.html" title="Upload video" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span class="sidebar-label">Upload video</span>
+      </a>
+      <a class="sidebar-link" href="matches-list.html" title="Recordings">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 14h4M17 9h4M17 14h4"/></svg>
+        <span class="sidebar-label">Recordings</span>
+      </a>
+    </div>
+    <div class="sidebar-foot">
+      <div class="user-menu-wrap">
+        <button class="avatar" id="userMenuToggle" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false">BL</button>
+        <div class="user-menu" id="userMenu" role="menu" aria-hidden="true">
+          <div class="user-menu-head">
+            <div class="user-menu-avatar">BL</div>
+            <div class="user-menu-id">
+              <span class="user-menu-name">Coach B. Le</span>
+              <span class="user-menu-email">brian@ucdavistennis.com</span>
+            </div>
+          </div>
+          <div class="user-menu-divider"></div>
+          <button class="user-menu-item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>Account settings</span>
+          </button>
+          <button class="user-menu-item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Team settings</span>
+          </button>
+          <button class="user-menu-item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>Help &amp; feedback</span>
+          </button>
+          <div class="user-menu-divider"></div>
+          <button class="user-menu-item user-menu-item-danger" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span>Sign out</span>
+          </button>
+        </div>
+      </div>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      </button>
+    </div>
+  </aside>
+  <script>
+    (function () {
+      const KEY = 'cc-sidebar-collapsed';
+      if (localStorage.getItem(KEY) === '1') document.body.classList.add('sidebar-collapsed');
+      const collapseBtn = document.getElementById('sidebarCollapse');
+      if (collapseBtn) {
+        collapseBtn.addEventListener('click', () => {
+          const collapsed = document.body.classList.toggle('sidebar-collapsed');
+          localStorage.setItem(KEY, collapsed ? '1' : '0');
+          collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+          collapseBtn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        });
+      }
+      // User menu — click avatar to toggle, click outside or Esc to close
+      const menuToggle = document.getElementById('userMenuToggle');
+      const menu = document.getElementById('userMenu');
+      if (menuToggle && menu) {
+        function closeMenu() {
+          menu.classList.remove('is-open');
+          menuToggle.setAttribute('aria-expanded', 'false');
+          menu.setAttribute('aria-hidden', 'true');
+        }
+        menuToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = menu.classList.toggle('is-open');
+          menuToggle.setAttribute('aria-expanded', String(isOpen));
+          menu.setAttribute('aria-hidden', String(!isOpen));
+        });
+        document.addEventListener('click', (e) => {
+          if (!menu.contains(e.target) && e.target !== menuToggle) closeMenu();
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') closeMenu();
+        });
+      }
+      // Checkmark webm (visible only when sidebar is collapsed): still at rest, plays on hover
+      const checkmark = document.querySelector('.app-sidebar .logo-checkmark');
+      if (checkmark) {
+        checkmark.pause();
+        try { checkmark.currentTime = 0; } catch (e) {}
+        const brand = checkmark.closest('.sidebar-brand');
+        if (brand) {
+          brand.addEventListener('mouseenter', () => {
+            try { checkmark.currentTime = 0; checkmark.play(); } catch (e) {}
+          });
+          brand.addEventListener('mouseleave', () => {
+            checkmark.pause();
+            try { checkmark.currentTime = 0; } catch (e) {}
+          });
+        }
+      }
+    })();
+  </script>
+  <!-- app sidebar (end) -->
+
+
+  
+
+
+  
+
+
+  
+
+
+  
+
+
+  
+
+  
+
+<!-- Dev-only state toggle. Would NOT ship to production. -->
+  <div class="dev-toggle" role="tablist" aria-label="Demo state">
+    <span class="label">Demo</span>
+    <button data-state="idle" class="active">Idle</button>
+    <button data-state="uploading">Uploading</button>
+    <button data-state="processing">Processing</button>
+    <button data-state="done">Done</button>
+  </div>
+
+  <main class="container">
+
+    <div class="page-head">
+      <span class="eyebrow">Analyze</span>
+      <h1 class="display">Upload a <span class="ital">recording</span>.</h1>
+      <p class="lede">Drop in your recording. We read every shot, every bounce, every pattern. You stop rewinding.</p>
+    </div>
+
+    <form class="match-form" onsubmit="return false;">
+      <div class="field">
+        <label for="player">Near-side player</label>
+        <select id="player">
+          <option>Unknown / not assigned</option>
+          <option>M. Lin · Junior</option>
+          <option>J. Rivera · Sophomore</option>
+          <option>A. Tran · Senior</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="clip-title">Recording title</label>
+          <input id="clip-title" type="text" placeholder="e.g. Lin vs Stanford · Set 1" />
+        </div>
+        <div class="field">
+          <label for="match-date">Match date</label>
+          <input id="match-date" type="date" />
+        </div>
+      </div>
+    </form>
+
+    <div class="upload-card" id="uploadCard" data-state="idle">
+
+      <!-- IDLE -->
+      <div class="state-pane state-idle">
+        <div class="upload-glyph">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9"/>
+            <path d="M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+        </div>
+        <h3>Drop your recording here</h3>
+        <p class="browse-line">or <span class="browse-link">browse files</span></p>
+        <p class="file-types">MP4 · MOV · AVI · max 500 MB</p>
+      </div>
+
+      <!-- UPLOADING -->
+      <div class="state-pane state-uploading">
+        <div class="bounce-loader bounce-loader-sm">
+          <video autoplay muted loop playsinline preload="auto" aria-hidden="true">
+            <source src="../motion/Bounce_Animated.webm" type="video/webm">
+            <source src="../motion/Bounce_Animated.mp4" type="video/mp4">
+          </video>
+        </div>
+        <h3>Uploading <span class="ital">your recording</span>...</h3>
+        <div class="file-pill">
+          <span class="filename">UCD_vs_Stanford_2026-04-28.mp4</span>
+          <span class="filesize">312 MB</span>
+        </div>
+        <div class="progress"><div class="progress-fill" id="uploadProgressFill" style="width: 0%;"></div></div>
+        <div class="progress-meta">
+          <span id="uploadSubLabel">Transferring. 0.0 MB / 312 MB</span>
+          <span class="pct" id="uploadProgressPct">0%</span>
+        </div>
+      </div>
+
+      <!-- PROCESSING -->
+      <div class="state-pane state-processing">
+        <div class="bounce-loader">
+          <video autoplay muted loop playsinline preload="auto" aria-hidden="true">
+            <source src="../motion/Bounce_Animated.webm" type="video/webm">
+            <source src="../motion/Bounce_Animated.mp4" type="video/mp4">
+          </video>
+        </div>
+        <h3 id="processingHeading"><span class="ital">Tracking</span> every shot, frame by frame...</h3>
+        <p class="stage-meta" id="processingStage">Following the ball and players</p>
+        <div class="progress"><div class="progress-fill" id="procProgressFill" style="width: 28%;"></div></div>
+        <div class="progress-meta">
+          <span id="procEta">~ 8 min remaining</span>
+          <span class="pct" id="procProgressPct">28%</span>
+        </div>
+        <div class="processing-foot">
+          <span>Recording · 9CFA1B7E</span>
+        </div>
+      </div>
+
+      <!-- DONE -->
+      <div class="state-pane state-done">
+        <div class="celebration">
+          <canvas class="confetti-canvas" id="confettiCanvas" aria-hidden="true"></canvas>
+          <div class="check-mark" aria-hidden="true">
+            <video id="doneLogoVideo" muted playsinline preload="auto">
+              <source src="../logo/CourtCheckCheckmark.webm" type="video/webm">
+            </video>
+          </div>
+        </div>
+        <h3 class="display">Recording <span class="ital">analyzed</span>.</h3>
+        <p class="lede-line"><span class="num" style="font-size:1.05em;">38</span> bounces tracked. <span class="num" style="font-size:1.05em;">7</span> patterns surfaced. Open the recording to see the read.</p>
+        <a href="#" class="btn btn-primary">Open recording report →</a>
+      </div>
+
+    </div>
+
+    <div class="features">
+      <div class="features-head">What we analyze</div>
+      <div class="feature-grid">
+        <div class="feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 3a9 9 0 019 9"/>
+            </svg>
+          </div>
+          <div>
+            <h5>Every shot</h5>
+            <p>Tracked and labeled. Forehand, backhand, serve, volley.</p>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 6h16M4 12h16M4 18h16M12 3v18"/>
+            </svg>
+          </div>
+          <div>
+            <h5>Every bounce</h5>
+            <p>Exact landing point on the court. In and out calls included.</p>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="3.5"/>
+              <path d="M5 21a7 7 0 0114 0"/>
+            </svg>
+          </div>
+          <div>
+            <h5>Every movement</h5>
+            <p>Where your player covered the court. And where they didn't.</p>
+          </div>
+        </div>
+        <div class="feature">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9.66 17h4.68M12 3v1m6.36 1.64l-.71.7M21 12h-1M4 12H3m3.34-5.66l-.71-.7m2.83 9.9a5 5 0 117.07 0l-.55.54A3.37 3.37 0 0014 18.47V19a2 2 0 11-4 0v-.53c0-.9-.36-1.76-.99-2.39l-.55-.54z"/>
+            </svg>
+          </div>
+          <div>
+            <h5>Repeating patterns</h5>
+            <p>Sequences that show up more than once. Called out for you.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <span>CourtCheck · Upload</span>
+      <span>v0.1 · brand mock</span>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      const toggle = document.getElementById('themeToggle');
+      const body = document.body;
+      const stored = localStorage.getItem('cc-theme');
+      if (stored === 'dark') body.classList.add('dark');
+      toggle.addEventListener('click', () => {
+        body.classList.toggle('dark');
+        localStorage.setItem('cc-theme', body.classList.contains('dark') ? 'dark' : 'light');
+      });
+    })();
+
+    // === Processing status cycle ===
+    // Backend reports a single 0..1 progress. Real phase boundaries (from backend/pipeline/run.py):
+    //   0.00–0.05  Setup     (model load, 720p re-encode, court calibration)
+    //   0.05–0.45  Pass 1    (frame-by-frame ball + player + pose tracking)
+    //   0.45–0.50  Analysis  (bounce detection, swing detection, TCN stroke classification)
+    //   0.50–0.95  Pass 2    (drawing overlays on each frame)
+    //   0.95–1.00  Stats     (heatmaps, in/out classification, GPT-4o report, MP4 + Supabase upload)
+    const PHASES = [
+      { until: 0.05, italic: 'Loading',     rest: ' the recording…',                  stage: 'Calibrating the court' },
+      { until: 0.45, italic: 'Tracking',    rest: ' every shot, frame by frame…',     stage: 'Following the ball and players' },
+      { until: 0.50, italic: 'Identifying', rest: ' bounces and strokes…',            stage: 'Detecting bounce points and stroke types' },
+      { until: 0.95, italic: 'Drawing',     rest: ' your recording overlay...',       stage: 'Rendering your annotated recording' },
+      { until: 1.00, italic: 'Reading',     rest: ' your tendencies…',                stage: 'Generating heatmaps and scouting report' },
+    ];
+
+    function phaseAt(p) {
+      for (const ph of PHASES) {
+        if (p <= ph.until) return ph;
+      }
+      return PHASES[PHASES.length - 1];
+    }
+    function etaAt(p) {
+      const totalSec = 12 * 60;  // mocked 12-min total
+      const remaining = Math.max(8, Math.round(totalSec * (1 - p)));
+      const m = Math.floor(remaining / 60), s = remaining % 60;
+      return m > 0 ? `~ ${m} min remaining` : `~ ${s} sec remaining`;
+    }
+
+    function setHeadline(headEl, italicWord, restText) {
+      // Build the heading via DOM nodes (no innerHTML) so user-supplied content
+      // would never reach the parser if any of these strings ever became dynamic.
+      headEl.replaceChildren();
+      const ital = document.createElement('span');
+      ital.className = 'ital';
+      ital.textContent = italicWord;
+      headEl.appendChild(ital);
+      headEl.appendChild(document.createTextNode(restText));
+    }
+
+    // === Uploading simulator ===
+    // The uploading state's progress bar animates 0 to 100 on entry. Curve is
+    // faster at start, slower as it nears 100, mimicking a real network upload
+    // (early transfer-buffer behavior, then TCP window contention as the
+    // socket fills). Total duration ~9s. Honors prefers-reduced-motion.
+    const UPLOAD_TOTAL_MB = 312;
+    const UPLOAD_DUR_MS = 9000;
+    let uploadTimer = null;
+    let uploadHoldTimer = null;
+    function setUploadUI(pct) {
+      const fill = document.getElementById('uploadProgressFill');
+      const pctEl = document.getElementById('uploadProgressPct');
+      const sub = document.getElementById('uploadSubLabel');
+      if (!fill || !pctEl || !sub) return;
+      const clamped = Math.max(0, Math.min(100, pct));
+      fill.style.width = clamped.toFixed(1) + '%';
+      pctEl.textContent = Math.round(clamped) + '%';
+      const mb = (clamped / 100) * UPLOAD_TOTAL_MB;
+      if (clamped >= 100) {
+        sub.textContent = 'Upload complete. Starting analysis...';
+      } else {
+        sub.textContent = 'Transferring. ' + mb.toFixed(1) + ' MB / ' + UPLOAD_TOTAL_MB + ' MB';
+      }
+    }
+    function startUploadingSim() {
+      stopUploadingSim();
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (prefersReduced) {
+        setUploadUI(100);
+        return;
+      }
+      const t0 = performance.now();
+      function tick() {
+        const elapsed = performance.now() - t0;
+        const t = Math.min(1, elapsed / UPLOAD_DUR_MS);
+        // ease-out curve: 1 - (1 - t)^2.4. Fast start, slow finish.
+        const eased = 1 - Math.pow(1 - t, 2.4);
+        const pct = eased * 100;
+        setUploadUI(pct);
+        if (t < 1) {
+          uploadTimer = setTimeout(tick, 95);
+        } else {
+          uploadTimer = null;
+          // Hold at 100 with the "starting analysis" sublabel.
+          uploadHoldTimer = setTimeout(() => { uploadHoldTimer = null; }, 600);
+        }
+      }
+      setUploadUI(0);
+      tick();
+    }
+    function stopUploadingSim() {
+      if (uploadTimer) { clearTimeout(uploadTimer); uploadTimer = null; }
+      if (uploadHoldTimer) { clearTimeout(uploadHoldTimer); uploadHoldTimer = null; }
+    }
+
+    let processingTimer = null;
+    let lastItalic = null;
+    function startProcessingSim() {
+      if (processingTimer) clearInterval(processingTimer);
+      let p = 0.02;
+      const fill  = document.getElementById('procProgressFill');
+      const pct   = document.getElementById('procProgressPct');
+      const head  = document.getElementById('processingHeading');
+      const stage = document.getElementById('processingStage');
+      const eta   = document.getElementById('procEta');
+
+      function tick() {
+        p = Math.min(0.99, p + 0.011);
+        if (p >= 0.99) p = 0.02;
+        fill.style.width = (p * 100).toFixed(1) + '%';
+        pct.textContent  = Math.round(p * 100) + '%';
+        eta.textContent  = etaAt(p);
+        const ph = phaseAt(p);
+        if (ph.italic !== lastItalic) {
+          head.style.opacity = '0';
+          setTimeout(() => {
+            setHeadline(head, ph.italic, ph.rest);
+            stage.textContent = ph.stage;
+            head.style.opacity = '1';
+          }, 180);
+          lastItalic = ph.italic;
+        }
+      }
+      tick();
+      processingTimer = setInterval(tick, 220);
+    }
+    function stopProcessingSim() {
+      if (processingTimer) { clearInterval(processingTimer); processingTimer = null; }
+    }
+
+    // Dev state toggle wires up which pane is visible inside the upload card
+    const card = document.getElementById('uploadCard');
+    document.querySelectorAll('.dev-toggle button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.dev-toggle button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const state = btn.dataset.state;
+        card.dataset.state = state;
+        if (state === 'uploading') startUploadingSim();
+        else stopUploadingSim();
+        if (state === 'processing') startProcessingSim();
+        else stopProcessingSim();
+        if (state === 'done') fireCelebration();
+      });
+    });
+  </script>
+
+  <script>
+    // celebration confetti
+    // Robinhood-style burst: brand palette only (lime, clay, court green, plum).
+    // No red, no bright primaries. Particles burst outward, gravity pulls them
+    // down, then fade. Plays ONCE on entry to the done state. Reduced-motion
+    // users see only the static checkmark (canvas is display:none via CSS).
+    (function() {
+      const canvas = document.getElementById('confettiCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const PALETTE_LIGHT = ['#BFC846', '#DDE970', '#B05B36', '#E07A52', '#2E5341', '#7B4E6E'];
+      const PALETTE_DARK  = ['#DDE970', '#BFC846', '#E07A52', '#F0A07F', '#7B4E6E', '#6FA88B'];
+
+      let particles = [];
+      let rafId = null;
+      let startTime = 0;
+      const LIFE_MS = 2400;     // total visible lifetime
+      const BURST_MS = 1700;    // outward burst phase; afterward, fade
+
+      function sizeCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+        canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function palette() {
+        return document.body.classList.contains('dark') ? PALETTE_DARK : PALETTE_LIGHT;
+      }
+
+      function spawn() {
+        sizeCanvas();
+        const rect = canvas.getBoundingClientRect();
+        const cx = rect.width / 2;
+        const cy = rect.height / 2;
+        const colors = palette();
+        const count = 160;         // dense burst
+        particles = [];
+        for (let i = 0; i < count; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 220 + Math.random() * 340;   // wider speed range so particles spread further
+          particles.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 80,        // stronger upward bias
+            size: 3 + Math.random() * 6,             // 3-9px
+            rot: Math.random() * Math.PI * 2,
+            vrot: (Math.random() - 0.5) * 10,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            shape: Math.random() < 0.5 ? 'rect' : 'circle',
+          });
+        }
+        startTime = performance.now();
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(step);
+      }
+
+      function step(now) {
+        const elapsed = now - startTime;
+        const dt = 1 / 60;
+        const gravity = 520;       // px/sec^2, pulls particles down after burst
+        const drag = 0.96;         // air drag per frame
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let alpha = 1;
+        if (elapsed > BURST_MS) {
+          alpha = Math.max(0, 1 - (elapsed - BURST_MS) / (LIFE_MS - BURST_MS));
+        }
+
+        for (const p of particles) {
+          p.vx *= drag;
+          p.vy = p.vy * drag + gravity * dt;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.rot += p.vrot * dt;
+
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rot);
+          ctx.fillStyle = p.color;
+          if (p.shape === 'rect') {
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+          } else {
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        if (elapsed < LIFE_MS) {
+          rafId = requestAnimationFrame(step);
+        } else {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          rafId = null;
+          particles = [];
+        }
+      }
+
+      // Replay the locked CourtCheck logo animation (the brand's checkmark moment)
+      // and re-trigger the wrapper scale-pop CSS animation each time we land on done.
+      function replayCheckmark() {
+        const cm = document.querySelector('.state-done .check-mark');
+        if (!cm) return;
+        // Re-run the wrapper scale-pop
+        cm.style.animation = 'none';
+        void cm.offsetWidth;
+        cm.style.animation = '';
+        // Restart the logo video from t=0
+        const video = document.getElementById('doneLogoVideo');
+        if (video) {
+          try {
+            video.pause();
+            video.currentTime = 0;
+            const p = video.play();
+            if (p && typeof p.catch === 'function') p.catch(() => {});
+          } catch (e) {}
+        }
+      }
+
+      window.fireCelebration = function() {
+        replayCheckmark();
+        if (prefersReduced) return;
+        spawn();
+      };
+
+      // Auto-fire on initial load if the page lands directly on the done state.
+      if (document.getElementById('uploadCard')?.dataset.state === 'done') {
+        window.fireCelebration();
+      }
+    })();
+  </script>
+
+  <script>
+    // brand-mark hover-to-play splash animation
+    (function () {
+      const marks = document.querySelectorAll('.brand-mark');
+      marks.forEach(mark => {
+        const video = mark.querySelector('video');
+        if (!video) return;
+        mark.addEventListener('mouseenter', () => {
+          try { video.currentTime = 0; video.play(); } catch (e) {}
+        });
+        mark.addEventListener('mouseleave', () => {
+          video.pause();
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>

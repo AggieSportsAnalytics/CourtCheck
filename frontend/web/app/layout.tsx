@@ -1,39 +1,53 @@
-import React from "react"
+import React from 'react'
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
+import { Newsreader, Inter_Tight, JetBrains_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { Toaster } from 'sonner'
 import { Providers } from '@/components/Providers'
 import ConditionalLayout from '@/components/layout/ConditionalLayout'
 import './globals.css'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const newsreader = Newsreader({
+  subsets: ['latin'],
+  variable: '--font-newsreader',
+  axes: ['opsz'],
+  display: 'swap',
+})
+
+const interTight = Inter_Tight({
+  subsets: ['latin'],
+  variable: '--font-inter-tight',
+  display: 'swap',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: 'CourtCheck - Tennis Analytics Dashboard',
-  description: 'Tennis analytics and performance tracking dashboard',
-  generator: 'v0.app',
+  title: { default: 'CourtCheck', template: '%s | CourtCheck' },
+  description:
+    'Tennis analytics for college coaches. Upload a match, get every shot, pattern, and percentage worth knowing.',
   icons: {
     icon: [
-      {
-        url: '/icon-light-32x32.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/icon-dark-32x32.png',
-        media: '(prefers-color-scheme: dark)',
-      },
-],
-    apple: '/apple-icon.png',
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-16.png', type: 'image/png', sizes: '16x16' },
+      { url: '/icon-32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/icon-192.png', type: 'image/png', sizes: '192x192' },
+    ],
+    apple: { url: '/apple-icon.png', sizes: '180x180' },
   },
   openGraph: {
-    title: 'CourtCheck - Tennis Analytics Platform',
-    description: 'AI-powered tennis analytics platform for match analysis, performance metrics, and scouting insights.',
+    title: 'CourtCheck. See every shot. Know every move.',
+    description:
+      'Tennis analytics for college coaches. Upload a match, get every shot, pattern, and percentage worth knowing.',
     url: 'https://courtcheck-rho.vercel.app',
     siteName: 'CourtCheck',
     images: [
       {
-        url: 'https://courtcheck-rho.vercel.app/courtcheck_logo.png',
+        url: 'https://courtcheck-rho.vercel.app/CourtCheckLogoLight.png',
         width: 1200,
         height: 630,
       },
@@ -45,15 +59,32 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body className="font-sans antialiased bg-primary text-white" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${newsreader.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="bg-cream text-ink font-sans antialiased" suppressHydrationWarning>
         <Providers>
           <ConditionalLayout>{children}</ConditionalLayout>
         </Providers>
+        <Toaster
+          position="bottom-center"
+          richColors={false}
+          closeButton
+          duration={4500}
+          toastOptions={{
+            classNames: {
+              toast: 'cc-toast',
+              success: 'cc-toast-success',
+              info: 'cc-toast-info',
+              warning: 'cc-toast-warn',
+              error: 'cc-toast-error',
+            },
+          }}
+        />
         <Analytics />
       </body>
     </html>

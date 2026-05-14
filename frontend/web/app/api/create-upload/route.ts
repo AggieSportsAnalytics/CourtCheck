@@ -36,33 +36,57 @@ export async function POST(req: Request) {
       }
     );
 
-    const { data: authData } = await supabase.auth.getClaims();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!authData?.claims) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await req.json();
+    const playerId: string | null = typeof body.player_id === 'string' ? body.player_id : null;
     const safeFilename = sanitizeFilename((body.filename as string) || '');
     if (!safeFilename) {
       return NextResponse.json({ error: 'Invalid file type. Allowed: mp4, mov, avi' }, { status: 400 });
     }
+
+    // Optional user-supplied metadata. Trim + bound; ignore empties.
+    const rawName = typeof body.name === 'string' ? body.name.trim().replace(/[\x00-\x1F\x7F]/g, '') : '';
+    const customName = rawName ? rawName.slice(0, 100) : null;
+    const rawMatchDate = typeof body.matchDate === 'string' ? body.matchDate.trim() : '';
+    // HTML5 date input emits YYYY-MM-DD. Pass through only if it matches.
+    const matchDate = /^\d{4}-\d{2}-\d{2}$/.test(rawMatchDate) ? rawMatchDate : null;
+
     const match_id = uuidv4();
     const file_key = `${match_id}/${safeFilename}`;
 
     // create row in matches table (status: pending) with user_id
-    await supabaseAdmin.from("matches").insert([{
+    const insertRow: Record<string, unknown> = {
       id: match_id,
       status: "pending",
       input_path: file_key,
-      user_id: authData.claims.sub,
+      user_id: user.id,
       created_at: new Date().toISOString(),
       progress: 0,
       error: null,
       results_path: null,
       fps: null,
-      num_frames: null
-    }]);
+      num_frames: null,
+      player_id: playerId,
+    };
+    if (customName) insertRow.name = customName;
+    await supabaseAdmin.from("matches").insert([insertRow]);
+
+    // match_date column may not exist on the matches table. Attempt a follow-up
+    // update so a missing column doesn't break the insert.
+    if (matchDate) {
+      const { error: matchDateError } = await supabaseAdmin
+        .from("matches")
+        .update({ match_date: matchDate })
+        .eq("id", match_id);
+      if (matchDateError) {
+        console.warn("match_date update skipped:", matchDateError.message);
+      }
+    }
 
     // generate signed PUT URL for direct upload (1 hour)
     const { data, error } = await supabaseAdmin.storage

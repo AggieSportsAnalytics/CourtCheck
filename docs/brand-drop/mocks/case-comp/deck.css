@@ -1,0 +1,1679 @@
+/* =============================================================================
+   Case-Comp deck — local layer on top of colors_and_type.css.
+   AAA structural DNA × CourtCheck visual execution.
+   ========================================================================== */
+
+/* ---- Deck-local tokens -------------------------------------------------- */
+:root {
+  /* Slide-scale type. Authored at 1920×1080 — read in px, not rem. */
+  --slide-action-title:  500 64px/1.08 var(--font-display);   /* AAA action title, in serif */
+  --slide-eyebrow:       500 18px/1   var(--font-mono);       /* mono uppercase */
+  --slide-body:          400 24px/1.45 var(--font-sans);
+  --slide-body-lg:       400 28px/1.45 var(--font-sans);
+  --slide-body-sm:       400 20px/1.4  var(--font-sans);
+  --slide-kicker:        400 italic 32px/1.3 var(--font-display);
+  --slide-stat-mega:     500 280px/0.92 var(--font-display);  /* big-number contrast */
+  --slide-stat-stack:    500 96px/1     var(--font-display);  /* slide 2 stat rows */
+  --slide-stat-tile:     500 56px/1.05  var(--font-display);  /* micro-grid */
+  --slide-quote-cold:    400 italic 84px/1.16 var(--font-display); /* slide 1 */
+  --slide-num:           500 16px/1     var(--font-mono);
+
+  /* Slide chrome geometry */
+  --slide-pad-x:         96px;
+  --slide-pad-top:       104px;
+  --slide-pad-bottom:    80px;
+  --slide-gap:           56px;
+
+  /* The brand-spec near-black for divider / cold-open surfaces.
+     The cream/paper tokens flip to deep void in dark mode (#07080F);
+     --night is the in-between AAA-style navy-ink the deck divider slides
+     and cold opens sit on, regardless of mode. */
+  --night:               #0A0E14;
+  --night-ink:           #F4F0E6;
+  --night-ink-mute:      #6B7388;
+}
+
+/* ---- Slide base --------------------------------------------------------- */
+deck-stage > section {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  letter-spacing: -0.005em;
+  /* every content slide is a 1920×1080 rectangle the deck-stage sizes for us;
+     just paint and lay out inside. */
+  overflow: hidden;
+}
+
+/* Subtle paper wash on cream slides — matches body radial wash from
+   colors_and_type.css, but contained within the slide rect. */
+deck-stage > section.paper {
+  background:
+    radial-gradient(1100px 600px at 92% -10%, var(--bg-grad-1), transparent 60%),
+    radial-gradient(900px 700px at -10% 110%, var(--bg-grad-2), transparent 65%),
+    var(--cream);
+}
+
+deck-stage > section.night {
+  background: var(--night);
+  color: var(--night-ink);
+}
+
+/* ---- Top accent bar (AAA gradient rail, CourtCheck recolor) ------------ */
+.accent-bar {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 14px;
+  background: linear-gradient(
+    90deg,
+    var(--clay) 0%,
+    var(--plum) 50%,
+    var(--court) 100%
+  );
+  z-index: 4;
+}
+/* Small court chip hanging off the right edge of the accent bar — echoes
+   the AAA logo-chip affordance without redrawing a logo variant. */
+.accent-bar::after {
+  content: "";
+  position: absolute;
+  right: 64px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--court);
+  border: 4px solid var(--cream);
+  box-shadow: var(--shadow-card);
+}
+.night .accent-bar::after,
+.cold-open .accent-bar::after { border-color: var(--night); }
+
+/* ---- Action title (consulting register: sans 700, scans at distance) --- */
+/* Inter Tight Bold so judges can read it from the back row. Court underline
+   on the leading key phrase. ONE italic-clay word per title, max. */
+.action-title {
+  font: 700 44px/1.18 var(--font-sans);
+  color: var(--ink);
+  letter-spacing: -0.014em;
+  margin: 0;
+  text-wrap: pretty;
+  max-width: 1720px;
+}
+.action-title .ital {
+  color: var(--clay);
+  font-style: italic;
+  font-weight: 700;
+  font-family: var(--font-sans);
+}
+.action-title .keyword {
+  text-decoration: underline;
+  text-decoration-color: var(--court);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+}
+
+/* Hairline separator under action titles — AAA convention. */
+.title-rule {
+  height: 1px;
+  background: var(--ink-mute);
+  width: 100%;
+  margin-top: -28px;
+  opacity: 0.4;
+}
+
+/* ---- Slide chrome (slide number, logo lockup) -------------------------- */
+.slide-num {
+  position: absolute;
+  right: var(--slide-pad-x);
+  bottom: 44px;
+  font: 500 16px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  z-index: 3;
+}
+.slide-logo {
+  position: absolute;
+  left: var(--slide-pad-x);
+  bottom: 38px;
+  height: 36px;
+  width: auto;
+  opacity: 1;
+  z-index: 3;
+}
+
+/* ---- Slide body container ---------------------------------------------- */
+.slide-body {
+  position: absolute;
+  inset: var(--slide-pad-top) var(--slide-pad-x) var(--slide-pad-bottom) var(--slide-pad-x);
+  display: flex;
+  flex-direction: column;
+  gap: var(--slide-gap);
+}
+
+/* ---- Cold-open slide (slide 1) ----------------------------------------- */
+section.cold-open {
+  background: var(--night);
+  color: var(--night-ink);
+  position: relative;
+}
+.cold-open .bounce-ghost {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0.07;
+  filter: brightness(1.4);
+  pointer-events: none;
+  z-index: 0;
+}
+.cold-open .cold-stack {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 120px 200px;
+  z-index: 1;
+}
+.cold-open .pull-quote {
+  font: var(--slide-quote-cold);
+  font-variation-settings: "opsz" 144;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  color: var(--night-ink);
+  text-wrap: balance;
+  text-align: center;
+  max-width: 1620px;
+  margin: 0;
+}
+.cold-open .pull-quote .qmark {
+  color: var(--clay);
+  font-style: italic;
+  margin: 0 6px;
+}
+.cold-open .pull-quote .ital {
+  color: var(--clay);
+  font-style: italic;
+  font-weight: 400;
+}
+.cold-open .attribution {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 144px;
+  font: 500 16px/1 var(--font-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--night-ink-mute);
+  text-align: center;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.cold-open .attribution .dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--clay);
+}
+
+/* ---- Theme toggle button (top-right of viewport, above stage) ---------- */
+.theme-toggle-hint {
+  position: fixed;
+  top: 16px; right: 16px;
+  z-index: 9999;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* =============================================================================
+   Slide 2 — The Structural Gap (4 stat cards in a row + court-rail callout)
+   AAA structural pattern: every datum in its own container with a categorical
+   top rail; the thesis lives inside a court-rail callout box.
+   ========================================================================== */
+.stat-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  flex: 1;
+}
+.stat-card {
+  position: relative;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 40px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  isolation: isolate;
+}
+/* 4px top rail in categorical color */
+.stat-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--rail-color, var(--court));
+  z-index: 1;
+}
+.stat-card.rail-court { --rail-color: var(--court); }
+.stat-card.rail-plum  { --rail-color: var(--plum); }
+.stat-card.rail-amber { --rail-color: var(--amber); }
+.stat-card.rail-clay  { --rail-color: var(--clay); }
+
+.stat-card .value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.stat-card .v {
+  font: 600 108px/0.95 var(--font-display);
+  font-variation-settings: "opsz" 144;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+.stat-card .v.placeholder { color: var(--ink-soft); }
+.stat-card .u {
+  font: 500 36px/1 var(--font-display);
+  font-variation-settings: "opsz" 72;
+  color: var(--ink-mute);
+  letter-spacing: -0.01em;
+}
+.stat-card .desc {
+  font: 600 20px/1.3 var(--font-sans);
+  color: var(--ink-soft);
+  margin-top: 20px;
+  text-wrap: balance;
+  letter-spacing: -0.005em;
+}
+
+/* Court-rail callout box (contained thesis statement, AAA pattern) */
+.callout {
+  position: relative;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--court);
+  border-radius: 6px;
+  padding: 22px 28px;
+  font: 600 24px/1.4 var(--font-sans);
+  color: var(--ink);
+  text-wrap: balance;
+  margin-top: 4px;
+  letter-spacing: -0.005em;
+}
+.callout .ital {
+  color: var(--clay);
+  font-style: italic;
+  font-weight: 700;
+}
+
+/* Dark filled callout (AAA navy-style insert: impact panels, quote inserts) */
+.dark-callout {
+  background: var(--ink);
+  color: var(--cream);
+  border-radius: 14px;
+  padding: 32px 36px;
+  border: 1px solid var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  justify-content: space-between;
+}
+.dark-callout .q {
+  font: 500 24px/1.4 var(--font-sans);
+  color: var(--cream);
+  text-wrap: balance;
+  letter-spacing: -0.005em;
+}
+.dark-callout .q .ital { color: var(--clay-soft); font-style: italic; font-weight: 700; }
+.dark-callout .attr {
+  font: 500 14px/1.2 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.dark-callout .label {
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+
+/* =============================================================================
+   Reusable badge — 38px categorical circular marker.
+   AAA's per-item anchor + presenter's verbal cue ("Category B here…").
+   Mono 14px tracked 0 — chrome micro-type by intent.
+   ========================================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--badge-color, var(--ink));
+  color: var(--cream);
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0;
+  flex: 0 0 auto;
+  text-transform: uppercase;
+}
+.badge.court  { --badge-color: var(--court); background: var(--court); }
+.badge.plum   { --badge-color: var(--plum);  background: var(--plum); }
+.badge.amber  { --badge-color: var(--amber); background: var(--amber); }
+.badge.clay   { --badge-color: var(--clay);  background: var(--clay); }
+.badge.slate  { --badge-color: var(--slate); background: var(--slate); }
+.badge.sm {
+  width: 30px; height: 30px;
+  font-size: 12px;
+}
+
+/* Stat card gets a top-left badge — value shifts down to clear it. */
+.stat-card { padding-top: 78px; }
+.stat-card > .badge {
+  position: absolute;
+  top: 22px; left: 22px;
+  z-index: 2;
+}
+
+/* =============================================================================
+   Slide 3 — Why Existing Tools Fail (failure cards with A/B/C/D badges)
+   Each option = one paper card with categorical left rail + badge.
+   ========================================================================== */
+.failure-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  margin-top: -8px;
+}
+.failure-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 60px 240px 1fr 1.4fr 200px;
+  gap: 28px;
+  align-items: center;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--rail-color, var(--ink));
+  border-radius: 14px;
+  padding: 20px 28px 20px 24px;
+}
+.failure-card.rail-court { --rail-color: var(--court); }
+.failure-card.rail-plum  { --rail-color: var(--plum); }
+.failure-card.rail-amber { --rail-color: var(--amber); }
+.failure-card.rail-clay  { --rail-color: var(--clay); }
+.failure-card .opt {
+  font: 700 24px/1.2 var(--font-sans);
+  color: var(--ink);
+  letter-spacing: -0.012em;
+}
+.failure-card .built {
+  font: 500 italic 20px/1.35 var(--font-sans);
+  color: var(--ink-soft);
+  text-wrap: balance;
+  letter-spacing: -0.005em;
+}
+.failure-card .why {
+  font: 400 20px/1.4 var(--font-sans);
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+.failure-card .col-h {
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  display: block;
+  margin-bottom: 8px;
+}
+.failure-card .signal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  text-align: right;
+}
+.failure-card .signal .l {
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.failure-card .signal .v {
+  font: 700 22px/1.1 var(--font-sans);
+  color: var(--clay);
+  letter-spacing: -0.012em;
+}
+.failure-card .signal .v.num {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-feature-settings: "tnum";
+}
+
+/* =============================================================================
+   Slide 4 — Demo (relief): empty content frame with eyebrow + slide-num chrome
+   ========================================================================== */
+.demo-shell {
+  position: absolute;
+  inset: 0;
+  padding: 16px;
+}
+.demo-eyebrow {
+  position: absolute;
+  top: 24px; left: 32px;
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--court);
+  display: inline-flex; align-items: center; gap: 10px;
+  z-index: 3;
+}
+.demo-eyebrow::before {
+  content: ""; width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--clay);
+}
+.demo-frame {
+  position: absolute;
+  inset: 80px 32px 32px 32px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.demo-frame .glyph {
+  text-align: center;
+  color: var(--ink-mute);
+}
+.demo-frame .glyph .word {
+  font: 400 italic 88px/1 var(--font-display);
+  font-variation-settings: "opsz" 144;
+  color: var(--clay);
+  letter-spacing: -0.02em;
+}
+.demo-frame .glyph .label {
+  display: block;
+  font: 500 26px/1 var(--font-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-top: 26px;
+}
+
+/* =============================================================================
+   Slide 5 — Impact (big-number contrast + micro-grid + inset quote)
+   ========================================================================== */
+.impact-grid {
+  display: grid;
+  grid-template-columns: 1.45fr 0.95fr;
+  gap: 80px;
+  flex: 1;
+}
+.contrast-pair {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 32px;
+}
+.contrast-pair .arrow {
+  font: 400 96px/1 var(--font-display);
+  color: var(--ink-mute);
+}
+.contrast-pair .num-block { text-align: center; }
+.contrast-pair .num {
+  font: 600 220px/0.9 var(--font-display);
+  font-variation-settings: "opsz" 144;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+.contrast-pair .num .unit {
+  font-size: 0.34em;
+  color: var(--ink-mute);
+  margin-left: 12px;
+  letter-spacing: -0.01em;
+  vertical-align: 0.22em;
+  font-style: normal;
+  font-weight: 500;
+}
+.contrast-pair .num.lime {
+  color: var(--lime);
+  font-style: normal;
+  font-weight: 600;
+}
+.contrast-pair .num.lime .unit { color: var(--tag-lime-ink); }
+.contrast-pair .caption {
+  font: 500 16px/1.2 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  margin-top: 16px;
+}
+
+.micro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 40px;
+}
+.micro-tile {
+  position: relative;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px 24px 22px 24px;
+}
+.micro-tile > .badge {
+  position: absolute;
+  top: 16px; right: 16px;
+  width: 30px; height: 30px;
+  font-size: 12px;
+}
+.micro-tile .v {
+  font: 600 56px/1 var(--font-display);
+  font-variation-settings: "opsz" 72;
+  font-feature-settings: "tnum";
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+.micro-tile .d {
+  font: 500 18px/1.3 var(--font-sans);
+  color: var(--ink-soft);
+  margin-top: 10px;
+  letter-spacing: -0.005em;
+}
+
+.inset-quote {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 32px 32px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 22px;
+}
+.inset-quote .q {
+  font: 500 italic 22px/1.4 var(--font-sans);
+  color: var(--ink);
+  text-wrap: balance;
+  letter-spacing: -0.005em;
+}
+.inset-quote .attr {
+  font: 500 14px/1.3 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.anchor-anecdote {
+  margin-top: 24px;
+  padding: 18px 26px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--court);
+  border-radius: 6px;
+  font: 500 20px/1.45 var(--font-sans);
+  color: var(--ink);
+  text-wrap: balance;
+  letter-spacing: -0.005em;
+}
+.anchor-anecdote .tag {
+  display: inline-block;
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--court);
+  margin-right: 14px;
+}
+
+/* =============================================================================
+   Slide 6 — Where This Goes (3-tier progression + ask strip)
+   ========================================================================== */
+.tier-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  flex: 1;
+}
+.tier {
+  padding: 8px 56px 32px 0;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+.tier + .tier { padding-left: 56px; }
+.tier:last-child { border-right: none; padding-right: 0; }
+.tier .roman {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: var(--court);
+  color: var(--cream);
+  display: inline-grid;
+  place-items: center;
+  font: 600 16px/1 var(--font-mono);
+  letter-spacing: 0;
+  margin-bottom: 28px;
+  text-transform: uppercase;
+}
+.tier .when {
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--court);
+  margin-bottom: 16px;
+}
+.tier .what {
+  font: 700 30px/1.18 var(--font-sans);
+  color: var(--ink);
+  margin-bottom: 16px;
+  text-wrap: balance;
+  letter-spacing: -0.012em;
+}
+.tier .desc {
+  font: 400 20px/1.5 var(--font-sans);
+  color: var(--ink-soft);
+  text-wrap: pretty;
+}
+
+.ask-strip {
+  margin-top: 48px;
+  background: var(--court);
+  color: var(--cream);
+  padding: 22px 32px;
+  border-radius: 100px;
+  font: 600 18px/1 var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.dark .ask-strip { color: #0A0E14; background: var(--court); }
+
+/* =============================================================================
+   Appendix divider — full dark slide, big italic-clay word centered
+   ========================================================================== */
+.appendix-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+.appendix-center .word {
+  font: 400 italic 200px/1 var(--font-display);
+  font-variation-settings: "opsz" 144;
+  color: var(--clay);
+  letter-spacing: -0.025em;
+}
+
+/* =============================================================================
+   A1 — Methodology + eval harness table
+   ========================================================================== */
+.a1-grid {
+  display: grid;
+  grid-template-columns: 1.65fr 1fr;
+  gap: 64px;
+  flex: 1;
+}
+.metric-table {
+  display: grid;
+  grid-template-columns: 240px repeat(3, 1fr);
+  border-top: 1px solid var(--line);
+}
+.metric-table .h {
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+}
+.metric-table .h.first { text-align: left; }
+.metric-table .cell {
+  padding: 24px 24px;
+  border-bottom: 1px solid var(--line-soft);
+  font: 600 36px/1 var(--font-display);
+  font-feature-settings: "tnum";
+  color: var(--ink-soft);
+  text-align: right;
+}
+.metric-table .cell.label {
+  font: 700 22px/1 var(--font-sans);
+  color: var(--ink);
+  text-align: left;
+  letter-spacing: -0.012em;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.metric-table .cell.label .badge { width: 32px; height: 32px; font-size: 13px; }
+.metric-table .cell.strong {
+  background: var(--tag-court-bg);
+  color: var(--court);
+}
+
+.confusion-card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.confusion-card .tag {
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--court);
+}
+.confusion-mini {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.confusion-mini .c {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--court) calc(var(--w) * 1%), var(--shade));
+}
+.confusion-card p {
+  font: 400 20px/1.5 var(--font-sans);
+  color: var(--ink-soft);
+  margin: 0;
+  letter-spacing: -0.005em;
+}
+
+/* =============================================================================
+   A2 — Pipeline (5 stages, circled numbers, court left rail)
+   ========================================================================== */
+.pipeline {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 28px;
+  flex: 1;
+  align-content: start;
+  margin-top: 24px;
+}
+.stage {
+  border-left: 3px solid var(--court);
+  padding: 4px 0 16px 28px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.stage .num {
+  width: 44px; height: 44px;
+  border: 2px solid var(--court);
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font: 500 16px/1 var(--font-mono);
+  color: var(--court);
+  font-feature-settings: "tnum";
+}
+.stage .name {
+  font: 700 22px/1.18 var(--font-sans);
+  color: var(--ink);
+  letter-spacing: -0.012em;
+}
+.stage .desc {
+  font: 400 20px/1.45 var(--font-sans);
+  color: var(--ink-soft);
+  letter-spacing: -0.005em;
+}
+
+/* =============================================================================
+   A3 — Unit Economics bento + pricing thesis sidebar
+   ========================================================================== */
+.a3-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 48px;
+  flex: 1;
+}
+.bento-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-content: start;
+}
+.bento-tile {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 32px;
+}
+.bento-tile .label {
+  font: 500 14px/1.2 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.bento-tile .v {
+  font: 600 88px/1 var(--font-display);
+  font-feature-settings: "tnum";
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin-top: 14px;
+}
+.bento-tile .v .unit { font-size: 0.36em; color: var(--ink-mute); margin-left: 10px; font-weight: 500; }
+.bento-tile .sub {
+  font: 500 18px/1.4 var(--font-sans);
+  color: var(--ink-soft);
+  margin-top: 12px;
+  letter-spacing: -0.005em;
+}
+
+.bento-sidebar {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.bento-sidebar .tag {
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--court);
+}
+.bento-sidebar h3 {
+  font: 700 26px/1.25 var(--font-sans);
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+.bento-sidebar p {
+  font: 400 20px/1.5 var(--font-sans);
+  color: var(--ink-soft);
+  margin: 0;
+  letter-spacing: -0.005em;
+}
+
+/* =============================================================================
+   A4 — Roadmap + risks
+   ========================================================================== */
+.a4-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 56px;
+  flex: 1;
+}
+.roadmap { padding-top: 8px; }
+.roadmap .track {
+  position: relative;
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  margin: 60px 0 24px;
+}
+.roadmap .track .marker {
+  position: absolute;
+  top: -8px;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--court);
+  transform: translateX(-50%);
+}
+.roadmap .quarters {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+.roadmap .q { padding-right: 24px; }
+.roadmap .q .qlabel {
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--court);
+}
+.roadmap .q .mile {
+  font: 600 22px/1.3 var(--font-sans);
+  color: var(--ink);
+  margin-top: 12px;
+  text-wrap: balance;
+  letter-spacing: -0.008em;
+}
+
+.risk-table {
+  display: grid;
+  grid-template-columns: 64px 1fr 150px 1.5fr;
+  border-top: 1px solid var(--line);
+}
+.risk-table .h {
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  padding: 16px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.risk-table .r {
+  padding: 22px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  font: 400 20px/1.4 var(--font-sans);
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  letter-spacing: -0.005em;
+}
+.risk-table .r.risk { font-weight: 600; color: var(--ink); }
+.risk-table .r.lh {
+  font: 600 14px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.risk-table .r.badge-cell { padding-left: 0; padding-right: 0; justify-content: center; }
+.risk-table .r.badge-cell .badge { width: 30px; height: 30px; font-size: 12px; }
+.risk-table .lh.high { color: var(--clay); }
+.risk-table .lh.med  { color: var(--amber); }
+.risk-table .lh.low  { color: var(--court); }
+
+/* =============================================================================
+   Templates section — divider + library layouts (T1 - T10)
+   ========================================================================== */
+.tpl-eyebrow {
+  position: absolute;
+  top: 38px; left: var(--slide-pad-x);
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--clay);
+  z-index: 3;
+  display: inline-flex; align-items: center; gap: 12px;
+}
+.tpl-eyebrow .id {
+  background: var(--court);
+  color: var(--cream);
+  padding: 5px 10px;
+  border-radius: 100px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+
+/* T1 — cover (denser: hero zone + title + meta strip + photo band) */
+.cover-grid {
+  position: absolute;
+  inset: 130px var(--slide-pad-x) 420px var(--slide-pad-x);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.cover-eyebrow {
+  font: 500 16px/1 var(--font-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--court);
+}
+.cover-title {
+  font: 600 112px/0.96 var(--font-display);
+  font-variation-settings: "opsz" 144;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  margin: 0;
+  text-wrap: balance;
+}
+.cover-title .ital { color: var(--clay); font-style: italic; font-weight: 400; }
+.cover-tagline {
+  font: 500 24px/1.35 var(--font-sans);
+  color: var(--ink-soft);
+  letter-spacing: -0.008em;
+  max-width: 1400px;
+  text-wrap: balance;
+}
+.cover-band {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 240px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cream) 14%, transparent) 0%, transparent 25%),
+    url("../../motion/Bounce_Still.png") center/cover no-repeat,
+    var(--shade);
+  border-top: 1px solid var(--line);
+  filter: saturate(0.9);
+}
+
+/* T2 — 3-col executive summary */
+.exec-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  flex: 1;
+  border-top: 1px solid var(--line);
+}
+.exec-col {
+  padding: 36px 36px 24px 0;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.exec-col + .exec-col { padding-left: 36px; }
+.exec-col:last-child { border-right: none; padding-right: 0; }
+.exec-col .eb {
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+.exec-col .eb .badge { width: 30px; height: 30px; font-size: 12px; }
+.exec-col.challenge .eb { color: var(--court); }
+.exec-col.solution  .eb { color: var(--plum); }
+.exec-col.impact    .eb { color: var(--amber); }
+.exec-col .head {
+  font: 700 26px/1.22 var(--font-sans);
+  color: var(--ink);
+  text-wrap: balance;
+  letter-spacing: -0.012em;
+}
+.exec-col ul {
+  list-style: none;
+  margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.exec-col li {
+  position: relative;
+  padding-left: 18px;
+  font: 400 20px/1.45 var(--font-sans);
+  color: var(--ink-soft);
+  letter-spacing: -0.005em;
+}
+.exec-col li::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 14px;
+  width: 10px; height: 1px;
+  background: var(--ink-mute);
+}
+.exec-col.impact {
+  background: var(--shade);
+  margin: 0 -24px;
+  padding: 36px 36px 32px 36px;
+  border-radius: 14px;
+  border-right: none;
+}
+
+/* T5 — sidebar + chart */
+.t5-grid {
+  display: grid;
+  grid-template-columns: 420px 1fr;
+  flex: 1;
+  gap: 56px;
+  position: relative;
+}
+.t5-grid::before {
+  content: "";
+  position: absolute;
+  left: 448px; top: 0; bottom: 0;
+  border-left: 1px dashed var(--line);
+}
+.t5-sidebar { display: flex; flex-direction: column; gap: 22px; }
+.t5-sidebar .pt {
+  display: flex; gap: 18px; align-items: center;
+}
+.t5-sidebar .pt .n {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--court);
+  color: var(--cream);
+  display: inline-grid;
+  place-items: center;
+  font: 600 14px/1 var(--font-mono);
+  letter-spacing: 0;
+  text-transform: uppercase;
+  flex: 0 0 auto;
+}
+.t5-sidebar .pt .b {
+  font: 400 20px/1.4 var(--font-sans);
+  color: var(--ink-soft);
+  letter-spacing: -0.005em;
+}
+.t5-chart {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 32px 36px 28px;
+  display: flex; flex-direction: column;
+  gap: 18px;
+}
+.t5-chart .cap {
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.bar-chart {
+  display: grid;
+  grid-template-columns: 180px 1fr 80px;
+  align-items: center;
+  gap: 16px 22px;
+}
+.bar-chart .blabel {
+  font: 600 18px/1 var(--font-sans);
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+.bar-chart .btrack {
+  height: 26px;
+  background: var(--shade);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.bar-chart .btrack .fill {
+  height: 100%;
+  border-radius: 4px;
+}
+.bar-chart .fill.court  { background: var(--court); }
+.bar-chart .fill.plum   { background: var(--plum); }
+.bar-chart .fill.amber  { background: var(--amber); }
+.bar-chart .fill.clay   { background: var(--clay); }
+.bar-chart .bval {
+  font: 600 28px/1 var(--font-display);
+  font-feature-settings: "tnum";
+  color: var(--ink);
+  text-align: right;
+}
+
+/* T7 — cluster action table with chevron right column */
+.cluster-table {
+  display: grid;
+  grid-template-columns: 1.4fr 0.7fr 1.4fr 1.2fr;
+  border-top: 1px solid var(--line);
+  flex: 1;
+}
+.cluster-table .h {
+  font: 500 14px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+}
+.cluster-row { display: contents; }
+.cluster-row .cell {
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--line-soft);
+  font: 400 20px/1.4 var(--font-sans);
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  letter-spacing: -0.005em;
+}
+.cluster-row .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 18px;
+  border-radius: 100px;
+  font: 600 14px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.cluster-row .pill .dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+}
+.cluster-row .pill.court { background: var(--tag-court-bg); color: var(--court); }
+.cluster-row .pill.court .dot { background: var(--court); }
+.cluster-row .pill.plum  { background: color-mix(in srgb, var(--plum) 12%, transparent); color: var(--plum); }
+.cluster-row .pill.plum .dot { background: var(--plum); }
+.cluster-row .pill.amber { background: color-mix(in srgb, var(--amber) 14%, transparent); color: var(--amber); }
+.cluster-row .pill.amber .dot { background: var(--amber); }
+.cluster-row .pill.clay  { background: var(--tag-clay-bg); color: var(--clay); }
+.cluster-row .pill.clay .dot { background: var(--clay); }
+.cluster-row .state {
+  font: 700 22px/1 var(--font-sans);
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+.cluster-row .state .arrow {
+  font-style: normal;
+  color: var(--ink-mute);
+  margin-right: 8px;
+}
+.cluster-row .action {
+  position: relative;
+  padding-right: 56px;
+}
+.cluster-row .action::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  width: 14px; height: 14px;
+  border-right: 3px solid var(--court);
+  border-top: 3px solid var(--court);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+/* T10 — section divider (dark, big italic-clay word) */
+.section-divider {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 38px;
+}
+.section-divider .word {
+  font: 400 italic 180px/0.95 var(--font-display);
+  font-variation-settings: "opsz" 144;
+  color: var(--clay);
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  text-align: center;
+}
+.section-divider .word .ink { color: var(--night-ink); font-style: normal; }
+.section-divider .sub {
+  font: 500 16px/1 var(--font-mono);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--night-ink-mute);
+}
+
+/* T-night chrome variations (slide-num + logo on dark) */
+.night .slide-num { color: var(--night-ink-mute); }
+.night .slide-logo { filter: invert(0); }
+
+/* =============================================================================
+   Universal density patterns — every card / row / chart gets layered content.
+   ========================================================================== */
+
+/* Card sub-meta line — bottom zone of any card (prior period, source, comp). */
+.card-meta {
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font: 500 14px/1.3 var(--font-sans);
+  color: var(--ink-mute);
+  letter-spacing: -0.005em;
+}
+.card-meta .k {
+  font-family: var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.card-meta .v {
+  color: var(--ink-soft);
+  font-weight: 600;
+  font-family: var(--font-sans);
+}
+
+/* Sub-detail under any list item / step description */
+.subdetail {
+  display: block;
+  font: 500 15px/1.4 var(--font-sans);
+  color: var(--ink-mute);
+  margin-top: 4px;
+  letter-spacing: -0.005em;
+}
+
+/* Insight strip — full-width mono one-liner band at the bottom of a slide */
+.insight-strip {
+  margin-top: 18px;
+  padding: 14px 18px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font: 600 15px/1.35 var(--font-sans);
+  color: var(--ink);
+  letter-spacing: -0.005em;
+}
+.insight-strip .tag {
+  display: inline-block;
+  background: var(--court);
+  color: var(--cream);
+  padding: 5px 10px;
+  border-radius: 4px;
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  flex: 0 0 auto;
+}
+.insight-strip .ital { color: var(--clay); font-style: italic; font-weight: 700; }
+
+/* Source / method footnote at the bottom of a chart card */
+.source-footnote {
+  margin-top: 10px;
+  font: 500 11px/1.4 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+/* Horizontal connector between sequential pipeline / tier elements */
+.connector {
+  position: absolute;
+  top: 22px;
+  right: -22px;
+  width: 24px;
+  height: 1px;
+  background: var(--ink-mute);
+  opacity: 0.5;
+}
+.connector::after {
+  content: "";
+  position: absolute;
+  right: -2px; top: -4px;
+  width: 0; height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid var(--ink-mute);
+  opacity: 1;
+}
+
+/* In-card KPI sub-tile (e.g., "Q1 GOAL: $250K") */
+.kpi-sub {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: var(--shade);
+  border-radius: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.kpi-sub .lbl {
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--court);
+}
+.kpi-sub .val {
+  font: 700 16px/1 var(--font-sans);
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  font-feature-settings: "tnum";
+}
+
+/* Mini axis tick labels for charts */
+.chart-x-axis {
+  display: grid;
+  grid-template-columns: 180px 1fr 80px;
+  margin-top: 8px;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.chart-x-axis .ticks {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.chart-legend .li {
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.chart-legend .sw {
+  width: 12px; height: 12px;
+  border-radius: 3px;
+}
+.chart-legend .sw.court { background: var(--court); }
+.chart-legend .sw.plum  { background: var(--plum); }
+.chart-legend .sw.amber { background: var(--amber); }
+.chart-legend .sw.clay  { background: var(--clay); }
+.chart-legend .ct { color: var(--ink-mute); margin-left: 4px; }
+
+/* Hero pull-quote zone for cover slide */
+.cover-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 28px;
+}
+.cover-hero .q {
+  font: 400 italic 36px/1.32 var(--font-display);
+  font-variation-settings: "opsz" 96;
+  color: var(--ink);
+  text-wrap: balance;
+  max-width: 1500px;
+  letter-spacing: -0.01em;
+}
+.cover-hero .q .ital { color: var(--clay); }
+.cover-hero .a {
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+/* Cover bottom meta strip (4 cells) */
+.cover-meta-strip {
+  position: absolute;
+  left: var(--slide-pad-x);
+  right: var(--slide-pad-x);
+  bottom: 280px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 22px;
+}
+.cover-meta-strip .col {
+  padding: 0 24px;
+  border-right: 1px solid var(--line-soft);
+}
+.cover-meta-strip .col:first-child { padding-left: 0; }
+.cover-meta-strip .col:last-child { border-right: none; padding-right: 0; }
+.cover-meta-strip .lbl {
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+.cover-meta-strip .val {
+  font: 700 22px/1.2 var(--font-sans);
+  color: var(--ink);
+  margin-top: 10px;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+.cover-meta-strip .val .ital { color: var(--clay); font-style: italic; font-weight: 700; }
+.cover-meta-strip .sub {
+  font: 500 14px/1.3 var(--font-sans);
+  color: var(--ink-mute);
+  margin-top: 6px;
+  letter-spacing: -0.005em;
+}
+
+/* Delta annotation strip below contrast pair */
+.delta-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 14px;
+  padding: 10px 18px;
+  background: var(--shade);
+  border-radius: 6px;
+  width: fit-content;
+  margin-left: auto;
+  margin-right: auto;
+}
+.delta-strip .lbl {
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--court);
+}
+.delta-strip .v {
+  font: 700 18px/1 var(--font-sans);
+  color: var(--ink);
+  letter-spacing: -0.005em;
+  font-feature-settings: "tnum";
+}
+.delta-strip .sep { color: var(--ink-mute); }
+.sub-label {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sub-label .k {
+  font: 600 11px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--court);
+}
+.sub-label .v {
+  font: 500 15px/1.35 var(--font-sans);
+  color: var(--ink-soft);
+  letter-spacing: -0.005em;
+}
+
+/* =============================================================================
+   AAA executive design overrides — applied 2026-05-13
+   1. T2 Impact column gets COURT-green fill + cream text (single deck ball moment lives in its KPI tile)
+   2. Horizontal flow connectors between sequential .stage and .tier elements (rule F)
+   3. Action title bumped up for executive-distance scan test
+   4. Tightened slide chrome to reduce visible white space
+   ========================================================================== */
+
+/* ---- 1. T2 Impact column court-fill ---------------------------------- */
+.exec-col.impact {
+  background: var(--court);
+  color: var(--night-ink);
+  margin: 0 -24px;
+  padding: 36px 36px 32px 36px;
+  border-radius: 14px;
+  border-right: none;
+}
+.exec-col.impact .eb { color: var(--lime); }
+.exec-col.impact .eb .badge { background: var(--amber); color: var(--ink); }
+.exec-col.impact .head {
+  color: var(--cream);
+}
+.exec-col.impact li {
+  color: color-mix(in srgb, var(--cream) 92%, var(--court-light));
+}
+.exec-col.impact li::before {
+  background: var(--lime);
+}
+.exec-col.impact li .subdetail {
+  color: color-mix(in srgb, var(--cream) 65%, var(--court-light));
+}
+.exec-col.impact .kpi-sub {
+  background: var(--court-deep);
+  border: 1px solid color-mix(in srgb, var(--cream) 20%, transparent);
+}
+.exec-col.impact .kpi-sub .lbl {
+  color: color-mix(in srgb, var(--cream) 70%, var(--court-light));
+}
+.exec-col.impact .kpi-sub .val {
+  color: var(--lime);
+}
+
+/* ---- 2. Flow connectors (rule F) ------------------------------------- */
+.stage { position: relative; }
+.stage:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 22px;
+  right: -22px;
+  width: 14px;
+  height: 1px;
+  background: var(--ink-mute);
+  opacity: 0.55;
+}
+.stage:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  right: -10px;
+  width: 0; height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid var(--ink-mute);
+  opacity: 0.7;
+}
+.tier { position: relative; }
+.tier:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  width: 16px;
+  height: 1px;
+  background: var(--ink-mute);
+  opacity: 0.55;
+}
+.tier:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 20px;
+  right: 22px;
+  width: 0; height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid var(--ink-mute);
+  opacity: 0.7;
+}
+
+/* ---- 3. Heavier action title + bolder title rule --------------------- */
+/* The base rule is .action-title at 44px / 700. AAA exec titles read heavier
+   at 15ft. Bump weight presence by keeping size but pulling line-height in
+   tighter and giving the underline more visual mass. */
+.action-title {
+  font-size: 48px;
+  line-height: 1.12;
+}
+.action-title .keyword {
+  text-decoration-thickness: 4px;
+  text-underline-offset: 8px;
+}
+.title-rule {
+  opacity: 0.5;
+  height: 1px;
+}
+
+/* ---- 4. Tighter slide chrome to recover vertical real estate --------- */
+.slide-body {
+  --slide-pad-top: 88px;
+  --slide-pad-bottom: 72px;
+  --slide-gap: 44px;
+  inset: var(--slide-pad-top) var(--slide-pad-x) var(--slide-pad-bottom) var(--slide-pad-x);
+  gap: var(--slide-gap);
+}
+
+/* ---- 5. Card chrome — slightly stronger borders for exec distance ---- */
+.stat-card, .failure-card, .micro-tile, .bento-tile, .t5-sidebar, .t5-chart {
+  border-color: color-mix(in srgb, var(--line) 70%, var(--ink-mute));
+}
+

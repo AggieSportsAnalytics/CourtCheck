@@ -126,6 +126,9 @@ class BallDetector:
         # Get the last 3 frames from the buffer
         frame_m2, frame_m1, frame_0 = list(self.frame_buffer)
 
+        # Capture output dimensions before downscaling for TrackNet
+        frame_h, frame_w = frame_0.shape[:2]
+
         # Preprocess frames
         img = cv2.resize(frame_0, (self.width, self.height))
         img_prev = cv2.resize(frame_m1, (self.width, self.height))
@@ -144,23 +147,30 @@ class BallDetector:
             output = out.argmax(dim=1).detach().cpu().numpy()
 
         # Post-process using previous prediction for stability
-        x_pred, y_pred = self.postprocess(output, self.prev_pred)
+        x_pred, y_pred = self.postprocess(output, self.prev_pred, frame_w=frame_w, frame_h=frame_h)
 
         # Update previous prediction state
         self.prev_pred = [x_pred, y_pred]
 
         return (x_pred, y_pred)
 
-    def postprocess(self, feature_map, prev_pred, scale=2, max_dist=80):
+    def postprocess(self, feature_map, prev_pred, frame_w=1280, frame_h=720, max_dist=80):
         """
         :params
             feature_map: feature map with shape (1,360,640)
             prev_pred: [x,y] coordinates of ball prediction from previous frame
-            scale: scale for conversion to original shape (720,1280)
-            max_dist: maximum distance from previous ball detection to remove outliers
+            frame_w: original frame width (used to scale TrackNet output back to frame space)
+            frame_h: original frame height
+            max_dist: maximum distance (in 1280x720-equivalent pixels) to filter outliers
         :return
-            x,y ball coordinates
+            x,y ball coordinates in frame pixel space
         """
+        # Scale TrackNet 640x360 detections back to original frame dimensions
+        scale_x = frame_w / self.width
+        scale_y = frame_h / self.height
+        # max_dist was tuned at 1280x720; scale it proportionally to frame size
+        scaled_max_dist = max_dist * (frame_w / 1280)
+
         feature_map *= 255
         feature_map = feature_map.reshape((self.height, self.width))
         feature_map = feature_map.astype(np.uint8)
@@ -179,14 +189,14 @@ class BallDetector:
         if circles is not None:
             if prev_pred[0]:
                 for i in range(len(circles[0])):
-                    x_temp = circles[0][i][0] * scale
-                    y_temp = circles[0][i][1] * scale
+                    x_temp = circles[0][i][0] * scale_x
+                    y_temp = circles[0][i][1] * scale_y
                     dist = distance.euclidean((x_temp, y_temp), prev_pred)
-                    if dist < max_dist:
+                    if dist < scaled_max_dist:
                         x, y = x_temp, y_temp
                         break
             else:
-                x = circles[0][0][0] * scale
-                y = circles[0][0][1] * scale
+                x = circles[0][0][0] * scale_x
+                y = circles[0][0][1] * scale_y
         return x, y
 

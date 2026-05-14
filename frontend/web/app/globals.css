@@ -1,31 +1,189 @@
 @import 'tailwindcss';
 @plugin "@tailwindcss/typography";
 
-@theme inline {
-  /* Background: near-black matching landing page */
-  --color-primary: #07070A;
-  /* Elevated surfaces: slightly lighter with a neutral-cool cast */
-  --color-secondary: #111116;
-  /* Neon tennis green — the CourtCheck brand accent */
-  --color-accent: #B4F000;
+/* Class-based dark mode (mocks toggle .dark on body) */
+@custom-variant dark (&:where(.dark, .dark *));
 
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+@theme {
+  /* === BRAND COLOR TOKENS (light defaults) === */
+  --color-cream: #F4F0E6;
+  --color-paper: #FBF8F1;
+  --color-surface: #FFFFFF;
+  --color-shade: #ECE6D5;
+  --color-line: #DDD7C5;
+  --color-line-soft: #EAE4D2;
+
+  --color-ink: #1A1815;
+  --color-ink-soft: #43403A;
+  --color-ink-mute: #837F77;
+
+  --color-court: #2E5341;
+  --color-court-deep: #1F3D2E;
+  --color-court-light: #6E8C7C;
+  --color-court-surface: #A85E3A;
+
+  --color-clay: #B05B36;
+  --color-clay-soft: #D08866;
+
+  --color-lime: #BFC846;
+  --color-plum: #7B4E6E;
+  --color-amber: #C8923A;
+  --color-slate: #5C6B7A;
+
+  /* Categorical (stroke types) */
+  --color-stroke-forehand: #2E5341;
+  --color-stroke-backhand: #7B4E6E;
+  --color-stroke-serve: #C8923A;
+  --color-stroke-volley: #B05B36;
+
+  /* === SHADCN SEMANTIC ALIASES (mapped to brand) === */
+  --color-background: #F4F0E6;
+  --color-foreground: #1A1815;
+  --color-card: #FBF8F1;
+  --color-card-foreground: #1A1815;
+  --color-popover: #FBF8F1;
+  --color-popover-foreground: #1A1815;
+  --color-primary: #2E5341;
+  --color-primary-foreground: #F4F0E6;
+  --color-secondary: #ECE6D5;
+  --color-secondary-foreground: #1A1815;
+  --color-muted: #ECE6D5;
+  --color-muted-foreground: #837F77;
+  --color-accent: #B05B36;
+  --color-accent-foreground: #F4F0E6;
+  --color-destructive: #B05B36;
+  --color-destructive-foreground: #F4F0E6;
+  --color-border: #DDD7C5;
+  --color-input: #DDD7C5;
+  --color-ring: #2E5341;
+
+  /* === FONTS === */
+  --font-display: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* === MOTION === */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-out-quart: cubic-bezier(0.165, 0.84, 0.44, 1);
+
+  --duration-quick: 160ms;
+  --duration-base: 240ms;
+  --duration-reveal: 480ms;
+  --duration-hero: 800ms;
+
+  /* === RADIUS === */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+
+  /* === SHADOW === */
+  --shadow-card: 0 1px 0 rgba(26, 24, 21, 0.04), 0 18px 48px -24px rgba(26, 24, 21, 0.16);
+  --shadow-pop: 0 1px 0 rgba(26, 24, 21, 0.06), 0 24px 60px -28px rgba(26, 24, 21, 0.22);
+  --shadow-hover: 0 1px 0 rgba(26, 24, 21, 0.05), 0 22px 56px -26px rgba(26, 24, 21, 0.20);
+}
+
+/* === DARK MODE OVERRIDES (Stadium-at-Night) — synced 2026-05-12 with the canonical mocks palette.
+   Cool navy surfaces with wider elevation deltas (cream → paper jumps ~30 luminance units so
+   adjacent sections read as distinct planes). Court stays GREEN (was incorrectly flipped to blue
+   in the original drop). Plum / amber / slate / court-surface added so dark mode mirrors the
+   full light-mode chromatic palette. */
+.dark {
+  --color-cream: #07080F;
+  --color-paper: #1F2940;
+  --color-surface: #2B374F;
+  --color-shade: #11161F;
+  --color-line: #2F3B52;
+  --color-line-soft: #1E2735;
+
+  --color-ink: #F4F0E6;
+  --color-ink-soft: #A8B0C0;
+  --color-ink-mute: #6B7388;
+
+  --color-court: #6FA88B;
+  --color-court-deep: #4A8268;
+  --color-court-light: #9FC6B0;
+  --color-court-surface: #6B3A24;
+
+  --color-clay: #E07A52;
+  --color-clay-soft: #F0A07F;
+
+  --color-lime: #DDE970;
+  --color-plum: #B584A6;
+  --color-amber: #DDB166;
+  --color-slate: #889DB3;
+
+  --color-stroke-forehand: #6FA88B;
+  --color-stroke-backhand: #B584A6;
+  --color-stroke-serve: #DDB166;
+  --color-stroke-volley: #E07A52;
+
+  /* Shadcn alias overrides */
+  --color-background: #07080F;
+  --color-foreground: #F4F0E6;
+  --color-card: #1F2940;
+  --color-card-foreground: #F4F0E6;
+  --color-popover: #2B374F;
+  --color-popover-foreground: #F4F0E6;
+  --color-primary: #6FA88B;
+  --color-primary-foreground: #07080F;
+  --color-secondary: #11161F;
+  --color-secondary-foreground: #F4F0E6;
+  --color-muted: #11161F;
+  --color-muted-foreground: #6B7388;
+  --color-accent: #E07A52;
+  --color-accent-foreground: #F4F0E6;
+  --color-destructive: #E07A52;
+  --color-destructive-foreground: #F4F0E6;
+  --color-border: #2F3B52;
+  --color-input: #2F3B52;
+  --color-ring: #6FA88B;
+
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.4), 0 18px 48px -24px rgba(0, 0, 0, 0.55);
+  --shadow-pop: 0 1px 0 rgba(0, 0, 0, 0.5), 0 24px 60px -28px rgba(0, 0, 0, 0.7);
+  --shadow-hover: 0 1px 0 rgba(0, 0, 0, 0.45), 0 22px 56px -26px rgba(0, 0, 0, 0.62);
 }
 
 @layer base {
+  html {
+    color-scheme: light;
+  }
+  html.dark,
+  .dark {
+    color-scheme: dark;
+  }
+
   body {
-    @apply bg-primary text-white font-sans;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+    @apply bg-cream text-ink font-sans antialiased;
+    font-size: 16px;
+    line-height: 1.55;
+    letter-spacing: -0.005em;
+    background-image:
+      radial-gradient(1400px 900px at 88% -10%, color-mix(in srgb, var(--color-clay) 8%, transparent), transparent 55%),
+      radial-gradient(900px 800px at -10% 80%, color-mix(in srgb, var(--color-court) 9%, transparent), transparent 60%);
+    background-attachment: fixed;
+    transition: background-color var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
+  }
+
+  /* Brand law: italic = clay. Locked exceptions opt in via .italic-lime. */
+  em,
+  i,
+  .italic-clay {
+    color: var(--color-clay);
+    font-style: italic;
+  }
+
+  .italic-lime {
+    color: var(--color-lime);
+    font-style: italic;
   }
 
   ::selection {
-    background: rgba(180, 240, 0, 0.2);
-    color: #fff;
+    background: color-mix(in srgb, var(--color-court) 20%, transparent);
+    color: var(--color-ink);
   }
 
-  /* Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -34,10 +192,221 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--color-ink) 12%, transparent);
     border-radius: 999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.18);
+    background: color-mix(in srgb, var(--color-ink) 22%, transparent);
+  }
+
+  /* Tabular nums for any element using the num primitive */
+  .num,
+  [data-num] {
+    font-feature-settings: 'tnum';
+  }
+
+  /* === SIDEBAR LAYOUT === */
+  /* App pages get padded left to clear the fixed sidebar. */
+  body.has-sidebar {
+    padding-left: 200px;
+    transition: padding-left 220ms var(--ease-out);
+  }
+  body.has-sidebar.sidebar-collapsed {
+    padding-left: 72px;
+  }
+  @media (max-width: 1100px) {
+    body.has-sidebar {
+      padding-left: 72px;
+    }
+  }
+
+  /* Lock scroll while splash overlay is up */
+  body.splash-locked {
+    overflow: hidden;
+  }
+}
+
+/* === SHARED COMPONENT PATTERNS (ported verbatim from docs/brand-drop/mocks/visuals.html) === */
+@layer components {
+  /* .card lift — base interactive surface */
+  .cc-card {
+    background: var(--color-paper);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
+    transition:
+      transform var(--duration-base) var(--ease-out),
+      box-shadow var(--duration-base) var(--ease-out),
+      border-color var(--duration-base) var(--ease-out);
+  }
+  .cc-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--color-ink-mute);
+  }
+
+  /* .insight prose card */
+  .cc-insight {
+    background: var(--color-paper);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    transition:
+      transform var(--duration-quick) var(--ease-out),
+      border-color var(--duration-quick) var(--ease-out);
+  }
+  .cc-insight:hover {
+    transform: translateY(-1px);
+    border-color: var(--color-ink-mute);
+  }
+
+  /* .match-row — list interactivity with arrow translate */
+  .cc-match-row {
+    transition:
+      background var(--duration-quick) var(--ease-out),
+      border-color var(--duration-quick) var(--ease-out);
+  }
+  .cc-match-row:hover {
+    background: var(--color-shade);
+    border-color: var(--color-ink-mute);
+  }
+  .cc-match-row:hover .cc-arrow {
+    transform: translateX(4px);
+  }
+  .cc-arrow {
+    transition: transform var(--duration-base) var(--ease-out);
+  }
+
+  /* .legend-chip filter chip with dim-siblings */
+  .cc-legend-chip {
+    transition:
+      transform var(--duration-quick) var(--ease-out),
+      border-color var(--duration-quick) var(--ease-out),
+      opacity var(--duration-quick) var(--ease-out);
+  }
+  .cc-legend-chip:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--color-clay) 30%, var(--color-line));
+  }
+  .cc-legend-chip.muted {
+    opacity: 0.35;
+  }
+  .cc-legend-chip.muted:hover {
+    opacity: 1;
+  }
+
+  /* .stat-tile / .hero-stat-card lift */
+  .cc-stat-tile {
+    background: var(--color-paper);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    transition:
+      transform var(--duration-base) var(--ease-out),
+      box-shadow var(--duration-base) var(--ease-out),
+      border-color var(--duration-base) var(--ease-out);
+  }
+  .cc-stat-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--color-ink-mute);
+  }
+
+  /* Court tile — canonical 27/39 aspect with clay surface */
+  .cc-court-tile {
+    aspect-ratio: 27 / 39;
+    background: var(--color-court-surface);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-line);
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Court overlay primitives — CSS owns the transition + pre-reveal hide,
+     React/JSX owns each element's "target" opacity via its `opacity` attribute.
+     This avoids the imperative-style fight that broke earlier. Matches
+     docs/brand-drop/mocks/visuals.html. */
+  .shot-dot,
+  .heatmap-zone,
+  .spacing-line,
+  .spacing-endpoint {
+    transition: opacity 480ms var(--ease-out);
+  }
+  /* Entrance animation: the useVizReveal hook adds `cc-viz-prereveal` to the
+     SVG root on mount, then removes it one paint later. Any matching child
+     drops to opacity 0 while the class is present, then CSS transitions back
+     to its declared opacity once removed. */
+  .cc-viz-prereveal .shot-dot,
+  .cc-viz-prereveal .heatmap-zone,
+  .cc-viz-prereveal .spacing-line,
+  .cc-viz-prereveal .spacing-endpoint {
+    opacity: 0 !important;
+  }
+  /* Legend-filter dimming — wins over both the JSX-set opacity AND the
+     pre-reveal state, since dimming is intentional user action. */
+  .shot-dot.dim,
+  .spacing-line.dim,
+  .spacing-endpoint.dim {
+    opacity: 0.1 !important;
+  }
+
+  /* Brand-mark hover-video container */
+  .brand-mark {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .brand-mark .bm-video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--duration-quick) var(--ease-out);
+  }
+  .brand-mark:hover .bm-video {
+    opacity: 1;
+  }
+  .brand-mark:hover .bm-img {
+    opacity: 0;
+  }
+  .bm-img {
+    transition: opacity var(--duration-quick) var(--ease-out);
+  }
+}
+
+/* === SONNER TOAST CLASSES (per notifications.md) === */
+@layer components {
+  .cc-toast {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+    box-shadow: var(--shadow-card);
+    font-family: var(--font-sans);
+  }
+  .cc-toast-success {
+    border-color: color-mix(in srgb, var(--color-court) 30%, var(--color-line));
+  }
+  .cc-toast-info {
+    border-color: var(--color-line);
+  }
+  .cc-toast-warn,
+  .cc-toast-error {
+    border-color: color-mix(in srgb, var(--color-clay) 35%, var(--color-line));
+  }
+}
+
+/* === REDUCED MOTION === */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

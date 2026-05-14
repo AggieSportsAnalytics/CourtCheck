@@ -1,0 +1,317 @@
+/* =============================================================================
+   CourtCheck Design System — colors_and_type.css
+   Foundation tokens (color, type, spacing, radius, shadow, motion) for both
+   light "cream paper" and dark "stadium at night" modes. Plain CSS, no build
+   step. Import this into any HTML you author against the brand.
+
+   Source of truth: brand-drop/tokens.css and 01-brand-guidelines.md.
+   ========================================================================== */
+
+/* ---- Fonts -------------------------------------------------------------- */
+@font-face {
+  font-family: "Newsreader";
+  src: url("../../fonts/Newsreader-Variable.ttf") format("truetype-variations");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Newsreader";
+  src: url("../../fonts/Newsreader-Italic-Variable.ttf") format("truetype-variations");
+  font-weight: 200 800;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter Tight";
+  src: url("../../fonts/InterTight-Variable.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Inter Tight";
+  src: url("../../fonts/InterTight-Italic-Variable.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../../fonts/JetBrainsMono-Variable.ttf") format("truetype-variations");
+  font-weight: 100 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("../../fonts/JetBrainsMono-Italic-Variable.ttf") format("truetype-variations");
+  font-weight: 100 800;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ---- Light mode (default — "cream paper") ------------------------------- */
+:root {
+  /* Surfaces */
+  --cream:       #F4F0E6;   /* page background */
+  --paper:       #FBF8F1;   /* card / elevated surface */
+  --surface:     #FFFFFF;   /* highest elevation (popovers, focus) */
+  --shade:       #ECE6D5;   /* inset (input bg, bar tracks) */
+  --line:        #DDD7C5;   /* borders */
+  --line-soft:   #EAE4D2;   /* subtle dividers */
+
+  /* Ink */
+  --ink:         #1A1815;   /* primary type, primary lines */
+  --ink-soft:    #43403A;   /* body type */
+  --ink-mute:    #837F77;   /* captions, system labels */
+
+  /* Brand */
+  --court:       #2E5341;   /* primary — "in favor" */
+  --court-deep:  #1F3D2E;   /* hover / pressed */
+  --court-light: #6E8C7C;   /* tinted variant */
+  --court-surface: #A85E3A; /* the actual court playing surface (clay) */
+
+  --clay:        #B05B36;   /* accent — "needs attention", italic-clay headlines */
+  --clay-soft:   #D08866;
+
+  --lime:        #BFC846;   /* "the ball" — used sparingly, once per screen */
+  --lime-soft:   #E1E7A6;
+
+  /* Categorical (6 slots, locked product-wide) */
+  --plum:        #7B4E6E;   /* slot 2 — backhand */
+  --amber:       #C8923A;   /* slot 3 — serve */
+  --slate:       #5C6B7A;   /* slot 5 — neutral / other */
+  /* slot 1 = --court (forehand), slot 4 = --clay (volley), slot 6 = --lime (ball) */
+
+  /* Categorical aliases (read like the chart legend) */
+  --stroke-forehand: var(--court);
+  --stroke-backhand: var(--plum);
+  --stroke-serve:    var(--amber);
+  --stroke-volley:   var(--clay);
+
+  /* Soft tint backgrounds used by tag / pill chrome */
+  --tag-court-bg: rgba(46, 83, 65, 0.10);
+  --tag-clay-bg:  rgba(176, 91, 54, 0.10);
+  --tag-lime-bg:  rgba(191, 200, 70, 0.18);
+  --tag-lime-ink: #6E7522;
+
+  /* Page wash (subtle radial tint on body) */
+  --bg-grad-1:   rgba(176, 91, 54, 0.08);
+  --bg-grad-2:   rgba(46, 83, 65, 0.09);
+
+  /* Radius */
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   14px;
+  --radius-xl:   18px;
+  --radius-pill: 100px;
+
+  /* Spacing (8pt scale) */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-7:  28px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-14: 56px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* Shadow */
+  --shadow-card:  0 1px 0 rgba(26, 24, 21, 0.04), 0 18px 48px -24px rgba(26, 24, 21, 0.16);
+  --shadow-pop:   0 1px 0 rgba(26, 24, 21, 0.06), 0 24px 60px -28px rgba(26, 24, 21, 0.22);
+  --shadow-hover: 0 1px 0 rgba(26, 24, 21, 0.04), 0 24px 60px -22px rgba(26, 24, 21, 0.22);
+
+  /* Motion */
+  --ease-out:    cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --dur-quick:  160ms;   /* hovers, button presses */
+  --dur-base:   240ms;   /* standard transitions */
+  --dur-reveal: 480ms;   /* element reveals */
+  --dur-hero:   800ms;   /* big page entrance */
+  --dur-loop:   2400ms;  /* bounce-arc loop, shimmer */
+
+  /* Type stack */
+  --font-display: "Newsreader", ui-serif, Georgia, serif;
+  --font-sans:    "Inter Tight", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Semantic type roles ("h1", "h2", "p", etc) — values consumed by the
+     primitives below. Tweak per page by overriding these on a scope. */
+  --type-display-1: 500 clamp(56px, 9vw, 142px)/0.96 var(--font-display);  /* hero h1, opsz 144 */
+  --type-display-2: 500 clamp(40px, 5.6vw, 76px)/1.0  var(--font-display); /* section h2, opsz 96 */
+  --type-display-3: 500 1.7rem/1.15 var(--font-display);                    /* card title, opsz 72 */
+  --type-num-hero:  500 clamp(72px, 9vw, 144px)/1.0 var(--font-display);   /* big stat, opsz 72, tnum */
+  --type-num-mid:   500 1.4rem/1.05 var(--font-display);                    /* card stat, tnum */
+  --type-body:      400 1rem/1.55 var(--font-sans);                         /* body */
+  --type-body-lg:   400 1.15rem/1.55 var(--font-sans);                      /* lede */
+  --type-body-sm:   400 0.92rem/1.5 var(--font-sans);                       /* secondary copy */
+  --type-mono:      500 0.72rem/1.25 var(--font-mono);                      /* mono caps system voice */
+}
+
+/* ---- Dark mode ("Stadium at Night") ------------------------------------- */
+:root.dark,
+.dark {
+  --cream:        #07080F;
+  --paper:        #1F2940;
+  --surface:      #2B374F;
+  --shade:        #11161F;
+  --line:         #2F3B52;
+  --line-soft:    #1E2735;
+
+  --ink:          #F4F0E6;
+  --ink-soft:     #A8B0C0;
+  --ink-mute:     #6B7388;
+
+  --court:        #6FA88B;
+  --court-deep:   #4A8268;
+  --court-light:  #9FC6B0;
+  --court-surface: #6B3A24;
+
+  --clay:         #E07A52;
+  --clay-soft:    #F0A07F;
+
+  --lime:         #DDE970;
+  --lime-soft:    #9BAD30;
+
+  --plum:         #B584A6;
+  --amber:        #DDB166;
+  --slate:        #889DB3;
+
+  --stroke-forehand: var(--court);
+  --stroke-backhand: var(--plum);
+  --stroke-serve:    var(--amber);
+  --stroke-volley:   var(--clay);
+
+  --tag-court-bg: rgba(176, 91, 54, 0.16);
+  --tag-clay-bg:  rgba(224, 122, 82, 0.15);
+  --tag-lime-bg:  rgba(221, 233, 112, 0.15);
+  --tag-lime-ink: var(--lime);
+
+  --bg-grad-1:   rgba(176, 91, 54, 0.12);
+  --bg-grad-2:   rgba(111, 168, 139, 0.08);
+
+  --shadow-card:  0 1px 0 rgba(0, 0, 0, 0.40), 0 24px 60px -28px rgba(0, 0, 0, 0.60);
+  --shadow-pop:   0 1px 0 rgba(0, 0, 0, 0.50), 0 24px 60px -28px rgba(0, 0, 0, 0.70);
+  --shadow-hover: 0 1px 0 rgba(0, 0, 0, 0.40), 0 28px 80px -28px rgba(0, 0, 0, 0.70);
+}
+
+/* ---- Base typography primitives ----------------------------------------- */
+/* Use these by giving an element the right class (.display-1, .display-2,
+   .num, .mono, .eyebrow, .ital). They map onto the type variables above. */
+
+html, body { background: var(--cream); color: var(--ink); }
+body {
+  font: var(--type-body);
+  font-family: var(--font-sans);
+  letter-spacing: -0.005em;
+  -webkit-font-smoothing: antialiased;
+  background-image:
+    radial-gradient(1200px 600px at 92% -10%, var(--bg-grad-1), transparent 60%),
+    radial-gradient(900px 700px at -10% 110%, var(--bg-grad-2), transparent 65%);
+  background-attachment: fixed;
+  transition: background-color var(--dur-base) var(--ease-out),
+              color var(--dur-base) var(--ease-out);
+}
+
+.display-1 {
+  font: var(--type-display-1);
+  font-variation-settings: "opsz" 144;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.display-2 {
+  font: var(--type-display-2);
+  font-variation-settings: "opsz" 96;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+.display-3 {
+  font: var(--type-display-3);
+  font-variation-settings: "opsz" 72;
+  letter-spacing: -0.014em;
+}
+
+/* The italic-clay rule: one italic word per headline, always clay.
+   Two locked exceptions render italic in lime — the "Check" half of the
+   wordmark, and the closing CTA "Start winning." */
+.ital      { color: var(--clay); font-style: italic; font-weight: 400; }
+.ital.lime { color: var(--lime); }
+
+/* Numerics — always Newsreader 500, tabular */
+.num,
+[data-num] {
+  font-family: var(--font-display);
+  font-variation-settings: "opsz" 72;
+  font-weight: 500;
+  font-feature-settings: "tnum";
+}
+.num-hero { font: var(--type-num-hero); font-feature-settings: "tnum"; letter-spacing: -0.03em; }
+
+/* System voice — JetBrains Mono, uppercase, wide-tracked */
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+/* Eyebrow — section / card labels. Mono caps in court with leading clay dot. */
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--court);
+}
+.eyebrow::before {
+  content: ""; width: 6px; height: 6px;
+  background: var(--clay); border-radius: 50%;
+}
+
+/* Body roles */
+.body-lg { font: var(--type-body-lg); color: var(--ink-soft); }
+.body-sm { font: var(--type-body-sm); color: var(--ink-soft); }
+
+/* Selection + scrollbar */
+::selection {
+  background: color-mix(in srgb, var(--court) 20%, transparent);
+  color: var(--ink);
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--ink) 12%, transparent);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--ink) 22%, transparent);
+}
+
+/* Reveal helper (initial page entrance — staggered).
+   Standard pattern from brand-drop/tokens.css: animations only run when
+   motion is allowed; otherwise content is visible at rest. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal {
+    opacity: 0; transform: translateY(8px);
+    animation: cc-reveal-in var(--dur-reveal) var(--ease-out) forwards;
+  }
+  .reveal-1 { animation-delay: 80ms; }
+  .reveal-2 { animation-delay: 160ms; }
+  .reveal-3 { animation-delay: 240ms; }
+  .reveal-4 { animation-delay: 320ms; }
+  .reveal-5 { animation-delay: 400ms; }
+}
+@keyframes cc-reveal-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

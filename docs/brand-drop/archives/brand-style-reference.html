@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CourtCheck · Brand Direction</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* === LIGHT (Clay & Cream) === */
+      --cream:        #F4F0E6;
+      --paper:        #FBF8F1;
+      --surface:      #FFFFFF;
+      --shade:        #ECE6D5;
+      --line:         #DDD7C5;
+      --line-soft:    #EAE4D2;
+
+      --ink:          #1A1815;
+      --ink-soft:     #43403A;
+      --ink-mute:     #837F77;
+
+      --court:        #2E5341;
+      --court-deep:   #1F3D2E;
+      --court-light:  #6E8C7C;
+      --clay:         #B05B36;
+      --clay-soft:    #D08866;
+      --lime:         #BFC846;
+      --lime-soft:    #E1E7A6;
+
+      --bg-grad-1:    rgba(176,91,54,0.06);
+      --bg-grad-2:    rgba(46,83,65,0.07);
+
+      --radius:       2px;
+      --radius-lg:    14px;
+      --shadow:       0 1px 0 rgba(26,24,21,0.04), 0 18px 48px -24px rgba(26,24,21,0.16);
+    }
+
+    /* === DARK (Near-black with US Open accents) === */
+    body.dark {
+      --cream:        #0A0E14;   /* L0 void — page background */
+      --paper:        #11161F;   /* L1 surface — cards */
+      --surface:      #1A2230;   /* L2 elevated — emphasized surface */
+      --shade:        #161D29;
+      --line:         #232B3A;
+      --line-soft:    #1A2130;
+
+      --ink:          #F4F0E6;   /* warm cream stays the type color */
+      --ink-soft:     #A8B0C0;
+      --ink-mute:     #6B7388;
+
+      --court:        #3B8FE8;   /* US Open Pacific Blue — ACCENT only */
+      --court-deep:   #1E5FA8;
+      --court-light:  #7FB6F0;
+      --clay:         #E07A52;
+      --clay-soft:    #F0A07F;
+      --lime:         #DDE970;
+      --lime-soft:    #9BAD30;
+
+      /* Subtle ambient glows — NOT a wash of color */
+      --bg-grad-1:    rgba(59,143,232,0.06);
+      --bg-grad-2:    rgba(221,233,112,0.03);
+
+      --shadow:       0 1px 0 rgba(0,0,0,0.40), 0 24px 60px -28px rgba(0,0,0,0.60);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: var(--cream); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      font-weight: 400;
+      font-size: 16px;
+      line-height: 1.55;
+      letter-spacing: -0.005em;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-image:
+        radial-gradient(1200px 600px at 92% -10%, var(--bg-grad-1), transparent 60%),
+        radial-gradient(900px 700px at -10% 110%, var(--bg-grad-2), transparent 65%);
+      background-attachment: fixed;
+      transition: background-color 240ms ease, color 240ms ease;
+    }
+
+    /* === Typography === */
+    .display {
+      font-family: 'Newsreader', 'Times New Roman', serif;
+      font-variation-settings: 'opsz' 72;
+      font-weight: 500;
+      letter-spacing: -0.022em;
+      line-height: 1.0;
+    }
+    .display-italic, .ital {
+      font-style: italic;
+      font-weight: 400;
+      font-variation-settings: 'opsz' 72;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--court);
+    }
+    .eyebrow::before {
+      content: "";
+      display: inline-block;
+      width: 6px; height: 6px;
+      background: var(--clay);
+      border-radius: 50%;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* === Container === */
+    .container { max-width: 1320px; margin: 0 auto; padding: 0 56px; }
+    @media (max-width: 720px) { .container { padding: 0 28px; } }
+
+    /* === Nav === */
+    nav {
+      padding: 26px 0;
+      border-bottom: 1px solid var(--line-soft);
+      position: sticky;
+      top: 0;
+      background: color-mix(in srgb, var(--cream) 85%, transparent);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 50;
+    }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; }
+    .brand-mark { display: flex; align-items: center; gap: 12px; }
+    .brand-mark .logo { width: 36px; height: 36px; }
+    .brand-mark .name {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 60;
+      font-weight: 500;
+      font-size: 1.35rem;
+      letter-spacing: -0.018em;
+    }
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-links a {
+      font-size: 0.92rem;
+      font-weight: 500;
+      color: var(--ink-soft);
+      transition: color 160ms ease;
+    }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-cta {
+      padding: 10px 18px;
+      background: var(--ink);
+      color: var(--cream);
+      border-radius: 100px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: background 160ms ease;
+    }
+    .nav-cta:hover { background: var(--court-deep); }
+
+    /* === Hero === */
+    .hero { padding: 100px 0 120px; position: relative; }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 80px;
+      align-items: end;
+    }
+    .hero h1 {
+      font-size: clamp(56px, 8.4vw, 142px);
+      margin: 28px 0 36px;
+    }
+    .hero h1 .court  { color: var(--court); }
+    .hero h1 .clay   { color: var(--clay); font-style: italic; font-weight: 400; }
+    .hero h1 .ital   { font-style: italic; font-weight: 400; }
+    .hero .lede {
+      font-size: 1.32rem;
+      max-width: 560px;
+      color: var(--ink-soft);
+      line-height: 1.45;
+      margin-bottom: 42px;
+    }
+    .hero-cta-row { display: flex; gap: 14px; align-items: center; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 24px;
+      border-radius: 100px;
+      font-weight: 500;
+      font-size: 0.98rem;
+      transition: transform 200ms ease, background 200ms ease, color 200ms ease;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--court);
+      color: var(--cream);
+    }
+    .btn-primary:hover { background: var(--court-deep); transform: translateY(-1px); }
+    .btn-ghost {
+      color: var(--ink);
+      background: transparent;
+      border: 1px solid var(--line);
+    }
+    .btn-ghost:hover { border-color: var(--ink); }
+
+    .hero-visual {
+      position: relative;
+      aspect-ratio: 4 / 5;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 40px 32px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .hero-visual::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(135deg, transparent 60%, var(--bg-grad-1));
+      pointer-events: none;
+    }
+    .hero-visual .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .hero-visual .anim {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 0;
+    }
+    .hero-visual .anim img { width: 80%; max-width: 280px; }
+    .hero-visual .caption .display {
+      font-size: 1.4rem;
+      line-height: 1.15;
+    }
+
+    /* === Section === */
+    section { padding: 100px 0; border-top: 1px solid var(--line-soft); }
+    .section-head {
+      display: grid;
+      grid-template-columns: 0.6fr 1fr;
+      gap: 60px;
+      margin-bottom: 64px;
+      align-items: end;
+    }
+    .section-head h2 {
+      font-size: clamp(40px, 4.6vw, 68px);
+    }
+    .section-head .h2-lede {
+      color: var(--ink-soft);
+      font-size: 1.05rem;
+      max-width: 540px;
+      line-height: 1.55;
+    }
+
+    /* === Palette === */
+    .palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 18px; }
+    .swatch {
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+    .swatch .block {
+      aspect-ratio: 1;
+      position: relative;
+    }
+    .swatch .info {
+      padding: 14px 16px 16px;
+      background: var(--paper);
+      border-top: 1px solid var(--line);
+    }
+    .swatch .info .name {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1.05rem;
+      margin-bottom: 4px;
+    }
+    .swatch .info .hex {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.74rem;
+      color: var(--ink-mute);
+    }
+    .swatch.cream .block   { background: var(--cream); }
+    .swatch.paper .block   { background: var(--paper); }
+    .swatch.ink .block     { background: var(--ink); }
+    .swatch.court .block   { background: var(--court); }
+    .swatch.clay .block    { background: var(--clay); }
+    .swatch.lime .block    { background: var(--lime); }
+    /* Fixed dark-mode swatches (always show dark-mode colors regardless of mode) */
+    .swatch.void .block    { background: #0A0E14; }
+    .swatch.l1 .block      { background: #11161F; }
+    .swatch.l2 .block      { background: #1A2230; }
+    .swatch.pacific .block { background: #3B8FE8; }
+    .swatch.court-blue .block { background: #1E5FA8; }
+    .swatch.lime-pop .block { background: #DDE970; }
+    .swatch.clay-warm .block { background: #E07A52; }
+    .palette-label {
+      font-family: 'Newsreader', serif;
+      font-style: italic;
+      font-weight: 400;
+      color: var(--ink-soft);
+      margin: 28px 0 14px;
+      font-size: 0.95rem;
+    }
+    @media (max-width: 900px) { .palette { grid-template-columns: repeat(3, 1fr); } }
+
+    /* === Typography Specimen === */
+    .type-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+    }
+    .specimen {
+      padding: 36px 38px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+    }
+    .specimen-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .specimen-label .role {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1.05rem;
+    }
+    .specimen .sample-display { font-size: 4.6rem; line-height: 0.95; margin-bottom: 18px; }
+    .specimen .sample-display.italic { font-style: italic; font-weight: 400; }
+    .specimen .sample-h2 { font-size: 2rem; line-height: 1.05; margin-bottom: 12px; }
+    .specimen .sample-h3 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 60;
+      font-weight: 500;
+      font-size: 1.4rem;
+      letter-spacing: -0.012em;
+      margin-bottom: 8px;
+    }
+    .specimen .sample-body {
+      font-size: 1.05rem;
+      line-height: 1.6;
+      color: var(--ink-soft);
+      max-width: 560px;
+    }
+    .specimen .scale {
+      display: grid;
+      gap: 14px;
+      margin-top: 12px;
+    }
+    .scale-row {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      align-items: baseline;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .scale-row:last-child { border-bottom: none; }
+    .scale-row .meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--ink-mute);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* === Components === */
+    .comp-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 24px;
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      transition: transform 280ms ease, box-shadow 280ms ease;
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .card .label { margin-bottom: 18px; }
+    .card .stat {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 72;
+      font-weight: 500;
+      font-size: 4.4rem;
+      line-height: 1.0;
+      letter-spacing: -0.025em;
+      margin-bottom: 6px;
+    }
+    .card .stat .unit {
+      font-size: 1.6rem;
+      color: var(--ink-mute);
+      margin-left: 4px;
+    }
+    .card .stat-label {
+      color: var(--ink-soft);
+      font-size: 0.95rem;
+    }
+    .card .meta-row {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line-soft);
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--ink-mute);
+    }
+    .card .meta-row .pos { color: var(--court); font-weight: 500; }
+    .card .meta-row .neg { color: var(--clay); font-weight: 500; }
+
+    /* Score card */
+    .score-card { background: var(--ink); color: var(--cream); }
+    .score-card .label { color: var(--lime-soft); }
+    .score-card .score-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto auto;
+      gap: 18px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .score-card .score-row:last-child { border-bottom: none; }
+    .score-card .player {
+      font-family: 'Newsreader', serif;
+      font-weight: 400;
+      font-size: 1.2rem;
+    }
+    .score-card .set {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.95rem;
+      width: 36px;
+      text-align: center;
+      color: rgba(252,247,234,0.55);
+    }
+    .score-card .set.won { color: var(--lime); }
+
+    /* Pattern card */
+    .pattern-card { padding: 0; overflow: hidden; }
+    .pattern-card .head {
+      padding: 28px 28px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+    }
+    .pattern-card .court-svg {
+      background: var(--clay);
+      padding: 24px;
+    }
+    .pattern-card .court-svg svg { width: 100%; display: block; }
+    .pattern-card .body {
+      padding: 24px 28px 28px;
+    }
+    .pattern-card h3 {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1.45rem;
+      letter-spacing: -0.015em;
+      margin-bottom: 8px;
+    }
+    .pattern-card p { color: var(--ink-soft); font-size: 0.95rem; }
+
+    /* Tag pills */
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 11px;
+      border-radius: 100px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      letter-spacing: 0.005em;
+    }
+    .tag.green { background: rgba(46,83,65,0.10); color: var(--court); }
+    .tag.clay  { background: rgba(176,91,54,0.10); color: var(--clay); }
+    .tag.lime  { background: rgba(191,200,70,0.18); color: #6E7522; }
+    .tag.dot::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor; display: inline-block;
+    }
+
+    /* === Voice === */
+    .voice-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+    .voice-card {
+      padding: 36px 32px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--paper);
+    }
+    .voice-card .number {
+      font-family: 'Newsreader', serif;
+      font-weight: 450;
+      font-style: italic;
+      font-size: 2.6rem;
+      color: var(--clay);
+      margin-bottom: 18px;
+      line-height: 1;
+    }
+    .voice-card h3 {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1.4rem;
+      letter-spacing: -0.015em;
+      margin-bottom: 10px;
+    }
+    .voice-card p {
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      line-height: 1.6;
+    }
+
+    /* === Icons === */
+    .icon-rules { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 36px; }
+    @media (max-width: 700px) { .icon-rules { grid-template-columns: 1fr; } }
+    .icon-rule {
+      padding: 22px 24px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+    }
+    .icon-rule h4 {
+      font-family: 'Newsreader', serif; font-weight: 500;
+      font-size: 1.1rem; letter-spacing: -0.01em; margin-bottom: 8px;
+    }
+    .icon-rule p { color: var(--ink-soft); font-size: 0.92rem; line-height: 1.55; }
+    .icon-rule code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.84rem;
+      background: var(--shade);
+      padding: 2px 7px;
+      border-radius: 4px;
+      color: var(--ink);
+    }
+    body.dark .icon-rule code { background: var(--surface); }
+
+    .icon-sizes {
+      margin-bottom: 32px;
+      padding: 32px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      display: flex; align-items: end; justify-content: center; gap: 48px;
+      flex-wrap: wrap;
+    }
+    .icon-sizes-item { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .icon-sizes-item svg { color: var(--ink); }
+    .icon-sizes-item .label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.08em;
+      color: var(--ink-mute); text-transform: uppercase;
+    }
+
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 800px) { .icon-grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (max-width: 500px) { .icon-grid { grid-template-columns: repeat(3, 1fr); } }
+    .icon-cell {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 22px 12px 14px;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      transition: border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+    }
+    .icon-cell:hover { border-color: var(--ink-mute); transform: translateY(-1px); }
+    .icon-cell svg { color: var(--ink); width: 22px; height: 22px; }
+    .icon-cell .icon-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem;
+      letter-spacing: 0.04em;
+      color: var(--ink-mute);
+    }
+
+    /* === Footer === */
+    footer {
+      padding: 80px 0 60px;
+      border-top: 1px solid var(--line);
+      margin-top: 40px;
+    }
+    .footer-quote {
+      font-size: clamp(36px, 4.4vw, 64px);
+      max-width: 920px;
+      margin-bottom: 60px;
+    }
+    .footer-quote .ital { font-style: italic; font-weight: 400; color: var(--court); }
+    .footer-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 32px;
+      border-top: 1px solid var(--line-soft);
+      color: var(--ink-mute);
+      font-size: 0.9rem;
+    }
+
+    /* === Dark-mode overrides === */
+    /* Score card is the one bright Pacific Blue moment — a stadium scoreboard against the void */
+    body.dark .score-card {
+      background: linear-gradient(160deg, #1E5FA8, #0F3D75);
+      color: #F4F0E6;
+      border-color: rgba(59,143,232,0.3);
+    }
+    body.dark .score-card .label .eyebrow { color: var(--lime) !important; }
+    body.dark .score-card .set { color: rgba(244,240,230,0.55); }
+    body.dark .score-card .set.won { color: var(--lime); }
+    body.dark .score-card .meta-row { border-top-color: rgba(255,255,255,0.12); color: rgba(244,240,230,0.55); }
+
+    /* Pattern card court tile stays Pacific Blue — it's the literal court visualization */
+    body.dark .pattern-card .court-svg { background: #1A4A82; }
+
+    /* Tag pill backgrounds — slightly more visible on dark */
+    body.dark .tag.green { background: rgba(79,160,232,0.15); color: var(--court-light); }
+    body.dark .tag.clay  { background: rgba(226,146,109,0.15); color: var(--clay-soft); }
+    body.dark .tag.lime  { background: rgba(221,233,112,0.15); color: var(--lime); }
+
+    /* Nav CTA inverts so it pops on dark */
+    body.dark .nav-cta { background: var(--lime); color: var(--ink); }
+    body.dark .nav-cta:hover { background: var(--court-light); color: var(--cream); }
+
+    /* Primary button uses Pacific Blue in dark */
+    body.dark .btn-primary { background: var(--court-deep); color: var(--cream); }
+    body.dark .btn-primary:hover { background: var(--court); }
+
+    /* === Theme toggle === */
+    .theme-toggle {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink);
+      transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
+      padding: 0;
+    }
+    .theme-toggle:hover { transform: rotate(20deg); border-color: var(--ink); }
+    .theme-toggle svg { width: 18px; height: 18px; }
+    .theme-toggle .moon { display: block; }
+    .theme-toggle .sun  { display: none; }
+    body.dark .theme-toggle .moon { display: none; }
+    body.dark .theme-toggle .sun  { display: block; }
+
+    /* Responsive cleanup */
+    @media (max-width: 960px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 56px; }
+      .section-head { grid-template-columns: 1fr; gap: 24px; }
+      .type-grid, .comp-grid, .voice-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="container nav-inner">
+      <div class="brand-mark">
+        <img class="logo" src="logo-arc-loop.svg" alt="CourtCheck">
+        <span class="name">CourtCheck</span>
+      </div>
+      <div class="nav-links">
+        <a href="#palette">Palette</a>
+        <a href="#type">Type</a>
+        <a href="#components">Components</a>
+        <a href="#icons">Icons</a>
+        <a href="#voice">Voice</a>
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+          <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+          <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+          </svg>
+        </button>
+        <a href="#" class="nav-cta">Book a demo</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <span class="eyebrow">Brand direction · v0.1</span>
+          <h1 class="display">
+            Read every <span class="ital">match</span>,<br>
+            <span class="court">point by point.</span>
+          </h1>
+          <p class="lede">
+            Computer vision built for college tennis coaches. Upload film, surface every pattern, percentage, and shot in your players' games — without watching a frame.
+          </p>
+          <div class="hero-cta-row">
+            <a href="#" class="btn btn-primary">Book a demo →</a>
+            <a href="#palette" class="btn btn-ghost">See the system</a>
+          </div>
+        </div>
+
+        <aside class="hero-visual">
+          <div class="meta">
+            <span class="mono">Match · UCD vs Stanford</span>
+            <span class="tag green dot">Live</span>
+          </div>
+          <div class="anim">
+            <img src="logo-arc-loop.svg" alt="Bounce">
+          </div>
+          <div class="caption">
+            <p class="mono" style="margin-bottom: 8px;">Set 2 · 4-3 · 30-15</p>
+            <p class="display"><span class="ital">"Forehand crosscourt</span><br>opens the line."</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- PALETTE -->
+    <section id="palette">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">01 · Palette</span>
+            <h2 class="display" style="margin-top:18px;">Clay & cream.</h2>
+          </div>
+          <p class="h2-lede">
+            Built around two constants: warm cream paper that doesn't fatigue the eye, and the deep court green of a well-worn match. Clay terracotta and aged tennis lime are accents — used like spice, not paint.
+          </p>
+        </div>
+
+        <p class="palette-label">Light · Clay & Cream</p>
+        <div class="palette">
+          <div class="swatch cream">
+            <div class="block"></div>
+            <div class="info"><div class="name">Cream</div><div class="hex">#F4F0E6</div></div>
+          </div>
+          <div class="swatch paper">
+            <div class="block"></div>
+            <div class="info"><div class="name">Paper</div><div class="hex">#FBF8F1</div></div>
+          </div>
+          <div class="swatch ink">
+            <div class="block"></div>
+            <div class="info"><div class="name">Ink</div><div class="hex">#1A1815</div></div>
+          </div>
+          <div class="swatch court">
+            <div class="block"></div>
+            <div class="info"><div class="name">Court</div><div class="hex">#2E5341</div></div>
+          </div>
+          <div class="swatch clay">
+            <div class="block"></div>
+            <div class="info"><div class="name">Clay</div><div class="hex">#B05B36</div></div>
+          </div>
+          <div class="swatch lime">
+            <div class="block"></div>
+            <div class="info"><div class="name">Lime</div><div class="hex">#BFC846</div></div>
+          </div>
+        </div>
+
+        <p class="palette-label">Dark · Stadium at Night</p>
+        <div class="palette">
+          <div class="swatch void">
+            <div class="block"></div>
+            <div class="info"><div class="name">Void</div><div class="hex">#0A0E14</div></div>
+          </div>
+          <div class="swatch l1">
+            <div class="block"></div>
+            <div class="info"><div class="name">Surface</div><div class="hex">#11161F</div></div>
+          </div>
+          <div class="swatch l2">
+            <div class="block"></div>
+            <div class="info"><div class="name">Elevated</div><div class="hex">#1A2230</div></div>
+          </div>
+          <div class="swatch pacific">
+            <div class="block"></div>
+            <div class="info"><div class="name">Pacific</div><div class="hex">#3B8FE8</div></div>
+          </div>
+          <div class="swatch clay-warm">
+            <div class="block"></div>
+            <div class="info"><div class="name">Clay</div><div class="hex">#E07A52</div></div>
+          </div>
+          <div class="swatch lime-pop">
+            <div class="block"></div>
+            <div class="info"><div class="name">Lime</div><div class="hex">#DDE970</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TYPE -->
+    <section id="type">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">02 · Typography</span>
+            <h2 class="display" style="margin-top:18px;">Editorial, not corporate.</h2>
+          </div>
+          <p class="h2-lede">
+            Fraunces carries the voice — variable, characterful, slightly imperfect. Inter Tight handles the chrome. Numbers go to JetBrains Mono so a 6-3 always reads like a scoreline, not a sentence.
+          </p>
+        </div>
+
+        <div class="type-grid">
+          <div class="specimen">
+            <div class="specimen-label">
+              <span class="role">Display</span>
+              <span class="mono">Fraunces · 144 opsz · 350 weight</span>
+            </div>
+            <div class="display sample-display">Match point.</div>
+            <div class="display sample-display italic" style="color:var(--clay);">Crosscourt.</div>
+            <div class="display sample-h2" style="color:var(--court); margin-top:24px;">Read every match,<br>point by point.</div>
+          </div>
+
+          <div class="specimen">
+            <div class="specimen-label">
+              <span class="role">Body & UI</span>
+              <span class="mono">Inter Tight + JetBrains Mono</span>
+            </div>
+            <div class="sample-h3">Pattern detected — opponent attacks the backhand corner on second serve return 64% of the time.</div>
+            <p class="sample-body" style="margin-top:16px;">
+              CourtCheck reads match film the way an experienced coach watches it — every shot in context, every percentage in its place. Built for coaches who'd rather be on the court than rewinding it.
+            </p>
+            <div class="scale">
+              <div class="scale-row">
+                <span class="meta">H1 · 132</span>
+                <span class="display" style="font-size:1.85rem; line-height:1;">A double display.</span>
+              </div>
+              <div class="scale-row">
+                <span class="meta">H2 · 56</span>
+                <span class="display" style="font-size:1.5rem; line-height:1;">Section heading.</span>
+              </div>
+              <div class="scale-row">
+                <span class="meta">Body · 16</span>
+                <span style="font-size:1rem;">The everyday paragraph.</span>
+              </div>
+              <div class="scale-row">
+                <span class="meta">Mono · 12</span>
+                <span class="mono" style="color:var(--ink); font-size:0.78rem;">SET 2 · 4-3 · 30-15</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMPONENTS -->
+    <section id="components">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">03 · Components</span>
+            <h2 class="display" style="margin-top:18px;">Calm by default.</h2>
+          </div>
+          <p class="h2-lede">
+            Cards on paper, never white. Numbers in serif so they feel observed, not auto-generated. Tags small, neutral, and color-coded by type — never decorative.
+          </p>
+        </div>
+
+        <div class="comp-grid">
+
+          <!-- Stat card -->
+          <div class="card">
+            <div class="label">
+              <span class="eyebrow">First serve</span>
+            </div>
+            <div class="stat">
+              68<span class="unit">%</span>
+            </div>
+            <div class="stat-label">In, last 5 matches</div>
+            <div class="meta-row">
+              <span class="pos">▲ 4.2 vs season avg</span>
+              <span class="mono">SET AVG</span>
+            </div>
+          </div>
+
+          <!-- Score card -->
+          <div class="card score-card">
+            <div class="label">
+              <span class="eyebrow" style="color:var(--lime);">Final · Set 1</span>
+            </div>
+            <div style="margin-top:18px;">
+              <div class="score-row">
+                <span class="player">M. Lin</span>
+                <span class="set won">6</span>
+                <span class="set">4</span>
+                <span class="set won">7</span>
+                <span class="mono" style="color:var(--lime);">W</span>
+              </div>
+              <div class="score-row">
+                <span class="player">D. Park</span>
+                <span class="set">3</span>
+                <span class="set won">6</span>
+                <span class="set">5</span>
+                <span class="mono">L</span>
+              </div>
+            </div>
+            <div class="meta-row" style="border-color: rgba(255,255,255,0.1); color: rgba(252,247,234,0.55);">
+              <span class="mono">UCD vs STAN</span>
+              <span class="mono">2H 14M</span>
+            </div>
+          </div>
+
+          <!-- Pattern card -->
+          <div class="card pattern-card">
+            <div class="head">
+              <span class="eyebrow">Pattern</span>
+              <span class="tag clay dot">High frequency</span>
+            </div>
+            <div class="court-svg">
+              <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+                <rect x="10" y="10" width="180" height="80" fill="none" stroke="rgba(252,247,234,0.55)" stroke-width="1.4"/>
+                <line x1="100" y1="10" x2="100" y2="90" stroke="rgba(252,247,234,0.55)" stroke-width="1.4"/>
+                <line x1="40" y1="30" x2="160" y2="30" stroke="rgba(252,247,234,0.55)" stroke-width="1.2"/>
+                <line x1="40" y1="70" x2="160" y2="70" stroke="rgba(252,247,234,0.55)" stroke-width="1.2"/>
+                <line x1="100" y1="30" x2="100" y2="70" stroke="rgba(252,247,234,0.55)" stroke-width="1.2"/>
+                <!-- Trajectory arc -->
+                <path d="M 30 25 Q 70 80 110 50 T 175 30" fill="none" stroke="#F4F0E6" stroke-width="2.2" stroke-linecap="round"/>
+                <circle cx="30" cy="25" r="3" fill="#BFC846"/>
+                <circle cx="175" cy="30" r="3.2" fill="#F4F0E6"/>
+              </svg>
+            </div>
+            <div class="body">
+              <h3>Forehand inside-out</h3>
+              <p>Player A opens with the FH inside-out 71% of break points won this season. Counter-prep on the ad side.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SAMPLE BUTTONS / TAGS -->
+    <section style="padding: 60px 0;">
+      <div class="container">
+        <span class="eyebrow">Inline</span>
+        <div style="display:flex; gap: 14px; flex-wrap: wrap; align-items:center; margin-top: 22px;">
+          <button class="btn btn-primary">Upload match</button>
+          <button class="btn btn-ghost">Export report</button>
+          <span class="tag green dot">In play</span>
+          <span class="tag clay dot">Bounce in</span>
+          <span class="tag lime dot">Winner</span>
+          <span class="mono" style="color:var(--ink);">SET 2 · 4-3 · 30-15</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- VOICE -->
+    <section id="voice">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">04 · Voice</span>
+            <h2 class="display" style="margin-top:18px;">Coach's voice. Not engineer's.</h2>
+          </div>
+          <p class="h2-lede">
+            Speak like a thoughtful assistant coach who's already watched the film. Specific over generic. Quiet over hype. Numbers when they matter, words when they don't.
+          </p>
+        </div>
+
+        <div class="voice-grid">
+          <div class="voice-card">
+            <div class="number">i.</div>
+            <h3>Specific, not splashy</h3>
+            <p>
+              "Opponent loses the cross 64% on second serve return" — not "AI-powered insights at your fingertips." If a real coach wouldn't say it, neither do we.
+            </p>
+          </div>
+          <div class="voice-card">
+            <div class="number">ii.</div>
+            <h3>Calm under pressure</h3>
+            <p>
+              No alerts that scream. No animations that fidget. The product earns trust by being quiet — the way a good film room is quiet — and surfacing the right answer when asked.
+            </p>
+          </div>
+          <div class="voice-card">
+            <div class="number">iii.</div>
+            <h3>For the bench, not the timeline</h3>
+            <p>
+              Our copy is read between practices, not in a feed. Sentences can breathe. Numbers can sit. The reader is a coach with a clipboard, not a scroll.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ICONS -->
+    <section id="icons">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">05 · Icons</span>
+            <h2 class="display" style="margin-top:18px;">Lucide. Restrained.</h2>
+          </div>
+          <p class="h2-lede">
+            Locked on Lucide — already in <code style="font-family:'JetBrains Mono',monospace;font-size:0.92em;background:var(--shade);padding:1px 6px;border-radius:4px;">package.json</code> via shadcn/ui, MIT-licensed, 1500+ glyphs. Never hand-roll an icon if Lucide has it. Override stroke and caps for brand fit.
+          </p>
+        </div>
+
+        <div class="icon-rules">
+          <div class="icon-rule">
+            <h4>Stroke weight: 1.75</h4>
+            <p>Lucide default is <code>2</code>. We override to <code>1.75</code> — slightly lighter lines pair with Newsreader and the rest of the editorial pacing. Never go below 1.5; readability suffers at 16px.</p>
+          </div>
+          <div class="icon-rule">
+            <h4>Caps and joins</h4>
+            <p><code>stroke-linecap="round"</code> and <code>stroke-linejoin="round"</code> across the board — same treatment as our court overlays and bar caps. Never square; reads industrial.</p>
+          </div>
+          <div class="icon-rule">
+            <h4>Color via currentColor</h4>
+            <p>Always inherit from the parent. Set the parent's <code>color</code>, not the icon's <code>stroke</code>. One icon adapts across ink, court, clay, and any state without overrides.</p>
+          </div>
+          <div class="icon-rule">
+            <h4>Outline only — no filled glyphs</h4>
+            <p>Lucide doesn't ship filled icons by default. Keep it that way. For "selected" states, use a colored background behind the outline icon, not a filled glyph.</p>
+          </div>
+        </div>
+
+        <div class="icon-sizes">
+          <div class="icon-sizes-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="label">16 · Inline</span>
+          </div>
+          <div class="icon-sizes-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="label">20 · Default</span>
+          </div>
+          <div class="icon-sizes-item">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="label">24 · Card</span>
+          </div>
+          <div class="icon-sizes-item">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="label">32 · Hero</span>
+          </div>
+        </div>
+
+        <div class="icon-grid">
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg><span class="icon-name">upload-cloud</span></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg><span class="icon-name">calendar</span></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="icon-name">users</span></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.5.5 0 0 1-.96 0L9.24 2.18a.5.5 0 0 0-.96 0l-2.35 8.36A2 2 0 0 1 4 12H2"/></svg><span class="icon-name">activity</span></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span class="icon-name">bar-chart-3</span></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0Z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg><span class="icon-name">map</span></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg><span class="icon-name">trophy</span></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg><span class="icon-name">filter</span></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span class="icon-name">search</span></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg><span class="icon-name">plus</span></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg><span class="icon-name">arrow-right</span></div>
+          <div class="icon-cell"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg><span class="icon-name">chevron-down</span></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="display footer-quote">
+        Built for the moment <span class="ital">between matches</span> — when the work that wins them actually happens.
+      </div>
+      <div class="footer-meta">
+        <span>CourtCheck · Brand direction v0.1</span>
+        <span class="mono">2026 — Davis, CA</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      const toggle = document.getElementById('themeToggle');
+      const body = document.body;
+      const stored = localStorage.getItem('cc-theme');
+      if (stored === 'dark') body.classList.add('dark');
+      toggle.addEventListener('click', () => {
+        body.classList.toggle('dark');
+        localStorage.setItem('cc-theme', body.classList.contains('dark') ? 'dark' : 'light');
+      });
+    })();
+  </script>
+
+</body>
+</html>

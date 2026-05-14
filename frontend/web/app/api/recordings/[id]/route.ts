@@ -3,6 +3,11 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
+// Polled by the recording detail page every 5s while a recording is processing.
+// Force-dynamic so Next.js doesn't pin progress/stage/status to a cached value.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -26,50 +31,74 @@ export async function GET(
       }
     );
 
-    const { data: authData } = await supabase.auth.getClaims();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!authData?.claims) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
 
-    const { data, error } = await supabaseAdmin
+    const FULL_COLS = "id, name, status, progress, processing_stage, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, player_shot_map_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, scouting_report, player_id, keypoints, notes, shots, coverage_grid, position_summary, net_approach_summary, error_summary";
+    // Pre-migration safety: if a column the API references hasn't been added to
+    // matches yet, Postgres returns "column does not exist" and the whole row
+    // 404s. Retry once without the optional columns so existing recordings
+    // stay viewable until the migration runs.
+    const OPTIONAL_COLS = [
+      "processing_stage",
+      "shots",
+      "coverage_grid",
+      "position_summary",
+      "net_approach_summary",
+      "error_summary",
+    ];
+    let { data, error } = await supabaseAdmin
       .from("matches")
-      .select("id, name, status, progress, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, scouting_report")
+      .select(FULL_COLS)
       .eq("id", id)
-      .eq("user_id", authData.claims.sub)
+      .eq("user_id", user.id)
       .single();
+    if (error && typeof error.message === "string" && error.message.includes("does not exist")) {
+      const safeCols = FULL_COLS.split(", ")
+        .filter((c) => !OPTIONAL_COLS.includes(c))
+        .join(", ");
+      const retry = await supabaseAdmin
+        .from("matches")
+        .select(safeCols)
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error || !data) {
       return NextResponse.json({ error: "Recording not found" }, { status: 404 });
     }
 
     let videoUrl = null;
-    if (data.status === "done" && data.results_path) {
-      const { data: signed } = await supabaseAdmin.storage
-        .from("results")
-        .createSignedUrl(data.results_path, 3600);
-      videoUrl = signed?.signedUrl ?? null;
-    }
-
     let bounceHeatmapUrl = null;
     let playerHeatmapUrl = null;
     let playerShotMapUrl = null;
     if (data.status === "done") {
-      if (data.bounce_heatmap_path) {
-        const { data: signed } = await supabaseAdmin.storage
-          .from("results")
-          .createSignedUrl(data.bounce_heatmap_path, 3600);
-        bounceHeatmapUrl = signed?.signedUrl ?? null;
-      }
-      if (data.player_heatmap_path) {
-        const { data: signed } = await supabaseAdmin.storage
-          .from("results")
-          .createSignedUrl(data.player_heatmap_path, 3600);
-        playerHeatmapUrl = signed?.signedUrl ?? null;
-      }
-      // player_shot_map_path not yet in schema — skip gracefully
+      const [videoSigned, bounceSigned, playerSigned, shotMapSigned] = await Promise.all([
+        data.results_path
+          ? supabaseAdmin.storage.from("results").createSignedUrl(data.results_path, 3600)
+          : Promise.resolve({ data: null }),
+        data.bounce_heatmap_path
+          ? supabaseAdmin.storage.from("results").createSignedUrl(data.bounce_heatmap_path, 3600)
+          : Promise.resolve({ data: null }),
+        data.player_heatmap_path
+          ? supabaseAdmin.storage.from("results").createSignedUrl(data.player_heatmap_path, 3600)
+          : Promise.resolve({ data: null }),
+        data.player_shot_map_path
+          ? supabaseAdmin.storage.from("results").createSignedUrl(data.player_shot_map_path, 3600)
+          : Promise.resolve({ data: null }),
+      ]);
+      videoUrl = videoSigned.data?.signedUrl ?? null;
+      bounceHeatmapUrl = bounceSigned.data?.signedUrl ?? null;
+      playerHeatmapUrl = playerSigned.data?.signedUrl ?? null;
+      playerShotMapUrl = shotMapSigned.data?.signedUrl ?? null;
     }
 
     return NextResponse.json({
@@ -77,6 +106,7 @@ export async function GET(
         id: data.id,
         status: data.status,
         progress: data.progress || 0,
+        stage: data.processing_stage || null,
         error: data.error || null,
         videoUrl,
         bounceHeatmapUrl,
@@ -96,6 +126,14 @@ export async function GET(
         inBoundsBounces: data.in_bounds_bounces ?? null,
         outBoundsBounces: data.out_bounds_bounces ?? null,
         scoutingReport: data.scouting_report ?? null,
+        playerId: data.player_id ?? null,
+        keypoints: data.keypoints ?? [],
+        notes: data.notes ?? [],
+        shots: Array.isArray(data.shots) ? data.shots : [],
+        coverageGrid: Array.isArray(data.coverage_grid) ? data.coverage_grid : [],
+        positionSummary: data.position_summary && typeof data.position_summary === "object" ? data.position_summary : null,
+        netApproachSummary: data.net_approach_summary && typeof data.net_approach_summary === "object" ? data.net_approach_summary : null,
+        errorSummary: data.error_summary && typeof data.error_summary === "object" ? data.error_summary : null,
       },
     });
   } catch (e) {
@@ -127,38 +165,66 @@ export async function PATCH(
       }
     );
 
-    const { data: authData } = await supabase.auth.getClaims();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!authData?.claims) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id } = await params;
     const body = await req.json();
 
-    let name = typeof body.name === 'string' ? body.name.trim() : '';
-    // Strip control characters
-    name = name.replace(/[\x00-\x1F\x7F]/g, '');
+    const updates: Record<string, unknown> = {};
 
-    if (!name) {
-      return NextResponse.json({ error: 'Name cannot be empty' }, { status: 400 });
+    if (typeof body.name === 'string') {
+      let name = body.name.trim().replace(/[\x00-\x1F\x7F]/g, '');
+      if (!name) return NextResponse.json({ error: 'Name cannot be empty' }, { status: 400 });
+      if (name.length > 100) return NextResponse.json({ error: 'Name too long (max 100 characters)' }, { status: 400 });
+      updates.name = name;
     }
-    if (name.length > 100) {
-      return NextResponse.json({ error: 'Name too long (max 100 characters)' }, { status: 400 });
+
+    if (Array.isArray(body.notes)) {
+      const validNotes = body.notes.every(
+        (n: unknown) =>
+          typeof n === 'object' && n !== null &&
+          typeof (n as { timestamp_sec: number }).timestamp_sec === 'number' &&
+          typeof (n as { text: string }).text === 'string'
+      );
+      if (!validNotes) return NextResponse.json({ error: 'Invalid notes format' }, { status: 400 });
+      updates.notes = body.notes.map((n: { timestamp_sec: number; text: string }) => ({
+        timestamp_sec: n.timestamp_sec,
+        text: n.text.slice(0, 1000),
+      }));
+    }
+
+    if (Array.isArray(body.keypoints)) {
+      // Validate each keypoint: { type, timestamp_sec }
+      const valid = body.keypoints.every(
+        (k: unknown) =>
+          typeof k === 'object' && k !== null &&
+          ['set_start', 'side_switch', 'cut'].includes((k as { type: string }).type) &&
+          typeof (k as { timestamp_sec: number }).timestamp_sec === 'number'
+      );
+      if (!valid) return NextResponse.json({ error: 'Invalid keypoints format' }, { status: 400 });
+      updates.keypoints = body.keypoints;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
     }
 
     const { error } = await supabaseAdmin
       .from("matches")
-      .update({ name })
+      .update(updates)
       .eq("id", id)
-      .eq("user_id", authData.claims.sub);
+      .eq("user_id", user.id);
 
     if (error) {
-      console.error("Rename error", error);
-      return NextResponse.json({ error: "Failed to rename" }, { status: 500 });
+      console.error("PATCH error", error);
+      return NextResponse.json({ error: "Failed to update" }, { status: 500 });
     }
 
-    return NextResponse.json({ name });
+    return NextResponse.json(updates);
   } catch (e) {
     console.error(e);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -188,8 +254,8 @@ export async function DELETE(
       }
     );
 
-    const { data: authData } = await supabase.auth.getClaims();
-    if (!authData?.claims) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -200,7 +266,7 @@ export async function DELETE(
       .from("matches")
       .select("id, input_path, results_path, bounce_heatmap_path, player_heatmap_path")
       .eq("id", id)
-      .eq("user_id", authData.claims.sub)
+      .eq("user_id", user.id)
       .single();
 
     if (fetchError || !data) {
@@ -212,7 +278,7 @@ export async function DELETE(
       .from("matches")
       .delete()
       .eq("id", id)
-      .eq("user_id", authData.claims.sub);
+      .eq("user_id", user.id);
 
     if (deleteError) {
       console.error("Delete error", deleteError);

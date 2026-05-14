@@ -24,9 +24,9 @@ export async function POST(req: Request) {
       }
     );
 
-    const { data: authData } = await supabase.auth.getClaims();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!authData?.claims) {
+    if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
       .eq("id", match_id)
       .single();
 
-    if (matchError || !match || match.user_id !== authData.claims.sub) {
+    if (matchError || !match || match.user_id !== user.id) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     const { count } = await supabaseAdmin
       .from("matches")
       .select("id", { count: "exact", head: true })
-      .eq("user_id", authData.claims.sub)
+      .eq("user_id", user.id)
       .gte("created_at", oneHourAgo);
 
     if ((count ?? 0) >= 20) {

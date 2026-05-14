@@ -17,12 +17,16 @@ interface Summary {
 export default function DashboardStats() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     fetch("/api/dashboard/summary")
       .then((r) => r.json())
       .then((d) => setSummary(d))
-      .catch(console.error)
+      .catch((err) => {
+        console.error(err);
+        setFetchError(true);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -84,6 +88,23 @@ export default function DashboardStats() {
       ),
     },
   ];
+
+  if (fetchError) {
+    return (
+      <div className="mb-6">
+        <div
+          className="rounded-xl px-4 py-3 text-xs"
+          style={{
+            background: "rgba(239,68,68,0.05)",
+            border: "1px solid rgba(239,68,68,0.15)",
+            color: "rgba(239,68,68,0.7)",
+          }}
+        >
+          Could not load stats. Please try refreshing the page.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mb-6">

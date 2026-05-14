@@ -4,6 +4,12 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
+// Polling endpoint — never cache the response. Without this Next.js's route
+// cache + browser cache pin /api/status to its first value, so progress stays
+// at the initial 0 even after Modal writes new values to Supabase.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(req: Request) {
   try {
     // Check authentication
@@ -25,9 +31,9 @@ export async function GET(req: Request) {
       }
     );
 
-    const { data: authData } = await supabase.auth.getClaims();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!authData?.claims) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -39,12 +45,25 @@ export async function GET(req: Request) {
     }
 
     // Filter by user_id to ensure users can only access their own matches
-    const { data, error } = await supabaseAdmin
+    // Pre-migration safety: drop optional columns from the select and retry if
+    // they aren't on the schema yet, so the upload flow stays responsive while
+    // a migration is being applied.
+    let { data, error } = await supabaseAdmin
       .from("matches")
-      .select("status, results_path, progress, error, user_id")
+      .select("status, results_path, progress, processing_stage, error, user_id")
       .eq("id", match_id)
-      .eq("user_id", authData.claims.sub)
+      .eq("user_id", user.id)
       .single();
+    if (error && typeof error.message === "string" && error.message.includes("does not exist")) {
+      const retry = await supabaseAdmin
+        .from("matches")
+        .select("status, results_path, progress, error, user_id")
+        .eq("id", match_id)
+        .eq("user_id", user.id)
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error || !data) {
       return NextResponse.json({ error: "data from Supabase not found" }, { status: 404 });
@@ -68,6 +87,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       status: data.status,
       progress: data.progress || 0,
+      stage: data.processing_stage || null,
       error: data.error || null,
       videoUrl,
     });

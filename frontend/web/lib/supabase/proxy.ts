@@ -27,9 +27,9 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Refresh session - this will update cookies if needed
-  const { data } = await supabase.auth.getClaims()
-  const isAuthenticated = !!data?.claims
+  // getSession() for middleware: fast cookie decode, used only for redirect logic (not data access)
+  const { data: { session } } = await supabase.auth.getSession()
+  const isAuthenticated = !!session
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
   const isLandingRoute = request.nextUrl.pathname.startsWith('/landing')

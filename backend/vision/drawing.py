@@ -52,7 +52,7 @@ def draw_ball_trace(
     ball_track,
     frame_idx,
     trace_length=7,
-    base_color=(255, 255, 0),  # light_blue from Colab
+    base_color=(255, 255, 0),  # BGR: yellow
 ):
     """
     Draw a fading ball trajectory on the main frame.
@@ -70,9 +70,9 @@ def draw_ball_trace(
     base_color : tuple
         Base BGR color of the trace
     """
-
     start_idx = max(0, frame_idx - trace_length + 1)
 
+    curr_pt = None
     for idx in range(start_idx, frame_idx + 1):
         if (
             idx >= len(ball_track)
@@ -82,18 +82,18 @@ def draw_ball_trace(
             continue
 
         x, y = ball_track[idx]
+        pt = (int(x), int(y))
 
-        # Alpha fade: newest = brightest
+        # Alpha fade: oldest = most transparent, newest = full brightness
         alpha = 1.0 - ((frame_idx - idx) / trace_length)
         color = tuple(int(c * alpha) for c in base_color)
 
-        cv2.circle(
-            frame,
-            (int(x), int(y)),
-            3,
-            color,
-            -1,
-        )
+        is_current = (idx == frame_idx)
+        radius = 5 if is_current else 3
+        cv2.circle(frame, pt, radius, color, -1, cv2.LINE_AA)
+
+        if is_current:
+            curr_pt = pt
 
     return frame
 
@@ -175,7 +175,13 @@ _PLAYER_COLORS = [
 ]
 
 
+_FAR_PLAYER_COLOR = (180, 105, 255)  # hot pink (BGR)
+
+
 def _player_color(track_id: int):
+    # Negative IDs are the canonical far player — always hot pink
+    if track_id < 0:
+        return _FAR_PLAYER_COLOR
     return _PLAYER_COLORS[(track_id - 1) % len(_PLAYER_COLORS)]
 
 
@@ -198,7 +204,8 @@ def draw_player_bboxes(frame, player_dict, color=None):
         cv2.rectangle(frame, (x1, y1), (x2, y2), c, 1, cv2.LINE_AA)
 
         # Small pill label at top-left corner of box
-        label = f"P{track_id}"
+        # Negative IDs are the canonical far player — show as P2
+        label = "P2" if track_id < 0 else f"P{track_id}"
         font, scale, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1
         (tw, th), _ = cv2.getTextSize(label, font, scale, thickness)
         pad = 4
@@ -224,12 +231,21 @@ def draw_player_bboxes(frame, player_dict, color=None):
 # -----------------------------
 
 STROKE_COLORS_BGR: dict[str, tuple[int, int, int]] = {
-    "Forehand":       (0, 220, 80),    # green
-    "Backhand":       (220, 100, 0),   # blue
-    "Serve/Overhead": (0, 210, 255),   # yellow
-    "Slice":          (160, 60, 220),  # purple
+    # Match the brand colors used in the shot-map dashboard tile so the minimap
+    # and the courtmap legend agree. Source: frontend/web/app/globals.css
+    #   --color-court  #2E5341 -> RGB(46,83,65)   -> BGR(65,83,46)
+    #   --color-plum   #7B4E6E -> RGB(123,78,110) -> BGR(110,78,123)
+    #   --color-amber  #C8923A -> RGB(200,146,58) -> BGR(58,146,200)
+    "Forehand":       (65, 83, 46),     # court green
+    "Backhand":       (110, 78, 123),   # plum
+    "Serve/Overhead": (58, 146, 200),   # amber
+    # Slice currently isn't emitted by the live classifier but the swatch is
+    # kept in case it's re-enabled — match the brand-mute tone.
+    "Slice":          (138, 138, 138),  # ink-mute grey
 }
-_STROKE_BOUNCE_DEFAULT = (0, 220, 200)  # teal — unknown / None
+# Neutral bounce color for bounces with no classified stroke — matches the
+# frontend "Unclassified" chip swatch (ink-mute on paper). BGR.
+_STROKE_BOUNCE_DEFAULT = (160, 160, 160)
 
 
 def draw_minimap_ball_and_bounces(
@@ -240,6 +256,7 @@ def draw_minimap_ball_and_bounces(
     bounces,
     trace_length=7,
     trace_color=(255, 255, 0),
+    trace_min_alpha=0.3,
     bounce_color=(0, 255, 255),
     frame_stroke_labels=None,
 ):
@@ -251,6 +268,10 @@ def draw_minimap_ball_and_bounces(
     ball_track: list of (x, y)
     frame_idx: current frame index
     bounces: set of frame indices where bounces occurred
+    trace_min_alpha: floor on the per-dot opacity. With a long trace
+        (e.g. 45 frames) the natural linear falloff renders the oldest
+        dots invisible — clamping at ~0.3 keeps the full comet tail
+        readable on the minimap.
     frame_stroke_labels: dict[int, dict[int, str]] mapping frame_idx ->
         {track_id -> stroke label}.  When provided, each bounce dot is
         colored by the stroke type that produced it instead of the
@@ -262,6 +283,10 @@ def draw_minimap_ball_and_bounces(
 
     # ---- 1. Ball trace ----
     start_idx = max(0, frame_idx - trace_length + 1)
+    # Bigger head dot than tail dot so the live ball position pops on the
+    # minimap. Tail uses the smaller radius.
+    HEAD_RADIUS = 5
+    TAIL_RADIUS = 3
 
     for idx in range(start_idx, frame_idx + 1):
         if (
@@ -281,16 +306,15 @@ def draw_minimap_ball_and_bounces(
 
         mx, my = int(mapped[0, 0, 0]), int(mapped[0, 0, 1])
 
-        alpha = 1.0 - ((frame_idx - idx) / trace_length)
+        # Linear falloff, clamped at trace_min_alpha so the back of the
+        # comet stays visible even with long trails.
+        age = frame_idx - idx
+        alpha_linear = 1.0 - (age / max(1, trace_length))
+        alpha = max(trace_min_alpha, alpha_linear)
         color = tuple(int(c * alpha) for c in trace_color)
+        radius = HEAD_RADIUS if idx == frame_idx else TAIL_RADIUS
 
-        cv2.circle(
-            minimap,
-            (mx, my),
-            3,
-            color,
-            20,  # OG thick trace
-        )
+        cv2.circle(minimap, (mx, my), radius, color, -1, cv2.LINE_AA)
 
     # ---- 2. Accumulated bounces ----
     for bounce_idx in bounces:
@@ -311,30 +335,15 @@ def draw_minimap_ball_and_bounces(
         mx, my = int(mapped[0, 0, 0]), int(mapped[0, 0, 1])
 
         if 0 <= mx < minimap.shape[1] and 0 <= my < minimap.shape[0]:
-            # Determine color from stroke label, falling back to bounce_color
             dot_color = bounce_color
             if frame_stroke_labels is not None:
                 labels_at_bounce = frame_stroke_labels.get(bounce_idx, {})
-                # Use the first available player's label at the bounce frame
                 if labels_at_bounce:
                     label = next(iter(labels_at_bounce.values()))
                     dot_color = STROKE_COLORS_BGR.get(label, _STROKE_BOUNCE_DEFAULT)
 
-            cv2.circle(
-                minimap,
-                (mx, my),
-                40,
-                dot_color,
-                -1,
-            )
-            # White outline ring for contrast
-            cv2.circle(
-                minimap,
-                (mx, my),
-                40,
-                (255, 255, 255),
-                3,
-            )
+            cv2.circle(minimap, (mx, my), 40, dot_color, -1)
+            cv2.circle(minimap, (mx, my), 40, (255, 255, 255), 3)
 
     return minimap
 

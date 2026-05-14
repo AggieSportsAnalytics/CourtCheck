@@ -1,8 +1,10 @@
 import os
 import tempfile
+import time
 import modal
 import requests
 from fastapi import Request, HTTPException
+
 app = modal.App("tennis-modal")
 
 def download_model_weights():
@@ -24,6 +26,11 @@ image = (
         "ffmpeg",       # needed for video writing
         "libgomp1",     # OpenMP runtime (required by catboost)
     )
+    # Unbuffered stdout — without this, every print() in run.py sits in Python's
+    # 4KB stdout buffer instead of streaming to Modal's log viewer. This is why
+    # [Progress] X% lines have not been appearing in Modal logs despite the
+    # Supabase writes succeeding — the writes happen, the prints don't reach us.
+    .env({"PYTHONUNBUFFERED": "1"})
     .pip_install_from_requirements("requirements.txt")
     .run_function(download_model_weights)
     .add_local_python_source("backend")
@@ -65,22 +72,49 @@ async def process_video(request: Request):
         os.environ["SUPABASE_SERVICE_ROLE_KEY"],
     )
 
-    signed = supabase.storage.from_("raw-videos").create_signed_url(
-        file_key,
-        expires_in=3600
-    )
+    # Download video — preserve original filename so _resolve_camera_id can detect court number.
+    # Supabase storage occasionally returns 504 Gateway Timeout under load; retry with a
+    # fresh signed URL on each attempt (the URL itself is fine, but a fresh one is cheap insurance).
+    original_name = os.path.basename(file_key)
+    video_path = os.path.join(tempfile.gettempdir(), original_name)
 
-    signed_url = signed["signedUrl"]
+    download_attempts = 4
+    last_exc = None
+    for attempt in range(1, download_attempts + 1):
+        try:
+            signed = supabase.storage.from_("raw-videos").create_signed_url(
+                file_key,
+                expires_in=3600,
+            )
+            signed_url = signed["signedUrl"]
 
-    # Download video — preserve original extension so OpenCV picks the right decoder
-    ext = os.path.splitext(file_key)[-1] or ".mp4"
-    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
-        r = requests.get(signed_url, stream=True)
-        r.raise_for_status()
-        for chunk in r.iter_content(8192):
-            if chunk:
-                f.write(chunk)
-        video_path = f.name
+            # (connect, read) timeouts. Most stalls are read-side; 300s read covers
+            # multi-GB clips at typical CDN throughput while still failing fast on dead links.
+            with requests.get(signed_url, stream=True, timeout=(15, 300)) as r:
+                r.raise_for_status()
+                with open(video_path, "wb") as f:
+                    for chunk in r.iter_content(64 * 1024):
+                        if chunk:
+                            f.write(chunk)
+            break  # success
+        except (requests.exceptions.HTTPError,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.ChunkedEncodingError,
+                requests.exceptions.Timeout) as exc:
+            last_exc = exc
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            # 4xx (other than 408/429) are real errors — don't retry
+            if status is not None and 400 <= status < 500 and status not in (408, 429):
+                raise
+            if attempt == download_attempts:
+                raise
+            backoff = min(60, 2 ** attempt)  # 2s, 4s, 8s, 16s (cap 60s)
+            print(f"[download] attempt {attempt}/{download_attempts} failed ({type(exc).__name__}: {exc}); retrying in {backoff}s")
+            time.sleep(backoff)
+    else:
+        # Should be unreachable — loop either breaks on success or raises on final attempt.
+        if last_exc is not None:
+            raise last_exc
 
     from backend.pipeline.run import run_pipeline
     result = run_pipeline(video_path, match_id)

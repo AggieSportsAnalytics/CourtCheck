@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CourtCheck · See every shot. Know every move.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream:#F4F0E6; --paper:#FBF8F1; --surface:#FFFFFF; --shade:#ECE6D5;
+      --line:#DDD7C5; --line-soft:#EAE4D2;
+      --ink:#1A1815; --ink-soft:#43403A; --ink-mute:#837F77;
+      --court:#2E5341; --court-deep:#1F3D2E; --court-light:#6E8C7C;
+      --clay:#B05B36; --clay-soft:#D08866;
+      --lime:#BFC846; --plum:#7B4E6E; --amber:#C8923A; --slate:#5C6B7A;
+      --bg-grad-1:rgba(176,91,54,0.08); --bg-grad-2:rgba(46,83,65,0.09);
+      --court-surface:#A85E3A;
+      --radius-lg:14px;
+      --shadow:0 1px 0 rgba(26,24,21,0.04), 0 18px 48px -24px rgba(26,24,21,0.16);
+      --ease-out:cubic-bezier(0.2, 0.8, 0.2, 1);
+      --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
+      --dur-quick:160ms; --dur-base:240ms; --dur-reveal:480ms; --dur-hero:800ms;
+    }
+    body.dark {
+      --cream:#07080F; --paper:#1F2940; --surface:#2B374F; --shade:#11161F;
+      --line:#2F3B52; --line-soft:#1E2735;
+      --ink:#F4F0E6; --ink-soft:#A8B0C0; --ink-mute:#6B7388;
+      --court:#6FA88B; --court-deep:#4A8268; --court-light:#9FC6B0;
+      --clay:#E07A52; --clay-soft:#F0A07F;
+      --lime:#DDE970;
+      --court-surface:#6B3A24;
+      --bg-grad-1:rgba(176,91,54,0.12); --bg-grad-2:rgba(111,168,139,0.08);
+      --plum:#B584A6; --amber:#DDB166; --slate:#889DB3;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: var(--cream); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      font-size: 16px; line-height: 1.55; letter-spacing: -0.005em;
+      -webkit-font-smoothing: antialiased;
+      background-image:
+        radial-gradient(1400px 900px at 88% -10%, var(--bg-grad-1), transparent 55%),
+        radial-gradient(900px 800px at -10% 80%, var(--bg-grad-2), transparent 60%);
+      background-attachment: fixed;
+      transition: background-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .display { font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 144; font-weight: 500; letter-spacing: -0.025em; line-height: 0.98; }
+    /* Global: any display headline using .line spans renders each sentence on its own line.
+       Stops "compound-word\nrest of sentence" wrap artifacts like "film-/room slog". */
+    h1 .line, h2 .line, h3 .line { display: block; }
+    h1, h2, h3 { text-wrap: balance; }
+    .ital { color: var(--clay); font-style: italic; font-weight: 400; }
+    .num     { font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 72; font-weight: 500; font-feature-settings: 'tnum'; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--court);
+    }
+    .eyebrow::before { content: ""; width: 6px; height: 6px; background: var(--clay); border-radius: 50%; }
+
+    .container { max-width: 1320px; margin: 0 auto; padding: 0 56px; }
+    @media (max-width: 700px) { .container { padding: 0 28px; } }
+
+    /* Nav: cream glass, sticky — logo left, links centered, actions right (theme + sign in) */
+    nav {
+      padding: 14px 0;
+      position: sticky; top: 0; z-index: 50;
+      background: color-mix(in srgb, var(--cream) 86%, transparent);
+      backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .nav-inner {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr; /* side columns equal so the middle stays true-centered */
+      align-items: center;
+      gap: 24px;
+      max-width: 1440px; margin: 0 auto; padding: 0 56px;
+    }
+    @media (max-width: 700px) { .nav-inner { padding: 0 28px; } }
+    .brand-mark { display: flex; align-items: center; gap: 12px; justify-self: start; }
+    .nav-actions { justify-self: end; }
+    .brand-mark .logo { height: 52px; width: auto; display: block; }
+    .brand-mark .logo-light { display: block; }
+    .brand-mark .logo-dark { display: none; }
+    body.dark .brand-mark .logo-light { display: none; }
+    body.dark .brand-mark .logo-dark { display: block; }
+    .brand-mark .name {
+      font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 60;
+      font-weight: 500; font-size: 1.4rem; letter-spacing: -0.018em;
+    }
+    /* Centered middle column of links */
+    .nav-links {
+      display: flex; gap: 44px; align-items: center; justify-content: center;
+    }
+    @media (max-width: 820px) { .nav-links { gap: 24px; } .nav-links a { display: none; } }
+    .nav-links a {
+      font-size: 0.98rem; font-weight: 500;
+      color: var(--ink-soft);
+      position: relative;
+      padding: 4px 2px;
+      transition: color var(--dur-quick) var(--ease-out);
+    }
+    .nav-links a:hover { color: var(--ink); }
+    /* Active state: subtle bottom rail in clay when the matching section is in view */
+    .nav-links a.active { color: var(--ink); }
+    .nav-links a.active::after {
+      content: "";
+      position: absolute;
+      left: 2px; right: 2px; bottom: -2px;
+      height: 2px;
+      background: var(--clay);
+      border-radius: 2px;
+    }
+    body.dark .nav-links a.active::after { background: var(--clay-soft); }
+    /* Right cluster: theme toggle + Sign in (text link) + Get started (primary pill) */
+    .nav-actions { display: flex; gap: 14px; align-items: center; }
+    .nav-actions .nav-signin {
+      font-size: 0.95rem; font-weight: 500;
+      color: var(--ink-soft);
+      padding: 6px 4px;
+      transition: color var(--dur-quick) var(--ease-out);
+    }
+    .nav-actions .nav-signin:hover { color: var(--ink); }
+    .nav-actions .cta {
+      padding: 10px 22px;
+      background: var(--ink); color: var(--cream);
+      border-radius: 100px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: transform var(--dur-quick) var(--ease-spring), background var(--dur-base) var(--ease-out);
+    }
+    .nav-actions .cta:hover {
+      transform: translateY(-1px);
+      background: var(--court-deep);
+    }
+    body.dark .nav-actions .cta { background: var(--court-deep); color: var(--cream); }
+    body.dark .nav-actions .cta:hover { background: var(--court); }
+    .theme-toggle {
+      width: 38px; height: 38px; border-radius: 50%;
+      border: 1px solid var(--line); background: var(--paper);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--ink); padding: 0;
+      transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+    }
+    .theme-toggle:hover { transform: rotate(20deg); border-color: var(--ink); }
+    .theme-toggle svg { width: 16px; height: 16px; }
+    .theme-toggle .moon { display: block; } .theme-toggle .sun  { display: none; }
+    body.dark .theme-toggle .moon { display: none; } body.dark .theme-toggle .sun { display: block; }
+
+    /* Hero section gets a lighter cream wash so the first screen reads brighter than the rest */
+    .hero-wrap {
+      background: var(--paper);
+      border-bottom: 1px solid var(--line-soft);
+    }
+    body.dark .hero-wrap { background: var(--paper); border-bottom-color: var(--line-soft); }
+
+    /* === HERO (2-column: text left, faded animation right — nextsense.io style) === */
+    .hero {
+      padding: 48px 0 80px;
+      position: relative;
+      min-height: calc(100vh - 92px);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+      gap: 56px;
+      align-items: center;
+    }
+    @media (max-width: 980px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 28px 0 56px;
+        min-height: auto;
+        gap: 24px;
+      }
+    }
+
+    .hero-left { max-width: 600px; }
+    @media (max-width: 980px) { .hero-left { max-width: 720px; } }
+
+    .hero h1 {
+      font-size: clamp(56px, 7.4vw, 104px);
+      margin: 18px 0 28px;
+      line-height: 1.0;
+    }
+    .hero h1 .line { display: block; }
+    .hero h1 br { display: block; }
+    .hero h1 .clay { color: var(--clay); font-style: italic; font-weight: 400; }
+    .hero .lede {
+      font-size: 1.15rem;
+      line-height: 1.55;
+      max-width: 520px;
+      color: var(--ink-soft);
+    }
+    @media (max-width: 700px) { .hero .lede { font-size: 1rem; } }
+
+    .hero-cta-row {
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+      margin-top: 28px;
+    }
+    .hero-partner {
+      margin-top: 28px;
+      display: inline-flex; align-items: center; gap: 12px;
+      padding-left: 4px;
+    }
+    .hero-partner .partner-prefix {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    .hero-partner .partner-name {
+      font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 60;
+      font-weight: 500;
+      font-size: 1.02rem; letter-spacing: -0.012em;
+      color: var(--ink);
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 2px;
+    }
+    body.dark .hero-partner .partner-name { color: var(--ink); }
+    .hero-partner .partner-logo {
+      height: 42px;
+      width: auto;
+      display: block;
+      transition: transform var(--dur-base) var(--ease-out);
+    }
+    body.dark .hero-partner .partner-logo {
+      filter: invert(0.92) hue-rotate(180deg);
+    }
+    .hero-partner:hover .partner-logo { transform: translateY(-1px); }
+    .btn {
+      display: inline-flex; align-items: center; gap: 12px;
+      padding: 18px 34px; border-radius: 100px;
+      font-weight: 600; font-size: 1.06rem; cursor: pointer; border: none;
+      font-family: inherit;
+      letter-spacing: -0.005em;
+      transition:
+        transform var(--dur-base) var(--ease-spring),
+        background var(--dur-base) var(--ease-out),
+        box-shadow var(--dur-base) var(--ease-out),
+        border-color var(--dur-base) var(--ease-out);
+    }
+    .btn-primary {
+      background: var(--court); color: var(--cream);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.18),
+        0 1px 0 rgba(26,24,21,0.06),
+        0 14px 28px -10px color-mix(in srgb, var(--court) 65%, transparent),
+        0 22px 48px -18px color-mix(in srgb, var(--court) 45%, transparent);
+    }
+    body.dark .btn-primary {
+      background: var(--court-deep); color: var(--cream);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.10),
+        0 1px 0 rgba(0,0,0,0.30),
+        0 16px 36px -12px color-mix(in srgb, var(--court-deep) 80%, transparent),
+        0 28px 60px -20px color-mix(in srgb, var(--court-deep) 60%, transparent);
+    }
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      background: var(--court-deep);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.22),
+        0 1px 0 rgba(26,24,21,0.08),
+        0 22px 44px -14px color-mix(in srgb, var(--court) 70%, transparent),
+        0 36px 72px -22px color-mix(in srgb, var(--court) 50%, transparent);
+    }
+    body.dark .btn-primary:hover { background: var(--court); }
+    .btn-primary:active { transform: translateY(-1px); }
+    .btn-primary svg {
+      transition: transform var(--dur-base) var(--ease-spring);
+    }
+    .btn-primary:hover svg { transform: translateY(-2px); }
+
+    .btn-ghost {
+      background: transparent; color: var(--ink);
+      border: 1.5px solid var(--ink-mute);
+      padding: 16.5px 30px;
+      box-shadow: 0 1px 0 rgba(26,24,21,0.02);
+    }
+    .btn-ghost:hover {
+      border-color: var(--ink);
+      transform: translateY(-2px);
+      box-shadow:
+        0 1px 0 rgba(26,24,21,0.04),
+        0 16px 32px -14px rgba(26,24,21,0.18);
+    }
+    .btn-ghost:active { transform: translateY(-1px); }
+    .btn svg { width: 18px; height: 18px; }
+    /* === Hero stage: transparent bouncing court, faded, bleeds off the right edge === */
+    .hero-stage {
+      position: relative;
+      width: 100%;
+      max-width: 720px;
+      aspect-ratio: 16 / 9;
+      justify-self: end;
+      margin-right: -56px; /* bleed past the container edge */
+    }
+    @media (max-width: 980px) {
+      .hero-stage {
+        max-width: 560px;
+        margin: 0 auto;
+        justify-self: center;
+      }
+    }
+    .hero-stage video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: right center;
+      background: transparent;
+      opacity: 0.62;
+      filter: saturate(0.9);
+      mask-image: linear-gradient(95deg, transparent 0%, #000 12%, #000 100%);
+      -webkit-mask-image: linear-gradient(95deg, transparent 0%, #000 12%, #000 100%);
+    }
+    body.dark .hero-stage video { opacity: 0.55; }
+
+    /* === Floating subtle glass cards over the bounce: court overlay + heatmap === */
+    .hero-float-card {
+      position: absolute;
+      z-index: 2;
+      background: color-mix(in srgb, var(--paper) 92%, transparent);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 14px 14px;
+      box-shadow: 0 1px 0 rgba(26,24,21,0.04), 0 22px 56px -28px rgba(26,24,21,0.22);
+      opacity: 0.92;
+      transition: transform 240ms var(--ease-out), opacity 240ms var(--ease-out), box-shadow 240ms var(--ease-out);
+    }
+    .hero-float-card:hover {
+      opacity: 1;
+      transform: translateY(-3px) !important;
+      box-shadow: 0 1px 0 rgba(26,24,21,0.04), 0 26px 64px -22px rgba(26,24,21,0.28);
+    }
+    .hero-float-card .fc-eyebrow {
+      display: flex; align-items: center; gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ink-mute);
+      margin-bottom: 8px;
+    }
+    .hero-float-card .fc-eyebrow::before {
+      content: ""; width: 5px; height: 5px; border-radius: 50%;
+      background: var(--clay);
+    }
+    .hero-float-card .fc-svg {
+      display: block; width: 100%; height: auto;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .hero-float-card .fc-foot {
+      margin-top: 6px;
+      font-family: 'Newsreader', serif;
+      font-weight: 500; font-size: 0.82rem;
+      color: var(--ink); letter-spacing: -0.005em;
+      font-feature-settings: 'tnum';
+    }
+    .hero-float-card .fc-foot .num {
+      font-family: 'Newsreader', serif; font-weight: 500;
+      font-feature-settings: 'tnum';
+    }
+    /* Cards positioned via CSS variables so the dev slider can tune them live.
+       Default: top-left + top-right at the very top, bottom-left near the floor.
+       Pushed vertically away from the bounce animation in the middle. */
+    .hero-stage {
+      --card-shots-top: -2%;
+      --card-shots-left: -15%;
+      --card-heat-top: -18%;
+      --card-heat-right: -1%;
+      --card-pattern-bottom: -7%;
+      --card-pattern-left: 15%;
+    }
+    .hero-float-card.card-shots {
+      top: var(--card-shots-top); left: var(--card-shots-left); width: 196px;
+      animation: hf-float-a 5.2s ease-in-out infinite alternate;
+    }
+    .hero-float-card.card-heat {
+      top: var(--card-heat-top); right: var(--card-heat-right); width: 216px;
+      animation: hf-float-b 6.4s ease-in-out infinite alternate;
+    }
+    .hero-float-card.card-pattern {
+      bottom: var(--card-pattern-bottom); left: var(--card-pattern-left); width: 248px;
+      animation: hf-float-c 7.2s ease-in-out infinite alternate;
+    }
+
+    .hero-float-card .fc-quote {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 0.96rem;
+      line-height: 1.35;
+      letter-spacing: -0.012em;
+      color: var(--ink);
+      margin: 0;
+    }
+    .hero-float-card .fc-quote .ital {
+      color: var(--clay); font-style: italic; font-weight: 400;
+    }
+    /* Float keyframes — gentle drift, kept INSIDE the stage (positive translations only
+       on the in-frame edge so the cards never wander off the page) */
+    @keyframes hf-float-a {
+      0%   { transform: translate(0, 0); }
+      100% { transform: translate(3px, 6px); }
+    }
+    @keyframes hf-float-b {
+      0%   { transform: translate(0, 0); }
+      100% { transform: translate(-4px, -5px); }
+    }
+    @keyframes hf-float-c {
+      0%   { transform: translate(0, 0); }
+      100% { transform: translate(5px, -4px); }
+    }
+    @media (max-width: 980px) {
+      .hero-float-card { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hero-float-card { animation: none; }
+    }
+
+    /* === PROBLEM (ink-dark contrast panel) === */
+    .problem-wrap {
+      background: var(--ink);
+      color: var(--cream);
+      margin-top: 24px;
+    }
+    /* Dark-mode equivalent of light's ink-black contrast panel: sit at --surface (brightest tier)
+       so this section reads as a distinct elevated plane against hero-wrap (--paper) and body (--cream). */
+    body.dark .problem-wrap { background: var(--surface); color: var(--ink); border-top: 1px solid var(--line); }
+    .problem {
+      padding: 120px 0 100px;
+    }
+    @media (max-width: 700px) { .problem { padding: 72px 0 56px; } }
+    .problem-grid {
+      display: grid; grid-template-columns: 1.1fr 1fr;
+      gap: 80px; align-items: start;
+    }
+    @media (max-width: 1000px) { .problem-grid { grid-template-columns: 1fr; gap: 40px; } }
+    .problem-wrap .eyebrow { color: var(--lime); }
+    .problem-wrap .eyebrow::before { background: var(--clay-soft); }
+    body.dark .problem-wrap .eyebrow { color: var(--court); }
+    body.dark .problem-wrap .eyebrow::before { background: var(--clay); }
+    .problem h2 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 96;
+      font-weight: 500;
+      font-size: clamp(40px, 5.4vw, 72px);
+      letter-spacing: -0.022em;
+      line-height: 1.02;
+      margin: 16px 0 0;
+    }
+    .problem h2 .ital { font-style: italic; font-weight: 400; color: var(--clay-soft); }
+    body.dark .problem h2 .ital { color: var(--clay); }
+    .problem-body { color: rgba(244,240,230,0.78); font-size: 1.15rem; line-height: 1.6; }
+    body.dark .problem-body { color: var(--ink-soft); }
+    .problem-body p + p { margin-top: 14px; }
+    .problem-body strong { color: var(--cream); font-weight: 500; }
+    body.dark .problem-body strong { color: var(--ink); font-weight: 500; }
+    /* Beefy insight hover rules live further down; the .insight class handles all the work */
+
+    /* === SECTION BASE === */
+    section.feature {
+      padding: 72px 0;
+    }
+    @media (max-width: 700px) { section.feature { padding: 56px 0; } }
+
+    .section-head { margin-bottom: 56px; max-width: 720px; }
+    .section-head h2 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 96;
+      font-weight: 500;
+      font-size: clamp(40px, 5.6vw, 76px);
+      letter-spacing: -0.022em;
+      line-height: 1.0;
+      margin: 16px 0 18px;
+    }
+    .section-head .h2-lede {
+      color: var(--ink-soft);
+      font-size: 1.15rem;
+      line-height: 1.5;
+      max-width: 60ch;
+    }
+    /* Feature section: tighter head so the panel + cards fit in one screen.
+       Smaller h2, less head margin, more compact lede. */
+    .feature .section-head { margin-bottom: 32px; max-width: 760px; }
+    .feature .section-head h2 { font-size: clamp(30px, 3.6vw, 48px); margin: 10px 0 14px; line-height: 1.04; }
+    .feature .section-head .h2-lede { font-size: 1.02rem; max-width: 56ch; }
+
+    /* === FEATURE GRID === */
+    .feature-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 900px) { .feature-grid { grid-template-columns: 1fr; } }
+    .feature-card {
+      padding: 36px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+    }
+    .feature-card.tall { grid-row: span 2; }
+    .feature-card .feat-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: color-mix(in srgb, var(--court) 10%, transparent);
+      color: var(--court);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+    }
+    body.dark .feature-card .feat-icon {
+      background: color-mix(in srgb, var(--court-light) 14%, transparent);
+      color: var(--court-light);
+    }
+    .feature-card .feat-icon svg { width: 22px; height: 22px; }
+    .feature-card h3 {
+      font-family: 'Newsreader', serif; font-weight: 500;
+      font-size: 1.7rem; letter-spacing: -0.014em;
+      margin-bottom: 10px;
+      line-height: 1.15;
+    }
+    .feature-card p {
+      color: var(--ink-soft); font-size: 1rem; line-height: 1.55;
+    }
+    .feature-card .visual-block {
+      margin-top: 24px;
+    }
+
+    /* Visual block: shot mix bars — ported verbatim from dashboard.html (.bar-row) */
+    .bar-row {
+      display: grid;
+      grid-template-columns: 110px 1fr 60px;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 0;
+    }
+    .bar-row .bar-label { font-size: 0.92rem; color: var(--ink-soft); font-weight: 500; }
+    .bar-row .bar-track {
+      height: 22px;
+      background: var(--shade);
+      border-radius: 100px;
+      overflow: hidden;
+      position: relative;
+    }
+    body.dark .bar-row .bar-track { background: var(--surface); }
+    .bar-row .bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      width: 0;
+      transform-origin: left center;
+      /* width: dashboard's ease-out-quart fill-in. Plus hover transform/opacity. */
+      transition:
+        width 760ms cubic-bezier(0.22, 1, 0.36, 1),
+        transform 240ms var(--ease-out),
+        opacity 240ms var(--ease-out);
+    }
+    .bar-row .bar-value {
+      text-align: right;
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1rem;
+      color: var(--ink);
+      transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out), color 240ms var(--ease-out);
+    }
+    .bar-row .bar-label {
+      transition: opacity 240ms var(--ease-out), color 240ms var(--ease-out);
+    }
+    /* Hover: dim siblings to 0.10 (dashboard pattern), highlight the focused row */
+    .bar-row { transition: opacity 240ms var(--ease-out); }
+    #shotBars:hover .bar-row { opacity: 0.10; }
+    #shotBars:hover .bar-row:hover { opacity: 1; }
+    #shotBars .bar-row:hover .bar-fill { transform: scaleY(1.10); }
+    #shotBars .bar-row:hover .bar-value { color: var(--clay); transform: translateX(2px); }
+    body.dark #shotBars .bar-row:hover .bar-value { color: var(--clay-soft); }
+
+    /* === HOW-IT-WORKS (court-deep green contrast panel) === */
+    .how {
+      padding: 110px 0;
+      background: var(--court-deep);
+      color: var(--cream);
+      border-top: 1px solid rgba(0,0,0,0.15);
+      border-bottom: 1px solid rgba(0,0,0,0.15);
+    }
+    body.dark .how { background: var(--surface); color: var(--ink); border-color: var(--line-soft); }
+    @media (max-width: 700px) { .how { padding: 72px 0; } }
+    .how .eyebrow { color: var(--lime); }
+    .how .eyebrow::before { background: var(--clay-soft); }
+    body.dark .how .eyebrow { color: var(--court); }
+    body.dark .how .eyebrow::before { background: var(--clay); }
+    .how .section-head h2 { color: var(--cream); }
+    body.dark .how .section-head h2 { color: var(--ink); }
+    .how-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
+    }
+    @media (max-width: 1000px) { .how-grid { grid-template-columns: 1fr 1fr; gap: 28px; } }
+    @media (max-width: 600px) { .how-grid { grid-template-columns: 1fr; } }
+    .how-step .step-num {
+      font-family: 'Newsreader', serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 2.4rem;
+      color: var(--lime);
+      line-height: 1;
+      margin-bottom: 10px;
+      font-feature-settings: 'tnum';
+    }
+    body.dark .how-step .step-num { color: var(--clay); }
+    .how-step h5 {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1.3rem; letter-spacing: -0.012em;
+      margin-bottom: 8px;
+      color: var(--cream);
+    }
+    body.dark .how-step h5 { color: var(--ink); }
+    .how-step p { color: rgba(244,240,230,0.72); font-size: 0.98rem; line-height: 1.5; }
+    body.dark .how-step p { color: var(--ink-soft); }
+    /* Beefy insight hover rules live further down; the .insight class handles all the work */
+
+    /* === PINNED SCROLL: SCROLLYTELLING SECTION === */
+    /* Pattern: outer .scrolly section is ~3 viewports tall; inner two-column grid;
+       LEFT column has position: sticky court tile; RIGHT column is a stack of
+       stage cards. IntersectionObserver flips an active-stage class on the outer
+       section, which CSS uses to fade overlay layers in/out on the sticky tile. */
+    .scrolly {
+      position: relative;
+      padding: 80px 0 0;
+    }
+    .scrolly-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: start;
+    }
+    @media (max-width: 1000px) {
+      .scrolly-grid { grid-template-columns: 1fr; gap: 32px; }
+    }
+
+    /* Sticky court column */
+    .scrolly-sticky {
+      position: sticky;
+      top: 96px;
+      align-self: start;
+      padding: 40px 0;
+    }
+    @media (max-width: 1000px) {
+      .scrolly-sticky { position: sticky; top: 16px; padding: 16px 0; }
+    }
+    .scrolly-tile-wrap {
+      width: 100%;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .scrolly-tile-eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-mute);
+      margin-bottom: 14px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .scrolly-tile-eyebrow .stage-counter {
+      color: var(--court);
+      font-variation-settings: 'opsz' 24;
+    }
+    body.dark .scrolly-tile-eyebrow .stage-counter { color: var(--court-light); }
+
+    /* Court tile: ports .court-tile from dashboard.html (same aspect, surface, radius) */
+    .scrolly-tile {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 27 / 39;
+      background: var(--court-surface);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .scrolly-tile svg.court-svg {
+      display: block; width: 100%; height: 100%;
+      position: absolute; inset: 0;
+    }
+
+    /* Overlay layers stack on top of the base court SVG; opacity is owned by
+       data-stage on the outer .scrolly element so transitions are pure CSS. */
+    .scrolly-layer {
+      position: absolute; inset: 0;
+      opacity: 0;
+      transition: opacity 360ms var(--ease-out);
+      pointer-events: none;
+    }
+    .scrolly-layer svg { display: block; width: 100%; height: 100%; }
+
+    /* Stage flow: only the active stage's layer is visible. Previous
+       stages fully disappear so each insight reads cleanly on its own. */
+    .scrolly[data-stage="2"] .layer-shots    { opacity: 1; }
+    .scrolly[data-stage="3"] .layer-spacing  { opacity: 1; }
+    .scrolly[data-stage="4"] .layer-coverage { opacity: 1; }
+    .scrolly[data-stage="4"] .layer-callout  { opacity: 1; }
+
+    /* Cross-fade between two court SVGs based on stage. Stage 2 (shot map) shows
+       the opponent's half (.court-top). Stages 3+4 (spacing, coverage) show the
+       player's half (.court-bottom). No flip — just a smooth opacity swap. */
+    .scrolly-tile .court-svg {
+      opacity: 0;
+      transition: opacity 480ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .scrolly[data-stage="1"] .court-top,
+    .scrolly[data-stage="2"] .court-top { opacity: 1; }
+    .scrolly[data-stage="3"] .court-bottom,
+    .scrolly[data-stage="4"] .court-bottom { opacity: 1; }
+    @media (prefers-reduced-motion: reduce) {
+      .scrolly-tile .court-svg { transition: none; }
+    }
+
+    /* Callout label (lime ball + arrow + line of text) */
+    .layer-callout .callout-text {
+      position: absolute;
+      left: 8%; bottom: 6%;
+      max-width: 76%;
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: clamp(0.92rem, 1.1vw, 1.1rem);
+      letter-spacing: -0.008em;
+      color: var(--cream);
+      background: rgba(10,14,20,0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      padding: 10px 14px;
+      border-radius: 8px;
+      line-height: 1.3;
+    }
+    .layer-callout .callout-text .num { color: var(--lime); font-feature-settings: 'tnum'; }
+
+    /* Right column: stage captions */
+    .scrolly-stages {
+      display: flex; flex-direction: column;
+      gap: 0;
+    }
+    .scrolly-stage {
+      min-height: 78vh;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 24px 0;
+      opacity: 0.35;
+      transition: opacity 320ms var(--ease-out), transform 320ms var(--ease-out);
+    }
+    .scrolly-stage.is-active { opacity: 1; }
+    @media (max-width: 1000px) {
+      .scrolly-stage { min-height: auto; padding: 28px 0; opacity: 1; }
+    }
+    .scrolly-stage .stage-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--court);
+      margin-bottom: 12px;
+      display: inline-flex; align-items: center; gap: 10px;
+    }
+    body.dark .scrolly-stage .stage-label { color: var(--court-light); }
+    .scrolly-stage .stage-label .pip {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--ink-mute);
+      transition: background 220ms var(--ease-out), transform 220ms var(--ease-out);
+    }
+    .scrolly-stage.is-active .stage-label .pip {
+      background: var(--clay);
+      transform: scale(1.2);
+    }
+    .scrolly-stage h3 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 72;
+      font-weight: 500;
+      font-size: clamp(34px, 4.4vw, 56px);
+      letter-spacing: -0.02em;
+      line-height: 1.02;
+      margin-bottom: 14px;
+    }
+    .scrolly-stage h3 .ital { color: var(--clay); font-style: italic; font-weight: 400; }
+    .scrolly-stage p {
+      color: var(--ink-soft);
+      font-size: 1.05rem;
+      line-height: 1.55;
+      max-width: 46ch;
+    }
+
+    /* Reduced motion: show everything at once, kill scroll animation */
+    @media (prefers-reduced-motion: reduce) {
+      .scrolly-sticky { position: static; }
+      .scrolly-stage { opacity: 1; min-height: auto; }
+      .scrolly-layer { opacity: 1 !important; transition: none !important; }
+      .scrolly[data-stage] .layer-shots { opacity: 0.5 !important; }
+    }
+
+    /* === CLOSING CTA === */
+    .closing {
+      padding: 120px 0 100px;
+      text-align: center;
+    }
+    .closing h2 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 144;
+      font-weight: 500;
+      font-size: clamp(48px, 7.5vw, 108px);
+      letter-spacing: -0.025em;
+      line-height: 1.0;
+      margin-bottom: 28px;
+      max-width: 18ch; margin-left: auto; margin-right: auto;
+    }
+    .closing h2 .line { display: block; }
+    .closing h2 .lime {
+      display: block;
+      color: var(--lime);
+      font-style: italic;
+      font-weight: 400;
+    }
+    body.dark .closing h2 .lime { color: var(--lime); }
+    .closing p {
+      color: var(--ink-soft);
+      font-size: 1.2rem;
+      max-width: 56ch;
+      margin: 0 auto 40px;
+      line-height: 1.5;
+    }
+
+    /* === FOOTER === */
+    footer {
+      padding: 56px 0 40px;
+      border-top: 1px solid var(--line-soft);
+    }
+    .footer-grid {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 32px;
+      margin-bottom: 40px;
+    }
+    @media (max-width: 700px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
+    .footer-grid h6 {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-mute);
+      margin-bottom: 14px;
+    }
+    .footer-grid ul {
+      list-style: none;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .footer-grid a {
+      font-size: 0.92rem; color: var(--ink-soft);
+      transition: color var(--dur-quick) var(--ease-out);
+    }
+    .footer-grid a:hover { color: var(--ink); }
+    .footer-tagline {
+      font-family: 'Newsreader', serif;
+      font-style: italic; font-weight: 400;
+      font-size: 1.1rem; letter-spacing: -0.005em;
+      max-width: 30ch; color: var(--ink-soft);
+    }
+    .footer-foot {
+      padding-top: 24px;
+      border-top: 1px solid var(--line-soft);
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-mute);
+      flex-wrap: wrap; gap: 12px;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal { opacity: 0; transform: translateY(12px); animation: rin var(--dur-hero) var(--ease-out) forwards; }
+      .reveal-1 { animation-delay: 80ms; }
+      .reveal-2 { animation-delay: 220ms; }
+      .reveal-3 { animation-delay: 360ms; }
+      .reveal-4 { animation-delay: 500ms; }
+    }
+    @keyframes rin { to { opacity: 1; transform: translateY(0); } }
+
+    /* === BRAND-MARK HOVER VIDEO === */
+    .brand-mark { position: relative; }
+    .brand-mark .logo-video {
+      display: none;
+      height: 52px;
+      width: auto;
+      background: transparent;
+    }
+    body.dark .brand-mark .logo-video {
+      filter: invert(1) hue-rotate(180deg);
+    }
+    .brand-mark:hover .logo-light,
+    .brand-mark:hover .logo-dark { display: none; }
+    .brand-mark:hover .logo-video { display: block; }
+    body.dark .brand-mark:hover .logo-light,
+    body.dark .brand-mark:hover .logo-dark { display: none; }
+    body.dark .brand-mark:hover .logo-video { display: block; }
+
+    /* === Hover treatments — direct references to dashboard.html classes === */
+
+    /* .card — bigger lift + shadow than dashboard so paragraph cards feel
+       genuinely lifted on hover. */
+    .card {
+      transition: transform var(--dur-base) var(--ease-out),
+                  box-shadow var(--dur-base) var(--ease-out),
+                  border-color var(--dur-base) var(--ease-out);
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: var(--ink-mute);
+      box-shadow:
+        0 1px 0 rgba(26,24,21,0.05),
+        0 32px 64px -22px rgba(26,24,21,0.28);
+    }
+    body.dark .card:hover {
+      box-shadow:
+        0 1px 0 rgba(0,0,0,0.50),
+        0 36px 88px -26px rgba(0,0,0,0.78);
+    }
+    /* Feature card prose warms slightly on card hover for tactile feedback */
+    .feature-card.card:hover p { color: var(--ink); }
+    .feature-card.card:hover h3 { color: var(--court); }
+    body.dark .feature-card.card:hover h3 { color: var(--court-light); }
+    .feature-card.card .feat-icon {
+      transition: transform var(--dur-base) var(--ease-spring),
+                  background var(--dur-base) var(--ease-out);
+    }
+    .feature-card.card:hover .feat-icon {
+      transform: scale(1.08) rotate(-3deg);
+      background: color-mix(in srgb, var(--court) 18%, transparent);
+    }
+
+    /* .insight — beefy hover: real padding, strong lift, subtle bg wash,
+       brighter border, soft shadow. Apply via class="... insight" on prose
+       tiles (problem-body, how-step). */
+    .insight {
+      border: 1px solid transparent;
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-left: -24px; margin-right: -24px; /* negative margin so prose width is unchanged */
+      transition:
+        transform var(--dur-base) var(--ease-out),
+        border-color var(--dur-base) var(--ease-out),
+        background var(--dur-base) var(--ease-out),
+        box-shadow var(--dur-base) var(--ease-out),
+        padding var(--dur-base) var(--ease-out);
+    }
+    .insight:hover {
+      transform: translateY(-4px);
+      border-color: var(--ink-mute);
+      background: color-mix(in srgb, var(--paper) 55%, transparent);
+      box-shadow:
+        0 1px 0 rgba(26,24,21,0.04),
+        0 22px 56px -24px rgba(26,24,21,0.22);
+    }
+    /* Insight prose warms on hover so the lift feels intentional, not just decorative */
+    .insight:hover p { color: var(--ink); }
+    .insight:hover strong { color: var(--cream); }
+
+    /* On the ink-dark Problem panel the bg wash needs to be cream-tinted, not paper-tinted,
+       so the lift reads against the dark surface. */
+    .problem-wrap .insight:hover {
+      border-color: rgba(244,240,230,0.32);
+      background: rgba(244,240,230,0.04);
+      box-shadow:
+        0 1px 0 rgba(0,0,0,0.20),
+        0 24px 60px -22px rgba(0,0,0,0.55);
+    }
+    body.dark .problem-wrap .insight:hover {
+      border-color: var(--ink-mute);
+      background: color-mix(in srgb, var(--paper) 55%, transparent);
+    }
+    .problem-wrap .insight:hover p { color: var(--cream); }
+    body.dark .problem-wrap .insight:hover p { color: var(--ink); }
+    .problem-wrap .insight:hover strong { color: var(--cream); }
+
+    /* Same logic for How-It-Works (court-deep bg) */
+    .how .insight:hover {
+      border-color: rgba(244,240,230,0.32);
+      background: rgba(244,240,230,0.05);
+      box-shadow:
+        0 1px 0 rgba(0,0,0,0.20),
+        0 24px 60px -22px rgba(0,0,0,0.55);
+    }
+    body.dark .how .insight:hover {
+      border-color: var(--ink-mute);
+      background: color-mix(in srgb, var(--paper) 50%, transparent);
+    }
+    .how .insight:hover p { color: var(--cream); }
+    body.dark .how .insight:hover p { color: var(--ink); }
+    .how .insight:hover h5 { color: var(--lime); }
+    body.dark .how .insight:hover h5 { color: var(--court); }
+    .how .insight .step-num {
+      transition: transform var(--dur-base) var(--ease-spring), color var(--dur-base) var(--ease-out);
+    }
+    .how .insight:hover .step-num {
+      transform: translateX(4px) scale(1.06);
+      color: var(--lime);
+    }
+    body.dark .how .insight:hover .step-num { color: var(--court); }
+
+    /* Reduced-motion: kill transforms, keep color/border feedback. */
+    @media (prefers-reduced-motion: reduce) {
+      .card,
+      .insight {
+        transition: border-color var(--dur-base) var(--ease-out),
+                    background var(--dur-base) var(--ease-out);
+        transform: none !important;
+      }
+      .card:hover { box-shadow: var(--shadow) !important; transform: none !important; }
+      .insight:hover { transform: none !important; }
+    }
+    /* === Page-load splash: full-cream overlay with big logo animation, fades out === */
+    .splash {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 1;
+      transition: opacity 620ms cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: auto;
+    }
+    .splash.is-hiding { opacity: 0; }
+    .splash.is-hidden { display: none; }
+    .splash video {
+      width: min(72vw, 760px);
+      height: auto;
+      max-height: 78vh;
+      object-fit: contain;
+      background: transparent;
+      display: block;
+    }
+    body.dark .splash { background: var(--cream); }
+    body.dark .splash video { filter: invert(1) hue-rotate(180deg); }
+    @media (prefers-reduced-motion: reduce) {
+      .splash { display: none; }
+    }
+    /* Lock scroll while splash is up */
+    body.splash-locked { overflow: hidden; }
+  </style>
+</head>
+<body class="splash-locked">
+
+  <!-- Page-load splash: plays the locked CourtCheckAnimation full-screen, then fades into the page -->
+  <div class="splash" id="splash" aria-hidden="true">
+    <video id="splashVideo" muted playsinline autoplay preload="auto">
+      <source src="../logo/CourtCheckAnimation.webm" type="video/webm">
+      <source src="../logo/CourtCheckAnimation.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="brand-mark">
+        <img class="logo logo-light" src="../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+        <img class="logo logo-dark" src="../logo/CourtCheckLogoDark.png" alt="CourtCheck">
+        <video class="logo logo-video" muted playsinline preload="metadata" aria-hidden="true"><source src="../logo/CourtCheckAnimation.webm" type="video/webm"><source src="../logo/CourtCheckAnimation.mp4" type="video/mp4"></video>
+      </a>
+      <div class="nav-links">
+        <a href="#scrolly">See It Work</a>
+        <a href="#how">How It Works</a>
+      </div>
+      <div class="nav-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+          <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
+        <a href="#" class="nav-signin">Sign in</a>
+        <a href="#" class="cta">Get started</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- HERO -->
+    <div class="hero-wrap">
+    <section class="hero container" id="hero">
+      <div class="hero-left reveal reveal-1">
+        <h1 class="display">
+          <span class="line">See every<br>shot.</span>
+          <span class="line clay">Know every<br>move.</span>
+        </h1>
+        <p class="lede">
+          CourtCheck turns raw match footage into the read coaches want. Ball tracking, heatmaps, stroke breakdown, and scouting reports. No rewinding a frame.
+        </p>
+        <div class="hero-cta-row">
+          <a href="#" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+            Upload your first match
+          </a>
+          <a href="#" class="btn btn-ghost">See a sample analysis</a>
+        </div>
+        <div class="hero-partner" aria-label="In partnership with UC Davis Tennis">
+          <span class="partner-prefix">In partnership with</span>
+          <span class="partner-name">UC Davis Tennis</span>
+          <img class="partner-logo" src="../logo/ucd-tennis.png" alt="UC Davis Tennis">
+        </div>
+      </div>
+
+      <!-- Transparent bouncing court (WebM with alpha, mp4 fallback). Faded, no box bg.
+           Floating glass cards (mini shot overlay + mini heatmap) sit subtly over it. -->
+      <div class="hero-stage reveal reveal-2" id="heroStage">
+        <video
+          poster="../motion/Bounce_Still.png"
+          autoplay
+          muted
+          loop
+          playsinline
+          aria-hidden="true"
+        >
+          <source src="../motion/Bounce_Animated.webm" type="video/webm">
+          <source src="../motion/Bounce_Animated.mp4" type="video/mp4">
+        </video>
+
+        <!-- Floating card 1: mini shot map -->
+        <div class="hero-float-card card-shots" aria-hidden="true">
+          <div class="fc-eyebrow">Shots · this recording</div>
+          <svg class="fc-svg" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
+            <rect x="6" y="4" width="88" height="62" rx="1.5" fill="color-mix(in srgb, var(--court) 6%, var(--paper))" stroke="var(--ink-mute)" stroke-width="0.7"/>
+            <line x1="6" y1="35" x2="94" y2="35" stroke="var(--ink-mute)" stroke-width="0.5"/>
+            <line x1="20" y1="4"  x2="20" y2="66" stroke="var(--ink-mute)" stroke-width="0.35"/>
+            <line x1="80" y1="4"  x2="80" y2="66" stroke="var(--ink-mute)" stroke-width="0.35"/>
+            <line x1="50" y1="20" x2="50" y2="50" stroke="var(--ink-mute)" stroke-width="0.35"/>
+            <!-- shot dots (lime = in, clay-soft = out/near-miss) -->
+            <g>
+              <circle cx="78" cy="11" r="1.7" fill="var(--lime)"/>
+              <circle cx="82" cy="17" r="1.7" fill="var(--lime)"/>
+              <circle cx="86" cy="23" r="1.7" fill="var(--lime)"/>
+              <circle cx="22" cy="14" r="1.7" fill="var(--lime)"/>
+              <circle cx="18" cy="21" r="1.7" fill="var(--lime)"/>
+              <circle cx="65" cy="18" r="1.7" fill="var(--lime)"/>
+              <circle cx="49" cy="22" r="1.7" fill="var(--lime)"/>
+              <circle cx="74" cy="28" r="1.7" fill="var(--lime)"/>
+              <circle cx="91" cy="9"  r="1.7" fill="var(--clay-soft)"/>
+              <circle cx="9"  cy="11" r="1.7" fill="var(--clay-soft)"/>
+            </g>
+          </svg>
+          <div class="fc-foot"><span class="num">287</span> shots <span class="ital">(87% accuracy)</span></div>
+        </div>
+
+        <!-- Floating card 3: simple shot-type tendency (stroke class + in/out from ball tracking) -->
+        <div class="hero-float-card card-pattern" aria-hidden="true">
+          <div class="fc-eyebrow">Tendency</div>
+          <p class="fc-quote"><span class="ital">28%</span> of backhands landed out this recording.</p>
+        </div>
+
+        <!-- Floating card 2: mini coverage heatmap -->
+        <div class="hero-float-card card-heat" aria-hidden="true">
+          <div class="fc-eyebrow">Coverage</div>
+          <svg class="fc-svg" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="hg-lime"><stop offset="0%" stop-color="var(--lime)" stop-opacity="0.85"/><stop offset="60%" stop-color="var(--lime)" stop-opacity="0.40"/><stop offset="100%" stop-color="var(--lime)" stop-opacity="0"/></radialGradient>
+              <radialGradient id="hg-clay"><stop offset="0%" stop-color="var(--clay-soft)" stop-opacity="0.55"/><stop offset="100%" stop-color="var(--clay-soft)" stop-opacity="0"/></radialGradient>
+            </defs>
+            <rect x="6" y="4" width="88" height="62" rx="1.5" fill="color-mix(in srgb, var(--court) 4%, var(--paper))" stroke="var(--ink-mute)" stroke-width="0.7"/>
+            <line x1="6" y1="35" x2="94" y2="35" stroke="var(--ink-mute)" stroke-width="0.5"/>
+            <line x1="20" y1="4"  x2="20" y2="66" stroke="var(--ink-mute)" stroke-width="0.35"/>
+            <line x1="80" y1="4"  x2="80" y2="66" stroke="var(--ink-mute)" stroke-width="0.35"/>
+            <!-- heat clouds skewed to player's baseline + deuce corner -->
+            <ellipse cx="50" cy="58" rx="34" ry="11" fill="url(#hg-lime)"/>
+            <ellipse cx="72" cy="50" rx="14" ry="9"  fill="url(#hg-lime)"/>
+            <ellipse cx="28" cy="48" rx="10" ry="7"  fill="url(#hg-clay)"/>
+            <ellipse cx="60" cy="40" rx="9"  ry="6"  fill="url(#hg-clay)"/>
+          </svg>
+          <div class="fc-foot"><span class="ital" style="color: var(--clay); font-style: italic;">68%</span> deuce-side</div>
+        </div>
+      </div>
+    </section>
+    </div>
+    <!-- /hero-wrap -->
+
+    <!-- PROBLEM (ink-dark panel for visual contrast against the cream) -->
+    <div class="problem-wrap">
+      <section class="problem container">
+        <div class="problem-grid">
+          <div>
+            <span class="eyebrow">The state of the game</span>
+            <h2>Tennis has always been played on <span class="ital">instinct.</span></h2>
+          </div>
+          <div class="problem-body insight">
+            <p>Every other major sport uses computer vision and analytics to train smarter. Tennis at the club and collegiate level is still flying blind.</p>
+            <p>Coaches scrub through hours of grainy recordings. Players replay points from memory. The answer to <strong>"what changed in the second set?"</strong> takes a Sunday to find.</p>
+            <p>CourtCheck closes that gap. Drop in the tape. Get the read.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- SCROLLY: pinned court tile, captions scroll past -->
+    <section class="scrolly container" id="scrolly" data-stage="1">
+      <div class="scrolly-grid">
+
+        <!-- Sticky court tile (LEFT) -->
+        <div class="scrolly-sticky">
+          <div class="scrolly-tile-wrap">
+            <div class="scrolly-tile-eyebrow">
+              <span>M. Lin · Recording 7 · Set 2</span>
+              <span class="stage-counter num" id="scrollyCounter">01 / 04</span>
+            </div>
+            <div class="scrolly-tile" id="scrollyTile">
+              <!-- Base court SVG injected by JS (.court-svg) -->
+              <!-- Overlay layers, opacity controlled by .scrolly[data-stage] -->
+              <div class="scrolly-layer layer-shots"     id="layerShots"></div>
+              <div class="scrolly-layer layer-spacing"   id="layerSpacing"></div>
+              <div class="scrolly-layer layer-coverage"  id="layerCoverage"></div>
+              <div class="scrolly-layer layer-callout"   id="layerCallout">
+                <div class="callout-text">
+                  <span class="num">28%</span> of backhands landed out this recording.
+                </div>
+              </div>
+            </div>
+            <div class="scrolly-tile-eyebrow" style="margin-top: 14px; margin-bottom: 0;">
+              <span>Half-court, real proportions</span>
+              <span>27 × 39 ft</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Captions stack (RIGHT) -->
+        <div class="scrolly-stages">
+
+          <div class="scrolly-stage is-active" data-stage="1">
+            <span class="stage-label"><span class="pip"></span>Stage 01 · The court</span>
+            <h3>Start with the <span class="ital">tape</span>. Nothing else.</h3>
+            <p>Recording in, court out. No annotations yet. This is what every coach starts with after a recording. The next three stages are what CourtCheck adds.</p>
+          </div>
+
+          <div class="scrolly-stage" data-stage="2">
+            <span class="stage-label"><span class="pip"></span>Stage 02 · Shot map</span>
+            <h3>Every shot, <span class="ital">placed</span>.</h3>
+            <p>Bounce locations for every ball in the recording. Forehand, backhand, serve, volley. The view your coaching brain already uses, drawn for you in under fifteen minutes.</p>
+          </div>
+
+          <div class="scrolly-stage" data-stage="3">
+            <span class="stage-label"><span class="pip"></span>Stage 03 · Spacing</span>
+            <h3>Where the player <span class="ital">stood</span>.</h3>
+            <p>Each line is the gap between player and ball at contact. Short means squeezed. Long means reaching. The pattern that tells you why a stroke broke down late in the recording.</p>
+          </div>
+
+          <div class="scrolly-stage" data-stage="4">
+            <span class="stage-label"><span class="pip"></span>Stage 04 · Coverage</span>
+            <h3>The pattern, called <span class="ital">out</span>.</h3>
+            <p>Court coverage heatmap, plus the one line of plain English worth bringing to practice. Sequences surface only when they repeat across the recording.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="feature container" id="features">
+      <div class="section-head">
+        <span class="eyebrow">What we surface</span>
+        <h2>Patterns you'd find watching the tape, in the time it takes to stretch.</h2>
+        <p class="h2-lede">CourtCheck reads recordings the way an experienced assistant coach watches it back. Every shot in context. Every pattern in plain English. Coaches save ~80 hours per season.</p>
+      </div>
+
+      <div class="feature-grid">
+        <div class="feature-card card tall">
+          <div class="feat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.5.5 0 0 1-.96 0L9.24 2.18a.5.5 0 0 0-.96 0l-2.35 8.36A2 2 0 0 1 4 12H2"/></svg>
+          </div>
+          <h3>Patterns, in <span class="ital">plain English</span>.</h3>
+          <p>"Lin wins 71% of service games when she opens with a slice." Plain prose, not dashboards full of numbers. We only surface patterns that show up across two or more recordings.</p>
+          <div class="visual-block">
+            <!-- Shot mix bars — built + scroll-animated by JS at the end of <body>,
+                 mirroring dashboard.html's buildBars() exactly. -->
+            <div id="shotBars" style="margin-top: 8px;"></div>
+          </div>
+        </div>
+
+        <div class="feature-card card">
+          <div class="feat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0Z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>
+          </div>
+          <h3>Shot maps, not <span class="ital">spreadsheets</span>.</h3>
+          <p>Every bounce, every contact, every stroke type. Overlaid on a court tile. The view your coaching brain already uses.</p>
+        </div>
+
+        <div class="feature-card card">
+          <div class="feat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <h3>From upload to <span class="ital">first insight</span>: 5 minutes.</h3>
+          <p>Drop in your recording, get the first surfaced pattern back before halftime of any other game you're watching. ~15 minutes for the full breakdown.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW -->
+    <section class="how" id="how">
+      <div class="container">
+        <div class="section-head">
+          <span class="eyebrow">How it works</span>
+          <h2 style="margin-top: 16px;">
+            <span class="line">Four steps.</span>
+            <span class="line">No film&#8209;room slog.</span>
+          </h2>
+        </div>
+        <div class="how-grid">
+          <div class="how-step insight">
+            <div class="step-num">i.</div>
+            <h5>Upload film</h5>
+            <p>MP4 from your camera, your phone, or your team's cloud. Up to 500 MB per recording.</p>
+          </div>
+          <div class="how-step insight">
+            <div class="step-num">ii.</div>
+            <h5>We watch it</h5>
+            <p>~15 min on average. Computer vision reads ball, players, bounces, and strokes. Frame by frame.</p>
+          </div>
+          <div class="how-step insight">
+            <div class="step-num">iii.</div>
+            <h5>Patterns surface</h5>
+            <p>Shot maps, spacing diagnostics, court coverage, and a written coaching report. All in the dashboard.</p>
+          </div>
+          <div class="how-step insight">
+            <div class="step-num">iv.</div>
+            <h5>You coach better</h5>
+            <p>Drills get specific. Match prep gets sharper. Player conversations get backed by film, not memory.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLOSING -->
+    <section class="closing container">
+      <h2 class="display">
+        <span class="line">Stop guessing.</span>
+        <span class="lime">Start winning.</span>
+      </h2>
+      <p>Upload your first recording. Get a full breakdown: heatmaps, stroke maps, and a written scouting report in minutes.</p>
+      <a href="#" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+        Upload your first match
+      </a>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <a href="#" class="brand-mark" style="margin-bottom: 16px;">
+            <img class="logo logo-light" src="../logo/CourtCheckLogoLight.png" alt="CourtCheck" style="height: 40px; width: auto;">
+          <img class="logo logo-dark" src="../logo/CourtCheckLogoDark.png" alt="CourtCheck" style="height: 40px; width: auto;">
+            <video class="logo logo-video" muted playsinline preload="metadata" aria-hidden="true" style="height: 40px; width: auto;"><source src="../logo/CourtCheckAnimation.webm" type="video/webm"><source src="../logo/CourtCheckAnimation.mp4" type="video/mp4"></video>
+          </a>
+          <p class="footer-tagline">See every shot. Know every move. Built for college tennis coaches.</p>
+        </div>
+        <div>
+          <h6>Product</h6>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how">How it works</a></li>
+            <li></li>
+          </ul>
+        </div>
+        <div>
+          <h6>Company</h6>
+          <ul>
+            <li><a href="#">About</a></li>
+            <li><a href="#">Coaches</a></li>
+            <li><a href="#">Contact</a></li>
+          </ul>
+        </div>
+        <div>
+          <h6>Legal</h6>
+          <ul>
+            <li><a href="#">Privacy</a></li>
+            <li><a href="#">Terms</a></li>
+            <li><a href="#">Data use</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-foot">
+        <span>© 2026 CourtCheck</span>
+        <span>v0.1 · brand mock</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      const toggle = document.getElementById('themeToggle');
+      const body = document.body;
+      const stored = localStorage.getItem('cc-theme');
+      if (stored === 'dark') body.classList.add('dark');
+      toggle.addEventListener('click', () => {
+        body.classList.toggle('dark');
+        localStorage.setItem('cc-theme', body.classList.contains('dark') ? 'dark' : 'light');
+        window.dispatchEvent(new CustomEvent('cc-theme-change', {
+          detail: { dark: body.classList.contains('dark') }
+        }));
+      });
+    })();
+  </script>
+
+  <script>
+    // brand-mark hover-to-play splash animation
+    (function () {
+      const marks = document.querySelectorAll('.brand-mark');
+      marks.forEach(mark => {
+        const video = mark.querySelector('video');
+        if (!video) return;
+        mark.addEventListener('mouseenter', () => {
+          try { video.currentTime = 0; video.play(); } catch (e) {}
+        });
+        mark.addEventListener('mouseleave', () => {
+          video.pause();
+        });
+      });
+    })();
+  </script>
+
+  <script>
+    /* === SCROLLY: pinned court tile + stage progression ===
+       Court SVG + overlay primitives are ported from dashboard.html
+       (buildCourtSVG, SHOT_DOTS, SPACING_SHOTS, COURT_COVERAGE). Same data,
+       same class names (.shot-dot, .spacing-line, .heatmap-zone). */
+    (function () {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const NS = 'http://www.w3.org/2000/svg';
+      const root  = document.getElementById('scrolly');
+      const tile  = document.getElementById('scrollyTile');
+      if (!root || !tile) return;
+
+      const counter = document.getElementById('scrollyCounter');
+      const stageEls = root.querySelectorAll('.scrolly-stage');
+
+      // === Court SVG ===
+      // half = 'top' (opponent's side y=0..39) or 'bottom' (player's side y=39..78).
+      // Same geometry; only the viewBox crop changes.
+      function buildCourtSVG(half) {
+        const svg = document.createElementNS(NS, 'svg');
+        const yMin = half === 'bottom' ? 39 : 0;
+        const yMax = 39;
+        svg.setAttribute('viewBox', `0 ${yMin} 27 ${yMax}`);
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.classList.add('court-svg');
+        svg.classList.add(half === 'bottom' ? 'court-bottom' : 'court-top');
+
+        const boundary = document.createElementNS(NS, 'rect');
+        boundary.setAttribute('x', 1); boundary.setAttribute('y', 1);
+        boundary.setAttribute('width', 25); boundary.setAttribute('height', 76);
+        boundary.setAttribute('fill', 'none');
+        boundary.setAttribute('stroke', 'white');
+        boundary.setAttribute('stroke-width', 0.3);
+
+        const net = document.createElementNS(NS, 'line');
+        net.setAttribute('x1', 0); net.setAttribute('y1', 39);
+        net.setAttribute('x2', 27); net.setAttribute('y2', 39);
+        net.setAttribute('stroke', 'white'); net.setAttribute('stroke-width', 0.5);
+
+        function svcLine(y) {
+          const l = document.createElementNS(NS, 'line');
+          l.setAttribute('x1', 1); l.setAttribute('y1', y);
+          l.setAttribute('x2', 26); l.setAttribute('y2', y);
+          l.setAttribute('stroke', 'white'); l.setAttribute('stroke-width', 0.25);
+          return l;
+        }
+        const center = document.createElementNS(NS, 'line');
+        center.setAttribute('x1', 13.5); center.setAttribute('y1', 18);
+        center.setAttribute('x2', 13.5); center.setAttribute('y2', 60);
+        center.setAttribute('stroke', 'white'); center.setAttribute('stroke-width', 0.25);
+
+        svg.appendChild(boundary);
+        svg.appendChild(net);
+        svg.appendChild(svcLine(18));
+        svg.appendChild(svcLine(60));
+        svg.appendChild(center);
+        return svg;
+      }
+
+      // === Overlay SVG factory (shares the same viewBox) ===
+      function buildOverlaySVG() {
+        const svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('viewBox', `0 0 27 39`);
+        svg.setAttribute('preserveAspectRatio', 'none');
+        return svg;
+      }
+
+      // === Data (subset of dashboard.html's SHOT_DOTS, top-half only) ===
+      const STROKE_COLORS = {
+        forehand: 'var(--court)',
+        backhand: 'var(--plum)',
+        serve:    'var(--amber)',
+        volley:   'var(--clay)',
+      };
+      const SHOT_DOTS = [
+        {x:21, y:5,  s:'forehand'}, {x:23, y:7,  s:'forehand'},
+        {x:19, y:11, s:'forehand'}, {x:24, y:9,  s:'forehand'},
+        {x:22, y:14, s:'forehand'}, {x:25, y:13, s:'forehand'},
+        {x:20, y:17, s:'forehand'}, {x:23, y:18, s:'forehand'},
+        {x:5,  y:6,  s:'backhand'}, {x:7,  y:9,  s:'backhand'},
+        {x:4,  y:13, s:'backhand'}, {x:6,  y:16, s:'backhand'},
+        {x:8,  y:11, s:'backhand'}, {x:3,  y:8,  s:'backhand'},
+        {x:18, y:25, s:'serve'},    {x:21, y:28, s:'serve'},
+        {x:24, y:32, s:'serve'},    {x:7,  y:24, s:'serve'},
+        {x:5,  y:30, s:'serve'},    {x:9,  y:34, s:'serve'},
+        {x:5,  y:36, s:'volley'},   {x:22, y:36, s:'volley'},
+        {x:3,  y:33, s:'volley'},   {x:24, y:34, s:'volley'},
+      ];
+
+      // Spacing lines, projected onto the top half so the same court tile can show them.
+      // (Original dashboard uses bottom half; we re-anchor to keep the sticky tile single-view.)
+      const SPACING_SHOTS = [
+        { px: 19, py: 33, bx: 22, by: 31, q: 'ideal' },
+        { px: 20, py: 35, bx: 23, by: 33, q: 'ideal' },
+        { px: 21, py: 31, bx: 25, by: 29, q: 'ideal' },
+        { px: 18, py: 36, bx: 19, by: 35, q: 'squeezed' },
+        { px: 22, py: 32, bx: 23, by: 31, q: 'squeezed' },
+        { px: 16, py: 34, bx: 25, by: 31, q: 'long' },
+        { px: 5,  py: 33, bx: 8,  by: 30, q: 'ideal' },
+        { px: 6,  py: 35, bx: 7,  by: 35, q: 'squeezed' },
+        { px: 7,  py: 32, bx: 7,  by: 31, q: 'squeezed' },
+        { px: 4,  py: 34, bx: 7,  by: 32, q: 'ideal' },
+        { px: 8,  py: 31, bx: 11, by: 28, q: 'ideal' },
+        { px: 3,  py: 35, bx: 9,  by: 32, q: 'long' },
+      ];
+      const QUALITY_COLOR = { ideal: 'var(--court)', squeezed: 'var(--clay)', long: 'var(--amber)' };
+
+      // === Build base court ===
+      // Two stacked court SVGs (top = opponent, bottom = player). CSS cross-fades them by stage.
+      tile.insertBefore(buildCourtSVG('top'), tile.firstChild);
+      tile.insertBefore(buildCourtSVG('bottom'), tile.firstChild);
+
+      // === Layer: shots ===
+      (function buildShots() {
+        const layer = document.getElementById('layerShots');
+        const svg = buildOverlaySVG();
+        SHOT_DOTS.forEach(d => {
+          const halo = document.createElementNS(NS, 'circle');
+          halo.setAttribute('cx', d.x); halo.setAttribute('cy', d.y);
+          halo.setAttribute('r', 1.15); halo.setAttribute('fill', 'white');
+          halo.setAttribute('opacity', 0.7);
+          halo.classList.add('shot-dot');
+          const dot = document.createElementNS(NS, 'circle');
+          dot.setAttribute('cx', d.x); dot.setAttribute('cy', d.y);
+          dot.setAttribute('r', 0.85); dot.setAttribute('fill', STROKE_COLORS[d.s]);
+          dot.classList.add('shot-dot');
+          svg.appendChild(halo);
+          svg.appendChild(dot);
+        });
+        layer.appendChild(svg);
+      })();
+
+      // === Layer: spacing ===
+      (function buildSpacing() {
+        const layer = document.getElementById('layerSpacing');
+        const svg = buildOverlaySVG();
+        SPACING_SHOTS.forEach(s => {
+          const color = QUALITY_COLOR[s.q];
+          const line = document.createElementNS(NS, 'line');
+          line.setAttribute('x1', s.px); line.setAttribute('y1', s.py);
+          line.setAttribute('x2', s.bx); line.setAttribute('y2', s.by);
+          line.setAttribute('stroke', color);
+          line.setAttribute('stroke-width', 0.5);
+          line.setAttribute('stroke-linecap', 'round');
+          line.classList.add('spacing-line');
+
+          const playerDot = document.createElementNS(NS, 'circle');
+          playerDot.setAttribute('cx', s.px); playerDot.setAttribute('cy', s.py);
+          playerDot.setAttribute('r', 0.55); playerDot.setAttribute('fill', 'white');
+          playerDot.setAttribute('stroke', color); playerDot.setAttribute('stroke-width', 0.18);
+          playerDot.classList.add('spacing-endpoint');
+
+          const ballDot = document.createElementNS(NS, 'circle');
+          ballDot.setAttribute('cx', s.bx); ballDot.setAttribute('cy', s.by);
+          ballDot.setAttribute('r', 0.45); ballDot.setAttribute('fill', 'var(--lime)');
+          ballDot.setAttribute('stroke', color); ballDot.setAttribute('stroke-width', 0.18);
+          ballDot.classList.add('spacing-endpoint');
+
+          svg.appendChild(line);
+          svg.appendChild(playerDot);
+          svg.appendChild(ballDot);
+        });
+        layer.appendChild(svg);
+      })();
+
+      // === Layer: coverage (heatmap) ===
+      // Ported from dashboard.html generateCoverage + buildCoverage, mirrored to top half.
+      (function buildCoverage() {
+        const ROWS = 12, COLS = 8;
+        const grid = [];
+        for (let r = 0; r < ROWS; r++) {
+          const row = [];
+          for (let c = 0; c < COLS; c++) {
+            // Peak intensity near the PLAYER'S baseline (bottom of overlay, large r)
+            const lengthFrac = r / (ROWS - 1);
+            const widthFrac  = (c + 0.5) / COLS;
+            const lengthIntensity = Math.pow(lengthFrac, 1.7);
+            const widthDist = Math.abs(widthFrac - 0.55);
+            const widthIntensity = Math.max(0, 1 - Math.pow(widthDist * 1.8, 1.5));
+            let intensity = lengthIntensity * widthIntensity;
+            const seed = ((r * 17 + c * 23) % 100) / 100;
+            intensity *= 0.82 + seed * 0.32;
+            row.push(Math.min(1, Math.max(0, intensity)));
+          }
+          grid.push(row);
+        }
+
+        const layer = document.getElementById('layerCoverage');
+        const svg = buildOverlaySVG();
+        const halfH = 38, halfW = 25;
+        const cellH = halfH / ROWS;
+        const cellW = halfW / COLS;
+        const yOffset = 1;
+        grid.forEach((row, r) => {
+          row.forEach((intensity, c) => {
+            const rect = document.createElementNS(NS, 'rect');
+            rect.setAttribute('x', 1 + c * cellW);
+            rect.setAttribute('y', yOffset + r * cellH);
+            rect.setAttribute('width', cellW);
+            rect.setAttribute('height', cellH);
+            rect.setAttribute('fill', 'var(--lime)');
+            rect.setAttribute('opacity', (0.04 + intensity * 0.66).toFixed(3));
+            rect.classList.add('heatmap-zone');
+            svg.appendChild(rect);
+          });
+        });
+        layer.appendChild(svg);
+      })();
+
+      // === Stage tracking (IntersectionObserver on each caption) ===
+      function setStage(n) {
+        root.setAttribute('data-stage', String(n));
+        if (counter) counter.textContent = String(n).padStart(2, '0') + ' / 04';
+        stageEls.forEach(el => {
+          const s = parseInt(el.dataset.stage, 10);
+          el.classList.toggle('is-active', s === n);
+        });
+      }
+
+      if (reduce) {
+        // Reduced motion: show everything stacked; freeze on stage 4.
+        setStage(4);
+        return;
+      }
+
+      // Pick the stage whose middle is closest to the viewport center.
+      // Each caption has min-height 78vh so they don't overlap aggressively.
+      function pickStage() {
+        const vh = window.innerHeight;
+        const mid = vh / 2;
+        let best = 1, bestDist = Infinity;
+        stageEls.forEach(el => {
+          const r = el.getBoundingClientRect();
+          const center = (r.top + r.bottom) / 2;
+          const dist = Math.abs(center - mid);
+          if (dist < bestDist) { bestDist = dist; best = parseInt(el.dataset.stage, 10); }
+        });
+        return best;
+      }
+      function onScroll() {
+        // Only update when the scrolly section is in viewport, otherwise stale stages stay set
+        const r = root.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > window.innerHeight) return;
+        const next = pickStage();
+        if (next !== parseInt(root.dataset.stage, 10)) setStage(next);
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll);
+      // Initial sync
+      setStage(1);
+      requestAnimationFrame(onScroll);
+    })();
+  </script>
+
+  <script>
+    // Scroll-spy: highlight the nav link whose target section is most in view.
+    (function () {
+      const links = Array.from(document.querySelectorAll('.nav-links a[href^="#"]'));
+      if (!links.length) return;
+      const sectionMap = new Map();
+      links.forEach(link => {
+        const id = link.getAttribute('href').slice(1);
+        const el = document.getElementById(id);
+        if (el) sectionMap.set(el, link);
+      });
+      if (!sectionMap.size) return;
+
+      let active = null;
+      function setActive(link) {
+        if (active === link) return;
+        if (active) active.classList.remove('active');
+        active = link || null;
+        if (active) active.classList.add('active');
+      }
+      // Track which sections are currently visible. When the set is empty (e.g. user
+      // scrolls back above all tracked sections), clear the active link instead of
+      // leaving the prior one stuck.
+      const visible = new Map(); // section element → latest intersectionRatio
+      const io = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+          if (e.isIntersecting) visible.set(e.target, e.intersectionRatio);
+          else visible.delete(e.target);
+        });
+        if (visible.size === 0) { setActive(null); return; }
+        let bestEl = null, bestRatio = -1;
+        visible.forEach((ratio, el) => {
+          if (ratio > bestRatio) { bestRatio = ratio; bestEl = el; }
+        });
+        const link = bestEl ? sectionMap.get(bestEl) : null;
+        setActive(link || null);
+      }, { threshold: [0, 0.25, 0.5, 0.75], rootMargin: '-80px 0px -40% 0px' });
+      sectionMap.forEach((_, el) => io.observe(el));
+    })();
+  </script>
+
+  <script>
+    // Page-load splash: plays the locked CourtCheckAnimation once per browser session,
+    // then fades into the page. Gated by sessionStorage so it doesn't replay on every refresh.
+    (function () {
+      const splash = document.getElementById('splash');
+      const video = document.getElementById('splashVideo');
+      if (!splash || !video) return;
+
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let seenThisSession = false;
+      try { seenThisSession = sessionStorage.getItem('ccSplashSeen') === '1'; } catch (e) {}
+      if (reduce || seenThisSession) {
+        splash.classList.add('is-hidden');
+        document.body.classList.remove('splash-locked');
+        return;
+      }
+      try { sessionStorage.setItem('ccSplashSeen', '1'); } catch (e) {}
+
+      let dismissed = false;
+      function dismiss() {
+        if (dismissed) return;
+        dismissed = true;
+        splash.classList.add('is-hiding');
+        setTimeout(() => {
+          splash.classList.add('is-hidden');
+          document.body.classList.remove('splash-locked');
+        }, 640);
+      }
+
+      video.addEventListener('ended', dismiss);
+      // Fallback: if video fails to load or stalls, hide after 4.5s
+      setTimeout(dismiss, 4500);
+      // Hard ceiling: never block for more than 6s
+      setTimeout(() => {
+        if (!splash.classList.contains('is-hidden')) {
+          splash.classList.add('is-hidden');
+          document.body.classList.remove('splash-locked');
+        }
+      }, 6000);
+
+      // Click to skip
+      splash.addEventListener('click', dismiss);
+    })();
+  </script>
+
+  <script>
+    // Shot mix bar chart — ported verbatim from dashboard.html buildBars()
+    // (DOM-built rows, scroll-triggered fill animation, count-up value text)
+    (function () {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const target = document.getElementById('shotBars');
+      if (!target) return;
+      const data = [
+        { label: 'Forehand',       pct: 42, color: 'var(--court)' },
+        { label: 'Backhand',       pct: 31, color: 'var(--plum)'  },
+        { label: 'Volley',         pct: 15, color: 'var(--clay)'  },
+        { label: 'Serve/Overhead', pct:  8, color: 'var(--amber)' },
+        { label: 'Other',          pct:  4, color: 'var(--slate)' },
+      ];
+      const BAR_DUR = 760;
+      const BAR_STAGGER = 100;
+      const bars = [];
+
+      data.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'bar-row';
+        const label = document.createElement('span');
+        label.className = 'bar-label';
+        label.textContent = d.label;
+        const track = document.createElement('div');
+        track.className = 'bar-track';
+        const fill = document.createElement('div');
+        fill.className = 'bar-fill';
+        fill.style.background = d.color;
+        track.appendChild(fill);
+        const value = document.createElement('span');
+        value.className = 'bar-value';
+        value.textContent = '0%';
+        value.style.opacity = '0';
+        value.style.transition = 'opacity 320ms var(--ease-out)';
+        row.appendChild(label);
+        row.appendChild(track);
+        row.appendChild(value);
+        target.appendChild(row);
+        bars.push({ fill, value, pct: d.pct, tickRafId: null });
+      });
+
+      if (reduce) {
+        bars.forEach(b => {
+          b.fill.style.transition = 'none';
+          b.fill.style.width = b.pct + '%';
+          b.value.textContent = b.pct + '%';
+          b.value.style.opacity = '1';
+        });
+        return;
+      }
+
+      function reset() {
+        bars.forEach(b => {
+          if (b.tickRafId) { cancelAnimationFrame(b.tickRafId); b.tickRafId = null; }
+          b.fill.style.transition = 'none';
+          b.fill.style.width = '0';
+          b.value.textContent = '0%';
+          b.value.style.opacity = '0';
+          b.fill.offsetWidth; // force reflow
+          b.fill.style.transition = '';
+        });
+      }
+      function animate() {
+        bars.forEach((b, i) => {
+          setTimeout(() => {
+            b.fill.style.width = b.pct + '%';
+            b.value.style.opacity = '1';
+            const start = performance.now();
+            function tick(now) {
+              const t = Math.min(1, (now - start) / BAR_DUR);
+              const eased = 1 - Math.pow(1 - t, 4); // ease-out-quart
+              b.value.textContent = Math.round(b.pct * eased) + '%';
+              if (t < 1) b.tickRafId = requestAnimationFrame(tick);
+              else { b.value.textContent = b.pct + '%'; b.tickRafId = null; }
+            }
+            b.tickRafId = requestAnimationFrame(tick);
+          }, i * BAR_STAGGER);
+        });
+      }
+
+      let isInView = false;
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !isInView) { isInView = true; animate(); }
+          else if (!entry.isIntersecting && isInView) { isInView = false; reset(); }
+        });
+      }, { threshold: 0.25 });
+      io.observe(target);
+    })();
+  </script>
+
+</body>
+</html>

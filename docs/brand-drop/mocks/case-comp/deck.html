@@ -1,0 +1,957 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CourtCheck · Case Comp Deck</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="colors_and_type.css">
+<link rel="stylesheet" href="deck.css">
+<style>
+  /* Keyboard hint chrome (hidden during presenting via deck-stage) */
+  .kbhint {
+    position: fixed; left: 16px; bottom: 16px; z-index: 9999;
+    font: 500 10px/1 var(--font-mono);
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-mute); opacity: 0.45; pointer-events: none;
+  }
+  .kbhint b { color: var(--ink-soft); font-weight: 600; }
+  html, body { margin: 0; }
+</style>
+</head>
+<body>
+
+<deck-stage width="1920" height="1080" no-rail>
+
+  <!-- ============================================================ -->
+  <!--  Slide 1 — Cold Open                                          -->
+  <!--  Hold 4s silent in narration after this appears.              -->
+  <!--  No chrome, no slide number, no logo.                         -->
+  <!-- ============================================================ -->
+  <section class="cold-open" data-label="01 Cold Open">
+    <img class="bounce-ghost" src="../../motion/Bounce_Still.png" alt="" aria-hidden="true">
+    <div class="cold-stack"><p class="pull-quote"><span class="qmark">&ldquo;</span><span class="quote-pre">[PULL </span><span class="ital">QUOTE</span><span class="quote-post"> FROM SARA JACKSON · TO LOCK MAY 12]</span><span class="qmark">&rdquo;</span></p></div>
+    <div class="attribution">
+      <span class="who">Sara Jackson</span>
+      <span class="dot" aria-hidden="true"></span>
+      <span class="role">Head Coach</span>
+      <span class="dot" aria-hidden="true"></span>
+      <span class="org">UC Davis Women&rsquo;s Tennis</span>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  Slide 2 — The Structural Gap                                 -->
+  <!--  AAA structural pattern: 4 stat cards in a row with cate-     -->
+  <!--  gorical top rails; thesis in a court-rail callout box.       -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="02 The Structural Gap">
+    <div class="accent-bar"></div>
+    <img class="slide-logo" src="../../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+    <div class="slide-num">02</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">The footage exists</span>. The <span class="ital">coaching</span> moments don&rsquo;t.</h2>
+      <div class="title-rule"></div>
+      <div class="stat-cards">
+        <div class="stat-card rail-court">
+          <span class="badge court">01</span>
+          <div class="value-row"><span class="v">80</span><span class="u">hrs</span></div>
+          <div class="desc">Footage per season, per program</div>
+          <div class="card-meta"><span class="k">Source</span><span class="v">D-I program avg, 2024-25</span></div>
+        </div>
+        <div class="stat-card rail-plum">
+          <span class="badge plum">02</span>
+          <div class="value-row"><span class="v">12</span><span class="u">%</span></div>
+          <div class="desc">Actually reviewed</div>
+          <div class="card-meta"><span class="k">Source</span><span class="v">Coach survey, n=24</span></div>
+        </div>
+        <div class="stat-card rail-amber">
+          <span class="badge amber">03</span>
+          <div class="value-row"><span class="v">3</span><span class="u">days</span></div>
+          <div class="desc">Lag from match to coaching insight</div>
+          <div class="card-meta"><span class="k">Source</span><span class="v">Self-reported, conference avg</span></div>
+        </div>
+        <div class="stat-card rail-clay">
+          <span class="badge clay">04</span>
+          <div class="value-row"><span class="v placeholder">[TBD</span><span class="u">%]</span></div>
+          <div class="desc">Coaching decisions data-backed today</div>
+          <div class="card-meta"><span class="k">Source</span><span class="v">[Placeholder · to lock May 12]</span></div>
+        </div>
+      </div>
+      <div class="callout">It&rsquo;s not a data problem. It&rsquo;s a <span class="ital">workflow</span> problem.</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  Slide 3 — Why Existing Tools Fail                            -->
+  <!--  4 paper cards in a vertical stack, each with categorical     -->
+  <!--  left rail + A/B/C/D badge (categorical facets).              -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="03 Why Existing Tools Fail">
+    <div class="accent-bar"></div>
+    <img class="slide-logo" src="../../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+    <div class="slide-num">03</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">Every existing option</span> was built for <span class="ital">someone else</span>.</h2>
+      <div class="title-rule"></div>
+      <div class="failure-cards">
+        <div class="failure-card rail-clay">
+          <span class="badge clay">A</span>
+          <div class="opt">Manual film review</div>
+          <div class="built">a coach with unlimited time</div>
+          <div class="why">Review takes longer than the next match arrives. The schedule keeps the tape unwatched.</div>
+          <div class="signal"><div class="l">Cost</div><div class="v num">0<span style="font-size:0.7em; color:var(--ink-mute); font-weight:500; margin-left:4px;">/wk recovered</span></div></div>
+        </div>
+        <div class="failure-card rail-court">
+          <span class="badge court">B</span>
+          <div class="opt">Hawk-Eye</div>
+          <div class="built">ATP / WTA broadcast</div>
+          <div class="why">$100K+ installation per court. No D-I college budget approves it.</div>
+          <div class="signal"><div class="l">Install</div><div class="v num">$100K<span style="font-size:0.7em; color:var(--ink-mute); font-weight:500; margin-left:4px;">+ per court</span></div></div>
+        </div>
+        <div class="failure-card rail-plum">
+          <span class="badge plum">C</span>
+          <div class="opt">SwingVision</div>
+          <div class="built">a recreational singles player</div>
+          <div class="why">Phone-mounted, one court at a time. No team workflow, no coach-facing insights.</div>
+          <div class="signal"><div class="l">Scale</div><div class="v num">1<span style="font-size:0.7em; color:var(--ink-mute); font-weight:500; margin-left:4px;">court at a time</span></div></div>
+        </div>
+        <div class="failure-card rail-amber">
+          <span class="badge amber">D</span>
+          <div class="opt">PlaySight</div>
+          <div class="built">tennis academies</div>
+          <div class="why">Hardware contract, prohibitively expensive, generic dashboards built for someone else&rsquo;s sport.</div>
+          <div class="signal"><div class="l">Lock-in</div><div class="v">Hardware<span style="font-size:0.7em; color:var(--ink-mute); font-weight:500; margin-left:4px;">contract</span></div></div>
+        </div>
+      </div>
+      <div class="insight-strip"><span class="tag">Insight</span><span>None of the four was designed for a college head coach finishing a Tuesday match at 9pm. <span class="ital">CourtCheck is.</span></span></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  Slide 4 — Demo (Relief)                                      -->
+  <!--  Full-bleed, minimal chrome only, demo frame placeholder.     -->
+  <!--                                                                -->
+  <!--  Demo storyboard (5 beats, tied back to Slide 2 stats):       -->
+  <!--   1. Drop the 80hr season reel into the upload bay → ingest   -->
+  <!--      transcodes and queues automatically.                      -->
+  <!--   2. The 3-day lag collapses to minutes-not-days: a match     -->
+  <!--      uploaded after the bus ride is analyzed before lights    -->
+  <!--      come back up in the team room.                            -->
+  <!--   3. The 12% review rate becomes the coverage heatmap — every -->
+  <!--      shot, every rally, every court zone visited.              -->
+  <!--   4. The "% decisions data-backed" gap closes around tendency  -->
+  <!--      callouts: "Lin loses cross-court second-serve returns     -->
+  <!--      64%, ad side."                                            -->
+  <!--   5. The one-decision anecdote — the lineup, the drill, the   -->
+  <!--      scouting note Sara only made because CourtCheck surfaced  -->
+  <!--      it. (Anchor anecdote to lock May 12.)                     -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="04 Demo">
+    <div class="demo-shell">
+      <div class="demo-eyebrow">Demo</div>
+      <div class="slide-num">04</div>
+      <div class="demo-frame">
+        <div class="glyph">
+          <div class="word">live demo</div>
+          <span class="label">drop live product window or pre-recorded screen capture here</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  Slide 5 — Impact (Proof)                                     -->
+  <!--  Big-number contrast, micro-grid, design-partner inset quote. -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="05 Impact">
+    <div class="accent-bar"></div>
+    <img class="slide-logo" src="../../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+    <div class="slide-num">05</div>
+    <div class="slide-body">
+      <h2 class="action-title">The <span class="ital">relief</span>, in numbers.</h2>
+      <div class="title-rule"></div>
+      <div class="impact-grid">
+        <div class="impact-main">
+          <div class="contrast-pair">
+            <div class="num-block">
+              <div class="num">80<span class="unit">hrs</span></div>
+              <div class="caption">Per match, manual</div>
+            </div>
+            <div class="arrow">&rsaquo;</div>
+            <div class="num-block">
+              <div class="num lime">12<span class="unit">min</span></div>
+              <div class="caption">Per match, CourtCheck</div>
+            </div>
+          </div>
+          <div class="micro-grid">
+            <div class="micro-tile">
+              <span class="badge court">01</span>
+              <div class="v">[N]</div>
+              <div class="d">Matches processed<br>Lifetime · backend</div>
+              <div class="card-meta"><span class="k">Source</span><span class="v">Production backend</span></div>
+            </div>
+            <div class="micro-tile">
+              <span class="badge plum">02</span>
+              <div class="v">[N%]</div>
+              <div class="d">Top-1 stroke accuracy<br>Eval harness · May &rsquo;26</div>
+              <div class="card-meta"><span class="k">Prior</span><span class="v">[N%] in March</span></div>
+            </div>
+            <div class="micro-tile">
+              <span class="badge amber">03</span>
+              <div class="v">1</div>
+              <div class="d">Design partner<br>UC Davis Tennis</div>
+              <div class="card-meta"><span class="k">Since</span><span class="v">January 2026</span></div>
+            </div>
+          </div>
+          <div class="anchor-anecdote">
+            <span class="tag">Anchor anecdote</span><span class="body">[One concrete coaching decision Sara made because of CourtCheck. To lock May 12.]</span>
+          </div>
+        </div>
+        <aside class="dark-callout">
+          <div class="label">Design partner</div>
+          <p class="q">&ldquo;[Second pull quote from Sara, different from Slide 1. Lean into the relief framing. To lock May 12.]&rdquo;</p>
+          <p class="attr">Sara Jackson · UC Davis Tennis</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  Slide 6 — Where This Goes + Ask                              -->
+  <!--  3-tier horizontal progression + footer ask strip.            -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="06 Where This Goes + Ask">
+    <div class="accent-bar"></div>
+    <img class="slide-logo" src="../../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+    <div class="slide-num">06</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">Built for UC Davis</span>. Same problem, <span class="ital">every program</span>.</h2>
+      <div class="title-rule"></div>
+      <div class="tier-row">
+        <div class="tier">
+          <div class="roman">I</div>
+          <div class="when">Today</div>
+          <div class="what">Tennis. D-I college tier.</div>
+          <div class="desc">UC Davis Women&rsquo;s Tennis as the design partner. Every coaching surface earned in the field.</div>
+          <div class="sub-label"><span class="k">Proof</span><span class="v">Sara Jackson · daily use</span></div>
+          <div class="sub-label"><span class="k">Owner</span><span class="v">Founder + design partner</span></div>
+        </div>
+        <div class="tier">
+          <div class="roman">II</div>
+          <div class="when">12 to 24 months</div>
+          <div class="what">Adjacent racket sports. 8 to 12 college programs.</div>
+          <div class="desc">Same workflow shape, same coach. Pickleball and squash share the geometry.</div>
+          <div class="sub-label"><span class="k">Proof</span><span class="v">Conference adoption signal</span></div>
+          <div class="sub-label"><span class="k">Owner</span><span class="v">Sales + onboarding lead</span></div>
+        </div>
+        <div class="tier">
+          <div class="roman">III</div>
+          <div class="when">3 to 5 years</div>
+          <div class="what">Institutional sports analytics platform. Multi-sport.</div>
+          <div class="desc">A department-wide system of record for college athletics. Coaches first, always.</div>
+          <div class="sub-label"><span class="k">Proof</span><span class="v">Athletic-director procurement</span></div>
+          <div class="sub-label"><span class="k">Owner</span><span class="v">Platform + partnerships</span></div>
+        </div>
+      </div>
+      <div class="ask-strip">[One-line ask · To lock May 12]</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  Appendix divider                                             -->
+  <!-- ============================================================ -->
+  <section class="night" data-label="07 Appendix">
+    <div class="appendix-center">
+      <div class="word">Appendix</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  A1 — Methodology + Eval Harness                              -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="A1 Methodology + Eval Harness">
+    <div class="accent-bar"></div>
+    <img class="slide-logo" src="../../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+    <div class="slide-num">A1</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">How we measure</span> ourselves.</h2>
+      <div class="title-rule"></div>
+      <div class="a1-grid">
+        <div class="metric-table">
+          <div class="h first">Stroke</div>
+          <div class="h">Precision</div>
+          <div class="h">Recall</div>
+          <div class="h">F1</div>
+
+          <div class="cell label"><span class="badge court">A</span>Forehand</div>
+          <div class="cell strong">0.94</div>
+          <div class="cell">0.91</div>
+          <div class="cell">0.92</div>
+
+          <div class="cell label"><span class="badge plum">B</span>Backhand</div>
+          <div class="cell">0.89</div>
+          <div class="cell strong">0.92</div>
+          <div class="cell">0.90</div>
+
+          <div class="cell label"><span class="badge amber">C</span>Serve</div>
+          <div class="cell">0.97</div>
+          <div class="cell">0.95</div>
+          <div class="cell strong">0.96</div>
+
+          <div class="cell label"><span class="badge clay">D</span>Volley</div>
+          <div class="cell strong">0.86</div>
+          <div class="cell">0.81</div>
+          <div class="cell">0.83</div>
+        </div>
+        <aside class="confusion-card">
+          <div class="tag">Confusion matrix · 4-class</div>
+          <div class="confusion-mini" aria-hidden="true">
+            <div class="c" style="--w:94"></div><div class="c" style="--w:4"></div><div class="c" style="--w:1"></div><div class="c" style="--w:1"></div>
+            <div class="c" style="--w:5"></div><div class="c" style="--w:89"></div><div class="c" style="--w:2"></div><div class="c" style="--w:4"></div>
+            <div class="c" style="--w:1"></div><div class="c" style="--w:1"></div><div class="c" style="--w:97"></div><div class="c" style="--w:1"></div>
+            <div class="c" style="--w:6"></div><div class="c" style="--w:5"></div><div class="c" style="--w:3"></div><div class="c" style="--w:86"></div>
+          </div>
+          <p>Tolerance bands held inside +/- 2 frames on stroke onset; serve / return events tightest, volley loosest at the net-rush boundary.</p>
+          <div class="source-footnote">Eval harness · May 2026 · n=247 matches</div>
+        </aside>
+      </div>
+      <div class="insight-strip"><span class="tag">Insight</span><span>Serve and forehand pass exec-distance F1. Volley is the next quarter&rsquo;s work — already in <span class="ital">flight</span>.</span></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  A2 — Technical Architecture                                  -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="A2 Technical Architecture">
+    <div class="accent-bar"></div>
+    <img class="slide-logo" src="../../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+    <div class="slide-num">A2</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">Five-stage pipeline</span>. Designed to ship <span class="ital">weekly</span>.</h2>
+      <div class="title-rule"></div>
+      <div class="pipeline">
+        <div class="stage">
+          <div class="num">01</div>
+          <div class="name">Ingest</div>
+          <div class="desc">TrackTennis cloud portal. Transcode to H.264, persist with match metadata.</div>
+          <div class="sub-label"><span class="k">Tool</span><span class="v">TrackTennis · ffmpeg</span></div>
+          <div class="sub-label"><span class="k">Output</span><span class="v">Match manifest · raw frames</span></div>
+        </div>
+        <div class="stage">
+          <div class="num">02</div>
+          <div class="name">Detection</div>
+          <div class="desc">YOLOv8. Two-class detector: ball plus player. Mixed-precision serving.</div>
+          <div class="sub-label"><span class="k">Tool</span><span class="v">YOLOv8 · ONNX runtime</span></div>
+          <div class="sub-label"><span class="k">Output</span><span class="v">Per-frame bounding boxes</span></div>
+        </div>
+        <div class="stage">
+          <div class="num">03</div>
+          <div class="name">Tracking</div>
+          <div class="desc">BoT-SORT. Identity persistence across occlusions, court-side swaps, baseline crowding.</div>
+          <div class="sub-label"><span class="k">Tool</span><span class="v">BoT-SORT · custom re-id</span></div>
+          <div class="sub-label"><span class="k">Output</span><span class="v">Player tracks · ball trace</span></div>
+        </div>
+        <div class="stage">
+          <div class="num">04</div>
+          <div class="name">Trajectory</div>
+          <div class="desc">Homography to court coordinates. Minimap render with shot dots and rally paths.</div>
+          <div class="sub-label"><span class="k">Tool</span><span class="v">OpenCV homography</span></div>
+          <div class="sub-label"><span class="k">Output</span><span class="v">Court-space shot map</span></div>
+        </div>
+        <div class="stage">
+          <div class="num">05</div>
+          <div class="name">Patterns</div>
+          <div class="desc">Stroke classification, tendency clustering, generated scouting report per player.</div>
+          <div class="sub-label"><span class="k">Tool</span><span class="v">Stroke CNN · k-means</span></div>
+          <div class="sub-label"><span class="k">Output</span><span class="v">Scouting report · tendencies</span></div>
+        </div>
+      </div>
+      <div class="callout">Each stage ships independently. The pipeline runs end-to-end in <span class="ital">under 20 minutes</span> per match.</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  A3 — Unit Economics                                          -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="A3 Unit Economics">
+    <div class="accent-bar"></div>
+    <img class="slide-logo" src="../../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+    <div class="slide-num">A3</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">Pricing built</span> for athletic department budgets.</h2>
+      <div class="title-rule"></div>
+      <div class="a3-grid">
+        <div class="bento-grid">
+          <div class="bento-tile">
+            <div class="label">Target ACV</div>
+            <div class="v">[$N<span class="unit">K]</span></div>
+            <div class="sub">[PLACEHOLDER · TO LOCK MAY 12]</div>
+            <div class="card-meta"><span class="k">Benchmark</span><span class="v">Peer college tools</span></div>
+          </div>
+          <div class="bento-tile">
+            <div class="label">Gross margin</div>
+            <div class="v">[N<span class="unit">%]</span></div>
+            <div class="sub">[PLACEHOLDER · TO LOCK MAY 12]</div>
+            <div class="card-meta"><span class="k">Driver</span><span class="v">Cloud + ML compute</span></div>
+          </div>
+          <div class="bento-tile">
+            <div class="label">Payback</div>
+            <div class="v">[N<span class="unit">mo]</span></div>
+            <div class="sub">[PLACEHOLDER · TO LOCK MAY 12]</div>
+            <div class="card-meta"><span class="k">CAC</span><span class="v">[$N per program]</span></div>
+          </div>
+          <div class="bento-tile">
+            <div class="label">Implementation</div>
+            <div class="v">[N<span class="unit">wk]</span></div>
+            <div class="sub">[PLACEHOLDER · TO LOCK MAY 12]</div>
+            <div class="card-meta"><span class="k">Steps</span><span class="v">Calibration + roster import</span></div>
+          </div>
+        </div>
+        <aside class="bento-sidebar">
+          <div class="tag">Pricing thesis</div>
+          <h3>Land at the smallest budget that gets every coach an account.</h3>
+          <p>A flat program license, indexed to roster size rather than match volume. Reads as a line item the athletic director already approves. No hardware contract, no per-court upcharge.</p>
+          <p>The numbers above are placeholders to lock alongside the design-partner contract terms.</p>
+        </aside>
+      </div>
+      <div class="insight-strip"><span class="tag">Insight</span><span>Procurement-friendly pricing is the lever. The product becomes the line item the athletic department <span class="ital">approves twice</span>.</span></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  A4 — Roadmap + Risks                                         -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="A4 Roadmap + Risks">
+    <div class="accent-bar"></div>
+    <img class="slide-logo" src="../../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+    <div class="slide-num">A4</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">12 months</span>, three risks, three mitigations.</h2>
+      <div class="title-rule"></div>
+      <div class="a4-grid">
+        <div class="roadmap">
+          <div class="track">
+            <div class="marker" style="left:6%"></div>
+            <div class="marker" style="left:32%"></div>
+            <div class="marker" style="left:58%"></div>
+            <div class="marker" style="left:84%"></div>
+          </div>
+          <div class="quarters">
+            <div class="q">
+              <div class="qlabel">Q3 &rsquo;26</div>
+              <div class="mile">UC Davis full-season ingest. Eval harness locked.</div>
+            </div>
+            <div class="q">
+              <div class="qlabel">Q4 &rsquo;26</div>
+              <div class="mile">Scouting report v1. Two pilot programs onboarded.</div>
+            </div>
+            <div class="q">
+              <div class="qlabel">Q1 &rsquo;27</div>
+              <div class="mile">Coach-facing tendency clusters. Conference-tier expansion.</div>
+            </div>
+            <div class="q">
+              <div class="qlabel">Q2 &rsquo;27</div>
+              <div class="mile">8 to 12 programs live. Pickleball pilot in adjacent racket sport.</div>
+            </div>
+          </div>
+        </div>
+        <div class="risk-table">
+          <div class="h"></div>
+          <div class="h">Risk</div>
+          <div class="h">Likelihood</div>
+          <div class="h">Mitigation</div>
+
+          <div class="r badge-cell"><span class="badge court">01</span></div>
+          <div class="r risk">Camera angles vary by venue, hurting tracking precision.</div>
+          <div class="r lh med">Medium</div>
+          <div class="r">Per-venue calibration in onboarding. Homography baked at install, re-verified per match.</div>
+
+          <div class="r badge-cell"><span class="badge plum">02</span></div>
+          <div class="r risk">A bigger player ships a coach-facing product.</div>
+          <div class="r lh high">High</div>
+          <div class="r">Lock the design partner relationship. Move at college-tier pricing they can&rsquo;t justify.</div>
+
+          <div class="r badge-cell"><span class="badge amber">03</span></div>
+          <div class="r risk">Coach adoption stalls past the first program.</div>
+          <div class="r lh low">Low</div>
+          <div class="r">Onboarding script with the assistant coach. Weekly office hours through Q4.</div>
+        </div>
+      </div>
+      <div class="insight-strip"><span class="tag">Insight</span><span>The competitive risk is the highest by likelihood. The design-partner relationship is the <span class="ital">moat</span>.</span></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  Templates divider                                            -->
+  <!-- ============================================================ -->
+  <section class="night" data-label="T0 Template Library">
+    <div class="section-divider">
+      <div class="word"><span class="ink">Template</span> <span>library</span></div>
+      <div class="sub">10 reusable layouts · AAA structure · CourtCheck execution</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  T1 — Cover slide                                             -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="T1 Cover">
+    <div class="accent-bar"></div>
+    <div class="tpl-eyebrow"><span class="id">T1</span> Cover</div>
+    <div class="slide-num">T1</div>
+    <div class="cover-grid">
+      <div class="cover-hero">
+        <p class="q">&ldquo;[Hero pull quote that frames the work in one sentence. Italic, attributed below.]&rdquo;</p>
+        <div class="a">[Attribution · Name · Role · Org]</div>
+      </div>
+      <div class="cover-eyebrow">2026 [Event name] · [Track or category]</div>
+      <h1 class="cover-title">[Project <span class="ital">name</span>]</h1>
+      <div class="cover-tagline">[One-sentence tagline that says what the product is and who it&rsquo;s for. Concrete, not slogan-y.]</div>
+    </div>
+    <div class="cover-meta-strip">
+      <div class="col">
+        <div class="lbl">Presented by</div>
+        <div class="val"><span class="ital">[Presenter name]</span></div>
+        <div class="sub">[Role · Affiliation]</div>
+      </div>
+      <div class="col">
+        <div class="lbl">Team</div>
+        <div class="val">[Co-presenters]</div>
+        <div class="sub">[Roles, comma separated]</div>
+      </div>
+      <div class="col">
+        <div class="lbl">Advised by</div>
+        <div class="val">[Advisor or partner name]</div>
+        <div class="sub">[Role · Affiliation]</div>
+      </div>
+      <div class="col">
+        <div class="lbl">Date</div>
+        <div class="val">[Month DD, YYYY]</div>
+        <div class="sub">[Venue · City]</div>
+      </div>
+    </div>
+    <div class="cover-band"></div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  T2 — Executive summary 3-col                                 -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="T2 Exec Summary 3-col">
+    <div class="accent-bar"></div>
+    <div class="tpl-eyebrow"><span class="id">T2</span> Executive summary</div>
+    <div class="slide-num">T2</div>
+    <div class="slide-body" style="padding-top: 0;">
+      <h2 class="action-title"><span class="keyword">[Leading phrase]</span>. [Action title summarizing the <span class="ital">opportunity</span>.]</h2>
+      <div class="title-rule"></div>
+      <div class="exec-grid">
+        <div class="exec-col challenge">
+          <div class="eb"><span class="badge court">A</span>Challenge</div>
+          <div class="head">[One-sentence framing of the problem the buyer faces today.]</div>
+          <ul>
+            <li>[Symptom or stat 1]<span class="subdetail">[Supporting context · source]</span></li>
+            <li>[Symptom or stat 2]<span class="subdetail">[Supporting context · source]</span></li>
+            <li>[Symptom or stat 3]<span class="subdetail">[Supporting context · source]</span></li>
+            <li>[Symptom or stat 4]<span class="subdetail">[Supporting context · source]</span></li>
+          </ul>
+          <div class="kpi-sub"><span class="lbl">Pain</span><span class="val">[$ at stake]</span></div>
+        </div>
+        <div class="exec-col solution">
+          <div class="eb"><span class="badge plum">B</span>Solution</div>
+          <div class="head">[One-sentence framing of what you built and how it lands.]</div>
+          <ul>
+            <li>[Capability 1]<span class="subdetail">[How it works · who uses it]</span></li>
+            <li>[Capability 2]<span class="subdetail">[How it works · who uses it]</span></li>
+            <li>[Capability 3]<span class="subdetail">[How it works · who uses it]</span></li>
+            <li>[Capability 4]<span class="subdetail">[How it works · who uses it]</span></li>
+          </ul>
+          <div class="kpi-sub"><span class="lbl">Time to value</span><span class="val">[N days]</span></div>
+        </div>
+        <div class="exec-col impact">
+          <div class="eb"><span class="badge amber">C</span>Impact</div>
+          <div class="head">[One-sentence framing of the outcome the buyer can take to leadership.]</div>
+          <ul>
+            <li>[Result 1]<span class="subdetail">[Measured how · timeframe]</span></li>
+            <li>[Result 2]<span class="subdetail">[Measured how · timeframe]</span></li>
+            <li>[Result 3]<span class="subdetail">[Measured how · timeframe]</span></li>
+            <li>[Result 4]<span class="subdetail">[Measured how · timeframe]</span></li>
+          </ul>
+          <div class="kpi-sub"><span class="lbl">Target ACV</span><span class="val">[$N]</span></div>
+        </div>
+      </div>
+      <div class="callout">[Bottom-line synthesis sentence with one <span class="ital">italic-clay</span> word.]</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  T3 — 4-stat card grid                                        -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="T3 4-stat Cards">
+    <div class="accent-bar"></div>
+    <div class="tpl-eyebrow"><span class="id">T3</span> 4-stat cards</div>
+    <div class="slide-num">T3</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">[Leading phrase]</span>. [Action title with one <span class="ital">italic-clay</span> word.]</h2>
+      <div class="title-rule"></div>
+      <div class="stat-cards">
+        <div class="stat-card rail-court">
+          <span class="badge court">01</span>
+          <div class="value-row"><span class="v">[N]</span><span class="u">unit</span></div>
+          <div class="desc">[Stat one descriptor — what the number measures.]</div>
+          <div class="card-meta"><span class="k">Prior</span><span class="v">[Comparison value]</span></div>
+        </div>
+        <div class="stat-card rail-plum">
+          <span class="badge plum">02</span>
+          <div class="value-row"><span class="v">[N]</span><span class="u">%</span></div>
+          <div class="desc">[Stat two descriptor — what the number measures.]</div>
+          <div class="card-meta"><span class="k">Source</span><span class="v">[Where measured]</span></div>
+        </div>
+        <div class="stat-card rail-amber">
+          <span class="badge amber">03</span>
+          <div class="value-row"><span class="v">[N]</span><span class="u">unit</span></div>
+          <div class="desc">[Stat three descriptor — what the number measures.]</div>
+          <div class="card-meta"><span class="k">Trend</span><span class="v">[Direction · pace]</span></div>
+        </div>
+        <div class="stat-card rail-clay">
+          <span class="badge clay">04</span>
+          <div class="value-row"><span class="v">[N]</span><span class="u">unit</span></div>
+          <div class="desc">[Stat four descriptor — what the number measures.]</div>
+          <div class="card-meta"><span class="k">Target</span><span class="v">[Goal value]</span></div>
+        </div>
+      </div>
+      <div class="callout">[Contained thesis statement with one <span class="ital">italic-clay</span> word.]</div>
+      <div class="insight-strip"><span class="tag">Insight</span><span>[One-line synthesis presenter can land in 5 seconds.]</span></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  T4 — 4-row failure cards                                     -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="T4 Failure Cards">
+    <div class="accent-bar"></div>
+    <div class="tpl-eyebrow"><span class="id">T4</span> Failure cards</div>
+    <div class="slide-num">T4</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">[Leading phrase]</span>. [Categorical action title with <span class="ital">italic accent</span>.]</h2>
+      <div class="title-rule"></div>
+      <div class="failure-cards">
+        <div class="failure-card rail-court">
+          <span class="badge court">A</span>
+          <div class="opt">[Option 1]</div>
+          <div class="built">[built for whom]</div>
+          <div class="why">[Why it fails for the actual buyer.]</div>
+          <div class="signal"><div class="l">Signal</div><div class="v num">[$N]<span style="font-size:0.7em; color:var(--ink-mute); font-weight:500; margin-left:4px;">[unit]</span></div></div>
+        </div>
+        <div class="failure-card rail-plum">
+          <span class="badge plum">B</span>
+          <div class="opt">[Option 2]</div>
+          <div class="built">[built for whom]</div>
+          <div class="why">[Why it fails for the actual buyer.]</div>
+          <div class="signal"><div class="l">Signal</div><div class="v num">[N]<span style="font-size:0.7em; color:var(--ink-mute); font-weight:500; margin-left:4px;">[unit]</span></div></div>
+        </div>
+        <div class="failure-card rail-amber">
+          <span class="badge amber">C</span>
+          <div class="opt">[Option 3]</div>
+          <div class="built">[built for whom]</div>
+          <div class="why">[Why it fails for the actual buyer.]</div>
+          <div class="signal"><div class="l">Signal</div><div class="v">[Value]<span style="font-size:0.7em; color:var(--ink-mute); font-weight:500; margin-left:4px;">[unit]</span></div></div>
+        </div>
+        <div class="failure-card rail-clay">
+          <span class="badge clay">D</span>
+          <div class="opt">[Option 4]</div>
+          <div class="built">[built for whom]</div>
+          <div class="why">[Why it fails for the actual buyer.]</div>
+          <div class="signal"><div class="l">Signal</div><div class="v">[Value]<span style="font-size:0.7em; color:var(--ink-mute); font-weight:500; margin-left:4px;">[unit]</span></div></div>
+        </div>
+      </div>
+      <div class="insight-strip"><span class="tag">Insight</span><span>[One-line synthesis of why every option misses, and what the gap looks like.]</span></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  T5 — Sidebar + chart (2-col)                                 -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="T5 Sidebar + Chart">
+    <div class="accent-bar"></div>
+    <div class="tpl-eyebrow"><span class="id">T5</span> Sidebar + chart</div>
+    <div class="slide-num">T5</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">[Leading phrase]</span>. [Sidebar-and-chart action title with <span class="ital">italic accent</span>.]</h2>
+      <div class="title-rule"></div>
+      <div class="t5-grid">
+        <aside class="t5-sidebar">
+          <div class="pt"><span class="n">I</span><span class="b">[Key point one.]<span class="subdetail">[Sub-detail · source · tool]</span></span></div>
+          <div class="pt"><span class="n">II</span><span class="b">[Key point two.]<span class="subdetail">[Sub-detail · source · tool]</span></span></div>
+          <div class="pt"><span class="n">III</span><span class="b">[Key point three.]<span class="subdetail">[Sub-detail · source · tool]</span></span></div>
+          <div class="pt"><span class="n">IV</span><span class="b">[Key point four.]<span class="subdetail">[Sub-detail · source · tool]</span></span></div>
+          <div class="kpi-sub"><span class="lbl">Headline metric</span><span class="val">[$N or N%]</span></div>
+        </aside>
+        <div class="t5-chart">
+          <div class="cap">[Chart caption · what is being shown]</div>
+          <div class="bar-chart">
+            <div class="blabel">[Series A]</div>
+            <div class="btrack"><div class="fill court" style="width:88%"></div></div>
+            <div class="bval">[N]</div>
+
+            <div class="blabel">[Series B]</div>
+            <div class="btrack"><div class="fill plum" style="width:64%"></div></div>
+            <div class="bval">[N]</div>
+
+            <div class="blabel">[Series C]</div>
+            <div class="btrack"><div class="fill amber" style="width:48%"></div></div>
+            <div class="bval">[N]</div>
+
+            <div class="blabel">[Series D]</div>
+            <div class="btrack"><div class="fill clay" style="width:32%"></div></div>
+            <div class="bval">[N]</div>
+          </div>
+          <div class="chart-x-axis">
+            <div></div>
+            <div class="ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+            <div></div>
+          </div>
+          <div class="chart-legend">
+            <div class="li"><span class="sw court"></span>Series A<span class="ct">· n=[N]</span></div>
+            <div class="li"><span class="sw plum"></span>Series B<span class="ct">· n=[N]</span></div>
+            <div class="li"><span class="sw amber"></span>Series C<span class="ct">· n=[N]</span></div>
+            <div class="li"><span class="sw clay"></span>Series D<span class="ct">· n=[N]</span></div>
+          </div>
+          <div class="source-footnote">Source · [Dataset · year · n=[N]]</div>
+        </div>
+      </div>
+      <div class="insight-strip"><span class="tag">Insight</span><span>[One-line synthesis of what the chart proves and what action it implies.]</span></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  T6 — Step progression (1 / 2 / 3 / 4)                        -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="T6 Step Progression">
+    <div class="accent-bar"></div>
+    <div class="tpl-eyebrow"><span class="id">T6</span> Step progression</div>
+    <div class="slide-num">T6</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">[Leading phrase]</span>. [Methodology or framework title in <span class="ital">four steps</span>.]</h2>
+      <div class="title-rule"></div>
+      <div class="pipeline" style="grid-template-columns: repeat(4, 1fr);">
+        <div class="stage">
+          <div class="num">01</div>
+          <div class="name">[Step one]</div>
+          <div class="desc">[Two-sentence description of what happens in this step and why it matters.]</div>
+          <div class="sub-label"><span class="k">Tool</span><span class="v">[Specific tool or method]</span></div>
+          <div class="sub-label"><span class="k">Output</span><span class="v">[Concrete artifact produced]</span></div>
+        </div>
+        <div class="stage">
+          <div class="num">02</div>
+          <div class="name">[Step two]</div>
+          <div class="desc">[Two-sentence description of what happens in this step and why it matters.]</div>
+          <div class="sub-label"><span class="k">Tool</span><span class="v">[Specific tool or method]</span></div>
+          <div class="sub-label"><span class="k">Output</span><span class="v">[Concrete artifact produced]</span></div>
+        </div>
+        <div class="stage">
+          <div class="num">03</div>
+          <div class="name">[Step three]</div>
+          <div class="desc">[Two-sentence description of what happens in this step and why it matters.]</div>
+          <div class="sub-label"><span class="k">Tool</span><span class="v">[Specific tool or method]</span></div>
+          <div class="sub-label"><span class="k">Output</span><span class="v">[Concrete artifact produced]</span></div>
+        </div>
+        <div class="stage">
+          <div class="num">04</div>
+          <div class="name">[Step four]</div>
+          <div class="desc">[Two-sentence description of what happens in this step and why it matters.]</div>
+          <div class="sub-label"><span class="k">Tool</span><span class="v">[Specific tool or method]</span></div>
+          <div class="sub-label"><span class="k">Output</span><span class="v">[Concrete artifact produced]</span></div>
+        </div>
+      </div>
+      <div class="callout">[Synthesis: what the four steps together produce, with one <span class="ital">italic-clay</span> word.]</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  T7 — Cluster-action table (chevron right column)             -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="T7 Cluster Action Table">
+    <div class="accent-bar"></div>
+    <div class="tpl-eyebrow"><span class="id">T7</span> Cluster action table</div>
+    <div class="slide-num">T7</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">[Leading phrase]</span>. [Decision-framework title pairing <span class="ital">cluster x state</span>.]</h2>
+      <div class="title-rule"></div>
+      <div class="cluster-table">
+        <div class="h">Cluster</div>
+        <div class="h">State</div>
+        <div class="h">Suggested action</div>
+        <div class="h">Examples</div>
+
+        <div class="cluster-row">
+          <div class="cell"><span class="badge court sm" style="margin-right:14px">01</span><span class="pill court"><span class="dot"></span>Cluster A</span></div>
+          <div class="cell state"><span class="arrow">&uarr;</span>Over</div>
+          <div class="cell action">[Action to take for over-state of cluster A.]</div>
+          <div class="cell">[Entity 1, Entity 2]<span class="subdetail">[n=N · owner · timing]</span></div>
+        </div>
+        <div class="cluster-row">
+          <div class="cell"><span class="badge court sm" style="margin-right:14px">02</span><span class="pill court"><span class="dot"></span>Cluster A</span></div>
+          <div class="cell state"><span class="arrow">&darr;</span>Under</div>
+          <div class="cell action">[Action to take for under-state of cluster A.]</div>
+          <div class="cell">[Entity 3, Entity 4]<span class="subdetail">[n=N · owner · timing]</span></div>
+        </div>
+        <div class="cluster-row">
+          <div class="cell"><span class="badge plum sm" style="margin-right:14px">03</span><span class="pill plum"><span class="dot"></span>Cluster B</span></div>
+          <div class="cell state"><span class="arrow">&uarr;</span>Over</div>
+          <div class="cell action">[Action to take for over-state of cluster B.]</div>
+          <div class="cell">[Entity 5, Entity 6]<span class="subdetail">[n=N · owner · timing]</span></div>
+        </div>
+        <div class="cluster-row">
+          <div class="cell"><span class="badge amber sm" style="margin-right:14px">04</span><span class="pill amber"><span class="dot"></span>Cluster C</span></div>
+          <div class="cell state"><span class="arrow">&darr;</span>Under</div>
+          <div class="cell action">[Action to take for under-state of cluster C.]</div>
+          <div class="cell">[Entity 7, Entity 8]<span class="subdetail">[n=N · owner · timing]</span></div>
+        </div>
+        <div class="cluster-row">
+          <div class="cell"><span class="badge clay sm" style="margin-right:14px">05</span><span class="pill clay"><span class="dot"></span>Cluster D</span></div>
+          <div class="cell state"><span class="arrow">&uarr;</span>Over</div>
+          <div class="cell action">[Action to take for over-state of cluster D.]</div>
+          <div class="cell">[Entity 9, Entity 10]<span class="subdetail">[n=N · owner · timing]</span></div>
+        </div>
+      </div>
+      <div class="callout">[Prioritize action across clusters by <span class="ital">[lever]</span>. One-line decision rule.]</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  T8 — Big-number contrast                                     -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="T8 Big-Number Contrast">
+    <div class="accent-bar"></div>
+    <div class="tpl-eyebrow"><span class="id">T8</span> Big-number contrast</div>
+    <div class="slide-num">T8</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">[Leading phrase]</span>. The <span class="ital">contrast</span>, in numbers.</h2>
+      <div class="title-rule"></div>
+      <div class="contrast-pair">
+        <div class="num-block">
+          <div class="num">[A]<span class="unit">unit</span></div>
+          <div class="caption">[Before · context]</div>
+        </div>
+        <div class="arrow">&rsaquo;</div>
+        <div class="num-block">
+          <div class="num lime">[B]<span class="unit">unit</span></div>
+          <div class="caption">[After · context]</div>
+        </div>
+      </div>
+      <div class="delta-strip"><span class="lbl">Delta</span><span class="v">[-N%]</span><span class="sep">·</span><span class="lbl">Source</span><span class="v">[Method · sample size]</span></div>
+      <div class="micro-grid">
+        <div class="micro-tile">
+          <span class="badge court">01</span>
+          <div class="v">[N]</div>
+          <div class="d">[Secondary stat one]</div>
+          <div class="card-meta"><span class="k">Source</span><span class="v">[Where measured]</span></div>
+        </div>
+        <div class="micro-tile">
+          <span class="badge plum">02</span>
+          <div class="v">[N%]</div>
+          <div class="d">[Secondary stat two]</div>
+          <div class="card-meta"><span class="k">Prior</span><span class="v">[Comparison]</span></div>
+        </div>
+        <div class="micro-tile">
+          <span class="badge amber">03</span>
+          <div class="v">[N]</div>
+          <div class="d">[Secondary stat three]</div>
+          <div class="card-meta"><span class="k">Trend</span><span class="v">[Direction]</span></div>
+        </div>
+      </div>
+      <div class="insight-strip"><span class="tag">Insight</span><span>[One-line synthesis of why this contrast matters and what action it implies.]</span></div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  T9 — 3-tier horizontal progression                           -->
+  <!-- ============================================================ -->
+  <section class="paper" data-label="T9 3-tier Progression">
+    <div class="accent-bar"></div>
+    <div class="tpl-eyebrow"><span class="id">T9</span> 3-tier progression</div>
+    <div class="slide-num">T9</div>
+    <div class="slide-body">
+      <h2 class="action-title"><span class="keyword">[Leading phrase]</span>. [Before, now, <span class="ital">future</span>. Or i / ii / iii arc.]</h2>
+      <div class="title-rule"></div>
+      <div class="tier-row">
+        <div class="tier">
+          <div class="roman">I</div>
+          <div class="when">[When]</div>
+          <div class="what">[Tier one headline.]</div>
+          <div class="desc">[Two-line description of this tier. Keep it short.]</div>
+          <div class="sub-label"><span class="k">Proof</span><span class="v">[Evidence or KPI]</span></div>
+          <div class="sub-label"><span class="k">Owner</span><span class="v">[Team or role]</span></div>
+        </div>
+        <div class="tier">
+          <div class="roman">II</div>
+          <div class="when">[When]</div>
+          <div class="what">[Tier two headline.]</div>
+          <div class="desc">[Two-line description of this tier. Keep it short.]</div>
+          <div class="sub-label"><span class="k">Proof</span><span class="v">[Evidence or KPI]</span></div>
+          <div class="sub-label"><span class="k">Owner</span><span class="v">[Team or role]</span></div>
+        </div>
+        <div class="tier">
+          <div class="roman">III</div>
+          <div class="when">[When]</div>
+          <div class="what">[Tier three headline.]</div>
+          <div class="desc">[Two-line description of this tier. Keep it short.]</div>
+          <div class="sub-label"><span class="k">Proof</span><span class="v">[Evidence or KPI]</span></div>
+          <div class="sub-label"><span class="k">Owner</span><span class="v">[Team or role]</span></div>
+        </div>
+      </div>
+      <div class="callout">[Synthesis: the arc the three tiers make, with one <span class="ital">italic-clay</span> word.]</div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!--  T10 — Section divider                                        -->
+  <!-- ============================================================ -->
+  <section class="night" data-label="T10 Section Divider">
+    <div class="section-divider">
+      <div class="word"><span class="ink">Section</span> <span>title</span></div>
+      <div class="sub">[Mono uppercase subtitle · optional]</div>
+    </div>
+  </section>
+
+</deck-stage>
+
+<div class="kbhint" aria-hidden="true">
+  <b>←</b> <b>→</b> Navigate &nbsp;·&nbsp; <b>T</b> Theme &nbsp;·&nbsp; <b>G</b> Grid &nbsp;·&nbsp; <b>P</b> Print
+</div>
+
+<script src="deck-stage.js"></script>
+<script>
+  // ── T / G keybinds ───────────────────────────────────────────────────
+  // T: toggle dark theme on <html> (CourtCheck design-system convention —
+  // .dark class on root re-points every color token to the dark palette).
+  // G: toggle the deck-stage thumbnail rail (its built-in grid view).
+  // P: invokes the browser's print dialog so the user can save as PDF.
+  const stage = document.querySelector('deck-stage');
+  function setTheme(dark) {
+    document.documentElement.classList.toggle('dark', dark);
+    try { localStorage.setItem('cc-deck-theme', dark ? 'dark' : 'light'); } catch(e){}
+  }
+  try {
+    const stored = localStorage.getItem('cc-deck-theme');
+    if (stored === 'dark') setTheme(true);
+  } catch(e){}
+
+  window.addEventListener('keydown', (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
+    const k = e.key.toLowerCase();
+    if (k === 't') {
+      e.preventDefault();
+      setTheme(!document.documentElement.classList.contains('dark'));
+    } else if (k === 'g') {
+      e.preventDefault();
+      // Toggle the thumbnail rail (deck-stage's built-in grid view).
+      if (stage.hasAttribute('no-rail')) stage.removeAttribute('no-rail');
+      else stage.setAttribute('no-rail', '');
+    } else if (k === 'p') {
+      e.preventDefault();
+      window.print();
+    }
+  });
+</script>
+</body>
+</html>

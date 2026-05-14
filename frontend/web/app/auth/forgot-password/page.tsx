@@ -1,167 +1,210 @@
-'use client';
+'use client'
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import Logo from '@/components/layout/Logo';
+import Link from 'next/link'
+import { useState } from 'react'
+import { ArrowLeft } from 'lucide-react'
+
+import { supabase } from '@/lib/supabase/client'
+import { AuthShell } from '@/components/auth/AuthShell'
+import {
+  AuthCard,
+  AuthFoot,
+  AuthInlineLink,
+  AuthSub,
+  AuthTitle,
+} from '@/components/auth/AuthCard'
+import { Field, FieldControl, FieldLabel } from '@/components/auth/Field'
+import { BrandMark } from '@/components/brand/BrandMark'
+import { Button } from '@/components/ui/button'
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+  async function sendLink() {
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email,
+      {
         redirectTo: `${window.location.origin}/auth/reset-password`,
-      });
-      if (error) throw error;
-      // Always show success — never reveal whether email exists (enumeration protection)
-      setEmailSent(true);
-    } catch (err: any) {
-      setError(err.message || 'Failed to send reset email');
+      },
+    )
+    if (resetError) throw resetError
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await sendLink()
+      setSent(true)
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to send reset link.'
+      setError(message)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
+
+  async function handleResend() {
+    if (!email) return
+    setError('')
+    try {
+      await sendLink()
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to resend.'
+      setError(message)
+    }
+  }
 
   return (
-    <>
-      {/* Faint court-grid background — suggests tennis court lines */}
-      <style>{`
-        .court-bg {
-          position: fixed;
-          inset: 0;
-          pointer-events: none;
-          z-index: 0;
-          background-image:
-            linear-gradient(rgba(180,240,0,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(180,240,0,0.03) 1px, transparent 1px);
-          background-size: 48px 48px;
-          mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 0%, transparent 100%);
-        }
-        @keyframes envelope-drop {
-          0%   { opacity: 0; transform: translateY(-12px) scale(0.92); }
-          100% { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes envelope-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(180,240,0,0.15); }
-          50%       { box-shadow: 0 0 0 12px rgba(180,240,0,0); }
-        }
-        .envelope-icon {
-          animation: envelope-drop 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards,
-                     envelope-pulse 2s ease-in-out 0.5s infinite;
-        }
-      `}</style>
+    <AuthShell>
+      <AuthCard>
+        <div className="flex justify-center mb-6">
+          <BrandMark size="md" href={null} />
+        </div>
 
-      <div className="court-bg" />
-
-      <div className="relative z-10 min-h-screen flex items-center justify-center bg-primary p-4">
-        {emailSent ? (
-          <Card className="w-full max-w-md bg-secondary border-gray-700">
-            <CardHeader className="space-y-4 pb-2">
-              <div className="flex justify-center">
-                <Logo />
-              </div>
-
-              {/* Animated envelope */}
-              <div className="flex justify-center pt-2">
-                <div
-                  className="envelope-icon w-16 h-16 rounded-2xl flex items-center justify-center"
-                  style={{ background: 'rgba(180,240,0,0.08)', border: '1px solid rgba(180,240,0,0.2)' }}
-                >
-                  <svg viewBox="0 0 24 24" className="w-8 h-8" fill="none" stroke="#B4F000" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                    <path d="M2 7l10 7 10-7" />
-                  </svg>
-                </div>
-              </div>
-
-              <CardTitle className="text-2xl text-center text-white">Check your email</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4 text-center pb-8">
-              <p className="text-gray-300">
-                We sent a password reset link to{' '}
-                <span className="text-white font-semibold">{email}</span>.
-              </p>
-              <p className="text-sm text-gray-400">
-                Click the link in the email to reset your password.
-                Check your spam folder if you don&apos;t see it within a minute.
-              </p>
-              <div className="pt-2">
-                <Link href="/auth/login" className="text-sm text-accent hover:underline inline-flex items-center gap-1">
-                  <svg viewBox="0 0 16 16" className="w-3 h-3" fill="currentColor">
-                    <path fillRule="evenodd" d="M14 8a.75.75 0 01-.75.75H4.56l3.22 3.22a.75.75 0 11-1.06 1.06l-4.5-4.5a.75.75 0 010-1.06l4.5-4.5a.75.75 0 011.06 1.06L4.56 7.25h8.69A.75.75 0 0114 8z" />
-                  </svg>
-                  Back to sign in
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+        {sent ? (
+          <div className="text-center pt-1 pb-1">
+            <div className="size-16 mx-auto mb-5 rounded-full inline-flex items-center justify-center bg-[color-mix(in_srgb,var(--color-court)_12%,transparent)] text-court dark:bg-[color-mix(in_srgb,var(--color-court-light)_18%,transparent)] dark:text-court-light">
+              <svg
+                viewBox="0 0 24 24"
+                width="26"
+                height="26"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m4 12 6 6L20 6" />
+              </svg>
+            </div>
+            <h3
+              className="font-display font-medium text-[1.5rem] tracking-[-0.014em] mb-2"
+              style={{ fontVariationSettings: '"opsz" 72' }}
+            >
+              Check your <em>email.</em>
+            </h3>
+            <p className="text-ink-soft text-[0.95rem] leading-[1.5] max-w-[32ch] mx-auto mb-5">
+              We sent a reset link to{' '}
+              <span className="text-ink font-medium">{email}</span>. The link
+              expires in 15 minutes.
+            </p>
+            <p className="text-[0.85rem] text-ink-mute">
+              Didn&apos;t get it?{' '}
+              <button
+                type="button"
+                onClick={handleResend}
+                className="text-court font-medium border-b border-current dark:text-court-light cursor-pointer"
+              >
+                Resend
+              </button>
+            </p>
+            <div className="mt-7">
+              <Link
+                href="/auth/login"
+                className="inline-flex items-center gap-1.5 text-[0.88rem] text-ink-mute hover:text-ink transition-colors"
+              >
+                <ArrowLeft className="size-3.5" />
+                Back to sign in
+              </Link>
+            </div>
+          </div>
         ) : (
-          <Card className="w-full max-w-md bg-secondary border-gray-700">
-            <CardHeader className="space-y-4">
-              <div className="flex justify-center">
-                <Logo />
-              </div>
-              <div className="space-y-1 text-center">
-                <CardTitle className="text-2xl text-white">Reset your password</CardTitle>
-                <p className="text-sm text-gray-400">
-                  Enter your email and we&apos;ll send you a reset link.
-                </p>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-gray-300">Email</Label>
-                  <Input
+          <>
+            <AuthTitle className="text-center">
+              Reset your <em>password.</em>
+            </AuthTitle>
+            <AuthSub className="text-center">
+              Enter the email tied to your account. We&apos;ll send a secure
+              reset link.
+            </AuthSub>
+
+            <form onSubmit={handleSubmit} className="grid gap-3.5 mb-4">
+              <Field>
+                <FieldLabel htmlFor="email">Email</FieldLabel>
+                <FieldControl>
+                  <input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="coach@school.edu"
+                    autoComplete="email"
+                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="bg-primary border-gray-600 text-white placeholder:text-gray-500"
                   />
-                </div>
+                </FieldControl>
+              </Field>
 
-                {error && (
-                  <div className="p-3 bg-red-900 bg-opacity-30 border border-red-600 rounded-lg">
-                    <p className="text-sm text-red-200">{error}</p>
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-accent text-primary hover:bg-opacity-90 font-semibold"
+              {error && (
+                <div
+                  role="alert"
+                  className="rounded-[10px] border border-clay bg-[color-mix(in_srgb,var(--color-clay)_8%,transparent)] text-clay text-[0.88rem] leading-[1.45] px-3.5 py-2.5"
                 >
-                  {loading ? 'Sending…' : 'Send reset link'}
-                </Button>
+                  {error}
+                </div>
+              )}
 
-                <p className="text-center text-sm text-gray-400">
-                  <Link href="/auth/login" className="text-accent hover:underline inline-flex items-center gap-1">
-                    <svg viewBox="0 0 16 16" className="w-3 h-3" fill="currentColor">
-                      <path fillRule="evenodd" d="M14 8a.75.75 0 01-.75.75H4.56l3.22 3.22a.75.75 0 11-1.06 1.06l-4.5-4.5a.75.75 0 010-1.06l4.5-4.5a.75.75 0 011.06 1.06L4.56 7.25h8.69A.75.75 0 0114 8z" />
-                    </svg>
-                    Back to sign in
-                  </Link>
-                </p>
-              </form>
-            </CardContent>
-          </Card>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                disabled={loading}
+                className="w-full mt-1"
+              >
+                {loading ? (
+                  <>
+                    <Spinner />
+                    Sending...
+                  </>
+                ) : (
+                  'Send reset link'
+                )}
+              </Button>
+            </form>
+
+            <AuthFoot>
+              Remembered it?{' '}
+              <Link href="/auth/login" legacyBehavior passHref>
+                <AuthInlineLink>
+                  <em>Sign in.</em>
+                </AuthInlineLink>
+              </Link>
+            </AuthFoot>
+          </>
         )}
-      </div>
-    </>
-  );
+      </AuthCard>
+    </AuthShell>
+  )
+}
+
+function Spinner() {
+  return (
+    <svg
+      className="size-4 animate-spin motion-reduce:animate-none"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+    >
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        opacity="0.25"
+      />
+      <path
+        d="M21 12a9 9 0 0 0-9-9"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
 }

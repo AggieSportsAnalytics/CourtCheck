@@ -26,15 +26,15 @@ export async function GET() {
       }
     );
 
-    const { data: authData } = await supabase.auth.getClaims();
-    if (!authData?.claims) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { data, error } = await supabaseAdmin
       .from('matches')
       .select('id, status, progress, error, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces')
-      .eq('user_id', authData.claims.sub)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(50);
 

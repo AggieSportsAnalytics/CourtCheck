@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CourtCheck · First session</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream:#F4F0E6; --paper:#FBF8F1; --surface:#FFFFFF; --shade:#ECE6D5;
+      --line:#DDD7C5; --line-soft:#EAE4D2;
+      --ink:#1A1815; --ink-soft:#43403A; --ink-mute:#837F77;
+      --court:#2E5341; --court-deep:#1F3D2E; --court-light:#6E8C7C;
+      --clay:#B05B36; --clay-soft:#D08866;
+      --lime:#BFC846; --lime-soft:#E1E7A6;
+      --plum:#7B4E6E; --amber:#C8923A; --slate:#5C6B7A;
+      --bg-grad-1:rgba(176,91,54,0.06); --bg-grad-2:rgba(46,83,65,0.07);
+      --court-surface:#A85E3A;
+      --radius-lg:14px;
+      --shadow:0 1px 0 rgba(26,24,21,0.04), 0 18px 48px -24px rgba(26,24,21,0.16);
+      --shadow-hover:0 1px 0 rgba(26,24,21,0.04), 0 24px 60px -22px rgba(26,24,21,0.22);
+      --ease-out:cubic-bezier(0.2, 0.8, 0.2, 1);
+      --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
+      --dur-quick:160ms; --dur-base:240ms; --dur-reveal:480ms;
+    }
+    body.dark {
+      --cream:#07080F; --paper:#1F2940; --surface:#2B374F; --shade:#11161F;
+      --line:#2F3B52; --line-soft:#1E2735;
+      --ink:#F4F0E6; --ink-soft:#A8B0C0; --ink-mute:#6B7388;
+      --court:#6FA88B; --court-deep:#4A8268; --court-light:#9FC6B0;
+      --clay:#E07A52; --clay-soft:#F0A07F;
+      --lime:#DDE970; --lime-soft:#9BAD30;
+      --court-surface:#6B3A24;
+      --bg-grad-1:rgba(176,91,54,0.08); --bg-grad-2:rgba(111,168,139,0.06);
+      --plum:#B584A6; --amber:#DDB166; --slate:#889DB3;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: var(--cream); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      font-size: 16px; line-height: 1.55; letter-spacing: -0.005em;
+      -webkit-font-smoothing: antialiased;
+      background-image:
+        radial-gradient(1200px 600px at 92% -10%, var(--bg-grad-1), transparent 60%),
+        radial-gradient(900px 700px at -10% 110%, var(--bg-grad-2), transparent 65%);
+      background-attachment: fixed;
+      transition: background-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .display { font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 72; font-weight: 500; letter-spacing: -0.022em; line-height: 1.0; }
+    .ital { color: var(--clay); font-style: italic; font-weight: 400; }
+    .num     { font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 72; font-weight: 500; font-feature-settings: 'tnum'; }
+    .mono    { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-mute); }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--court);
+    }
+    .eyebrow::before { content: ""; width: 6px; height: 6px; background: var(--clay); border-radius: 50%; }
+
+    .container { max-width: 1320px; margin: 0 auto; padding: 0 56px; }
+
+    .brand-mark { display: flex; align-items: center; gap: 12px; }
+    .brand-mark .logo { height: 56px; width: auto; display: block; }
+    .brand-mark .logo-dark { display: none; }
+    body.dark .brand-mark .logo-light { display: none; }
+    body.dark .brand-mark .logo-dark { display: block; }
+    .brand-mark .name {
+      font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 60;
+      font-weight: 500; font-size: 1.25rem; letter-spacing: -0.018em;
+    }
+    .theme-toggle {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--line); background: var(--paper);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--ink); padding: 0;
+      transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+    }
+    .theme-toggle:hover { transform: rotate(20deg); border-color: var(--ink); }
+    .theme-toggle svg { width: 16px; height: 16px; }
+    .theme-toggle .moon { display: block; } .theme-toggle .sun  { display: none; }
+    body.dark .theme-toggle .moon { display: none; } body.dark .theme-toggle .sun { display: block; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--court); color: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 0.95rem;
+    }
+
+    /* Reveal animation on load */
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal { opacity: 0; transform: translateY(8px); animation: reveal-in var(--dur-reveal) var(--ease-out) forwards; }
+      .reveal-1 { animation-delay: 80ms; }
+      .reveal-2 { animation-delay: 160ms; }
+      .reveal-3 { animation-delay: 240ms; }
+      .reveal-4 { animation-delay: 320ms; }
+    }
+    @keyframes reveal-in { to { opacity: 1; transform: translateY(0); } }
+
+    /* === Hero (first-session) === */
+    .hero {
+      padding: 64px 0 28px;
+    }
+    .hero h1 {
+      font-size: clamp(48px, 6.4vw, 84px);
+      margin: 18px 0 18px;
+    }
+    .hero .lede {
+      color: var(--ink-soft);
+      font-size: 1.2rem;
+      max-width: 60ch;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+    .hero-cta-row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 14px 24px; border-radius: 100px;
+      font-weight: 500; font-size: 1rem; cursor: pointer; border: none;
+      transition: transform var(--dur-quick) var(--ease-spring), background var(--dur-base) var(--ease-out);
+    }
+    .btn-primary {
+      background: var(--court); color: var(--cream);
+    }
+    body.dark .btn-primary { background: var(--court-deep); color: var(--cream); }
+    .btn-primary:hover { transform: translateY(-1px); background: var(--court-deep); }
+    body.dark .btn-primary:hover { background: var(--court); }
+    .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); padding: 13px 22px; }
+    .btn-ghost:hover { border-color: var(--ink); }
+    .btn svg { width: 18px; height: 18px; }
+
+    /* === Upload spotlight (the hero card on first session) === */
+    .upload-spotlight {
+      margin: 24px 0 56px;
+      background: var(--paper);
+      border: 1.5px dashed var(--line);
+      border-radius: 20px;
+      padding: 64px 48px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 56px;
+      align-items: center;
+      transition: border-color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out);
+    }
+    .upload-spotlight:hover { border-color: var(--ink-mute); }
+    @media (max-width: 900px) { .upload-spotlight { grid-template-columns: 1fr; padding: 40px 28px; } }
+
+    .upload-spotlight .copy h2 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 72;
+      font-weight: 500;
+      font-size: clamp(32px, 3.6vw, 48px);
+      letter-spacing: -0.018em;
+      margin-bottom: 14px;
+      line-height: 1.05;
+    }
+    .upload-spotlight .copy p {
+      color: var(--ink-soft);
+      font-size: 1.05rem; line-height: 1.55;
+      margin-bottom: 24px;
+      max-width: 36ch;
+    }
+    .upload-spotlight .timing {
+      display: flex; gap: 24px; flex-wrap: wrap;
+      font-size: 0.88rem; color: var(--ink-mute);
+    }
+    .upload-spotlight .timing .num {
+      color: var(--ink); font-weight: 500; font-size: 1.15rem;
+      display: inline-block; margin-right: 4px;
+    }
+    .upload-spotlight .stage {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+      padding: 48px 32px;
+      background: var(--shade);
+      border: 1.5px dashed var(--line);
+      border-radius: 18px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px;
+      cursor: pointer;
+      transition: border-color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out);
+    }
+    .upload-spotlight .stage:hover {
+      border-color: var(--ink-mute);
+      background: color-mix(in srgb, var(--shade) 88%, var(--paper));
+    }
+    body.dark .upload-spotlight .stage { background: var(--surface); }
+    body.dark .upload-spotlight .stage:hover { background: color-mix(in srgb, var(--surface) 88%, var(--paper)); }
+    .upload-spotlight .stage-icon {
+      width: 60px; height: 60px;
+      border-radius: 16px;
+      background: color-mix(in srgb, var(--court) 9%, transparent);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--court);
+    }
+    body.dark .upload-spotlight .stage-icon {
+      background: color-mix(in srgb, var(--court-light) 14%, transparent);
+      color: var(--court-light);
+    }
+    .upload-spotlight .stage-icon svg { width: 26px; height: 26px; }
+    .upload-spotlight .stage-text { text-align: center; }
+    .upload-spotlight .stage-label {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 60;
+      font-weight: 500;
+      font-size: 1.2rem;
+      letter-spacing: -0.012em;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+    .upload-spotlight .stage-sub {
+      font-size: 0.92rem;
+      color: var(--ink-soft);
+    }
+    .upload-spotlight .stage-sub .browse-link {
+      color: var(--court); font-weight: 500;
+      border-bottom: 1px solid currentColor;
+    }
+    body.dark .upload-spotlight .stage-sub .browse-link { color: var(--court-light); }
+    .upload-spotlight .stage-types {
+      margin-top: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+
+    /* === Empty cards section === */
+    .preview-head {
+      display: flex; justify-content: space-between; align-items: end;
+      margin-bottom: 24px; gap: 24px; flex-wrap: wrap;
+    }
+    .preview-head h3 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 72;
+      font-weight: 500;
+      font-size: clamp(28px, 3vw, 40px);
+      letter-spacing: -0.014em;
+    }
+    .preview-head .h3-sub { color: var(--ink-mute); font-size: 0.95rem; max-width: 38ch; }
+
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    @media (max-width: 900px) { .grid-3 { grid-template-columns: 1fr; } }
+
+    .empty-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      min-height: 280px;
+      display: flex; flex-direction: column; gap: 14px;
+      transition: border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+      position: relative;
+      overflow: hidden;
+    }
+    .empty-card:hover { border-color: var(--ink-mute); transform: translateY(-1px); }
+    .empty-card .icon-wrap {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: color-mix(in srgb, var(--court) 8%, transparent);
+      color: var(--court);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    body.dark .empty-card .icon-wrap {
+      background: color-mix(in srgb, var(--court-light) 14%, transparent);
+      color: var(--court-light);
+    }
+    .empty-card .icon-wrap svg { width: 18px; height: 18px; }
+    .empty-card h4 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 60;
+      font-weight: 500;
+      font-size: 1.25rem;
+      letter-spacing: -0.012em;
+    }
+    .empty-card p {
+      color: var(--ink-soft);
+      font-size: 0.93rem;
+      line-height: 1.5;
+    }
+    .empty-card .post {
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid var(--line-soft);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+
+    /* Faded preview "what it'll look like" — court placeholder inside an empty card */
+    .empty-court {
+      width: 100%;
+      aspect-ratio: 27 / 39;
+      max-width: 200px;
+      margin: 4px auto 0;
+      background: var(--court-surface);
+      border-radius: 8px;
+      opacity: 0.5;
+      position: relative;
+    }
+    .empty-court svg { width: 100%; height: 100%; display: block; }
+
+    /* === How it works strip === */
+    .how-it-works {
+      margin: 56px 0;
+      padding: 36px 0;
+      border-top: 1px solid var(--line-soft);
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .how-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 32px;
+    }
+    @media (max-width: 900px) { .how-grid { grid-template-columns: 1fr 1fr; gap: 24px; } }
+    @media (max-width: 600px) { .how-grid { grid-template-columns: 1fr; } }
+    .how-step {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .how-step .step-num {
+      font-family: 'Newsreader', serif;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 1.6rem;
+      color: var(--clay);
+      line-height: 1;
+    }
+    body.dark .how-step .step-num { color: var(--clay-soft); }
+    .how-step h5 {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1.05rem;
+      letter-spacing: -0.01em;
+    }
+    .how-step p { color: var(--ink-soft); font-size: 0.9rem; line-height: 1.5; }
+
+    /* === Footer prompt === */
+    .closing {
+      padding: 60px 0;
+      text-align: center;
+    }
+    .closing h2 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 72;
+      font-weight: 500;
+      font-size: clamp(32px, 4vw, 56px);
+      letter-spacing: -0.018em;
+      margin-bottom: 18px;
+      max-width: 28ch; margin-left: auto; margin-right: auto;
+    }
+    .closing p {
+      color: var(--ink-soft);
+      font-size: 1.05rem;
+      margin-bottom: 28px;
+      max-width: 50ch; margin-left: auto; margin-right: auto;
+    }
+
+    footer { padding: 40px 0; border-top: 1px solid var(--line-soft); }
+    footer .container {
+      display: flex; justify-content: space-between;
+      font-size: 0.82rem; color: var(--ink-mute);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* === BRAND-MARK HOVER VIDEO === */
+    .brand-mark { position: relative; }
+    .brand-mark .logo-video {
+      display: none;
+      height: 56px;
+      width: auto;
+      background: transparent;
+    }
+    body.dark .brand-mark .logo-video {
+      filter: invert(1) hue-rotate(180deg);
+    }
+    .brand-mark:hover .logo-light,
+    .brand-mark:hover .logo-dark { display: none; }
+    .brand-mark:hover .logo-video { display: block; }
+    body.dark .brand-mark:hover .logo-light,
+    body.dark .brand-mark:hover .logo-dark { display: none; }
+    body.dark .brand-mark:hover .logo-video { display: block; }
+
+    
+
+    
+
+    /* === Page-load splash: full-cream overlay with the locked CourtCheckAnimation. Plays once per session on dashboard entry. === */
+    .splash {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 1;
+      transition: opacity 620ms cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: auto;
+    }
+    .splash.is-hiding { opacity: 0; }
+    .splash.is-hidden { display: none; }
+    .splash video {
+      width: min(72vw, 760px);
+      height: auto;
+      max-height: 78vh;
+      object-fit: contain;
+      background: transparent;
+      display: block;
+    }
+    body.dark .splash { background: var(--cream); }
+    body.dark .splash video { filter: invert(1) hue-rotate(180deg); }
+    @media (prefers-reduced-motion: reduce) {
+      .splash { display: none; }
+    }
+    body.splash-locked { overflow: hidden; }
+
+    
+
+    
+
+    
+
+    
+
+    /* === APP SIDEBAR (in-product nav; replaces the top bar on internal routes) === */
+    body { padding-left: 200px; transition: padding-left 220ms var(--ease-out); }
+    .app-sidebar {
+      position: fixed; top: 0; left: 0;
+      width: 200px; height: 100vh;
+      background: var(--paper);
+      border-right: 1px solid var(--line-soft);
+      display: flex; flex-direction: column;
+      padding: 22px 14px;
+      z-index: 50;
+      box-sizing: border-box;
+      transition: width 220ms var(--ease-out), padding 220ms var(--ease-out);
+    }
+    .app-sidebar .sidebar-brand {
+      position: relative;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 76px;
+      padding: 8px 4px 16px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    /* Logo fills the sidebar width and scales tall; max-height caps growth at ~64px */
+    .app-sidebar .sidebar-brand .logo {
+      width: 100%; height: auto;
+      max-width: 100%; max-height: 64px;
+      display: block;
+      object-fit: contain;
+    }
+    .app-sidebar .sidebar-brand .logo-dark { display: none; }
+    .app-sidebar .sidebar-brand .logo-video {
+      display: none;
+      width: 100%; height: auto; max-height: 64px;
+      object-fit: contain; background: transparent;
+    }
+    /* Checkmark-only WebM — shown when sidebar is collapsed (no wordmark room) */
+    .app-sidebar .sidebar-brand .logo-checkmark {
+      display: none;
+      width: auto; height: auto;
+      max-width: 100%; max-height: 48px;
+      object-fit: contain; background: transparent;
+    }
+    body.dark .app-sidebar .sidebar-brand .logo-light { display: none; }
+    body.dark .app-sidebar .sidebar-brand .logo-dark { display: block; }
+    body.dark .app-sidebar .sidebar-brand .logo-video { filter: invert(1) hue-rotate(180deg); }
+    body.dark .app-sidebar .sidebar-brand .logo-checkmark { filter: invert(1) hue-rotate(180deg); }
+    .app-sidebar .sidebar-brand:hover .logo-light,
+    .app-sidebar .sidebar-brand:hover .logo-dark { display: none; }
+    .app-sidebar .sidebar-brand:hover .logo-video { display: block; }
+    body.dark .app-sidebar .sidebar-brand:hover .logo-light,
+    body.dark .app-sidebar .sidebar-brand:hover .logo-dark { display: none; }
+    body.dark .app-sidebar .sidebar-brand:hover .logo-video { display: block; }
+    .app-sidebar .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .app-sidebar .sidebar-link {
+      position: relative;
+      display: flex; align-items: center; gap: 12px;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: var(--ink-soft);
+      font-size: 0.92rem; font-weight: 500;
+      transition: background var(--dur-quick) var(--ease-out),
+                  color var(--dur-quick) var(--ease-out);
+    }
+    .app-sidebar .sidebar-link svg { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; }
+    .app-sidebar .sidebar-link:hover { background: var(--shade); color: var(--ink); }
+    .app-sidebar .sidebar-link:focus-visible { outline: 2px solid var(--court); outline-offset: 2px; }
+    .app-sidebar .sidebar-link.active { background: var(--shade); color: var(--ink); font-weight: 600; }
+    /* Active route accent rail — supplements color/weight so meaning isn't color-only */
+    .app-sidebar .sidebar-link.active::before {
+      content: ''; position: absolute; left: -14px; top: 8px; bottom: 8px;
+      width: 3px; border-radius: 0 3px 3px 0; background: var(--court);
+    }
+    body.dark .app-sidebar .sidebar-link.active::before { background: var(--court-light); }
+    body.dark .app-sidebar .sidebar-link:hover,
+    body.dark .app-sidebar .sidebar-link.active { background: var(--surface); }
+    .app-sidebar .sidebar-foot {
+      display: flex; align-items: center; justify-content: flex-start; gap: 10px;
+      padding: 14px 6px 4px;
+      border-top: 1px solid var(--line-soft);
+    }
+    /* Collapse toggle (chevron). Sits absolute in the top-right corner of the sidebar
+       so it doesn't crowd the brand-mark or the foot row. Stays in place when collapsed. */
+    .sidebar-collapse {
+      position: absolute; top: 14px; right: 8px;
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1px solid var(--line); background: var(--paper);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--ink-mute); padding: 0;
+      z-index: 51;
+      transition: background var(--dur-base) var(--ease-out),
+                  border-color var(--dur-base) var(--ease-out),
+                  color var(--dur-base) var(--ease-out);
+    }
+    .sidebar-collapse:hover { border-color: var(--ink); color: var(--ink); }
+    .sidebar-collapse svg { width: 13px; height: 13px; transition: transform 220ms var(--ease-out); }
+    body.sidebar-collapsed .sidebar-collapse svg { transform: rotate(180deg); }
+
+    /* === COLLAPSED state — applied by user toggle OR by narrow viewport === */
+    body.sidebar-collapsed { padding-left: 72px; }
+    body.sidebar-collapsed .app-sidebar { width: 72px; padding: 22px 8px; }
+    /* Show ONLY the checkmark webm in collapsed mode (no room for the wordmark) */
+    body.sidebar-collapsed .app-sidebar .sidebar-brand {
+      min-height: 56px; padding: 4px 0 14px; margin-bottom: 8px;
+    }
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-light,
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-dark,
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-video { display: none; }
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-checkmark { display: block; }
+    body.sidebar-collapsed .app-sidebar .sidebar-brand:hover .logo-checkmark { display: block; }
+    body.sidebar-collapsed .app-sidebar .sidebar-link { justify-content: center; padding: 12px; }
+    body.sidebar-collapsed .app-sidebar .sidebar-link.active::before { left: -8px; }
+    body.sidebar-collapsed .app-sidebar .sidebar-label { display: none; }
+    body.sidebar-collapsed .app-sidebar .sidebar-foot { flex-direction: column; gap: 12px; padding: 14px 0 4px; }
+
+    @media (max-width: 1100px) {
+      body { padding-left: 72px; }
+      .app-sidebar { width: 72px; padding: 22px 8px; }
+      .app-sidebar .sidebar-brand { min-height: 56px; padding: 4px 0 14px; margin-bottom: 8px; }
+      .app-sidebar .sidebar-brand .logo-light,
+      .app-sidebar .sidebar-brand .logo-dark,
+      .app-sidebar .sidebar-brand .logo-video { display: none; }
+      .app-sidebar .sidebar-brand .logo-checkmark { display: block; }
+      .app-sidebar .sidebar-link { justify-content: center; padding: 12px; }
+      .app-sidebar .sidebar-link.active::before { left: -8px; }
+      .app-sidebar .sidebar-label { display: none; }
+      .app-sidebar .sidebar-foot { flex-direction: column; gap: 12px; padding: 14px 0 4px; }
+    }
+
+    /* === USER MENU (pops up from the avatar in sidebar-foot) === */
+    .user-menu-wrap { position: relative; }
+    button.avatar {
+      background: var(--court); color: var(--cream);
+      border: none; cursor: pointer; padding: 0;
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 0.95rem;
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform var(--dur-quick) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+    }
+    button.avatar:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+    button.avatar:focus-visible { outline: 2px solid var(--court); outline-offset: 2px; }
+    body.dark button.avatar { background: var(--court-deep); }
+
+    /* Menu pops UP from the avatar, left-aligned to the avatar (which sits next to the
+       night-mode toggle on the left side of the foot row). Stays clear of main content
+       on the right and grows upward into the sidebar. */
+    .user-menu {
+      position: absolute;
+      bottom: calc(100% + 12px);
+      left: 0;
+      width: 248px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow-hover);
+      padding: 6px;
+      z-index: 60;
+      opacity: 0; transform: translateY(8px); pointer-events: none;
+      transition: opacity var(--dur-quick) var(--ease-out), transform var(--dur-quick) var(--ease-out);
+    }
+    .user-menu.is-open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .user-menu-head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 10px 12px;
+      min-width: 0;
+    }
+    .user-menu-head .user-menu-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--court); color: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+    body.dark .user-menu-head .user-menu-avatar { background: var(--court-deep); }
+    .user-menu-head .user-menu-id { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+    .user-menu-head .user-menu-name {
+      font-family: 'Newsreader', serif; font-weight: 500;
+      font-size: 0.96rem; letter-spacing: -0.012em;
+      color: var(--ink); line-height: 1.1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-menu-head .user-menu-email {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem; letter-spacing: 0.04em;
+      color: var(--ink-mute);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-menu-divider {
+      height: 1px; background: var(--line-soft); margin: 4px 0;
+    }
+    .user-menu-item {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; text-align: left;
+      padding: 9px 10px;
+      background: transparent; border: none;
+      border-radius: 8px;
+      font-family: inherit; font-size: 0.9rem; font-weight: 500;
+      color: var(--ink);
+      cursor: pointer;
+      transition: background var(--dur-quick) var(--ease-out);
+    }
+    .user-menu-item svg { width: 15px; height: 15px; stroke: currentColor; flex-shrink: 0; color: var(--ink-mute); }
+    .user-menu-item:hover { background: var(--shade); }
+    body.dark .user-menu-item:hover { background: var(--surface); }
+    .user-menu-item:hover svg { color: var(--ink); }
+    .user-menu-item-danger { color: var(--clay); }
+    .user-menu-item-danger svg { color: var(--clay); }
+    .user-menu-item-danger:hover { background: rgba(176,91,54,0.10); }
+    body.dark .user-menu-item-danger { color: var(--clay-soft); }
+    body.dark .user-menu-item-danger:hover { background: rgba(224,122,82,0.15); }
+    body.dark .user-menu-item-danger svg { color: var(--clay-soft); }
+
+    /* === END APP SIDEBAR === */
+  </style>
+</head>
+<body class="splash-locked">
+
+  <!-- app sidebar (begin) -->
+  <aside class="app-sidebar" aria-label="Primary navigation">
+    <button class="sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" aria-expanded="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <a class="brand-mark sidebar-brand" href="dashboard.html" aria-label="CourtCheck home">
+      <img class="logo logo-light" src="../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+      <img class="logo logo-dark" src="../logo/CourtCheckLogoDark.png" alt="CourtCheck">
+      <video class="logo logo-video" muted playsinline preload="metadata" aria-hidden="true"><source src="../logo/CourtCheckAnimation.webm" type="video/webm"><source src="../logo/CourtCheckAnimation.mp4" type="video/mp4"></video>
+      <video class="logo logo-checkmark" muted playsinline preload="metadata" aria-hidden="true"><source src="../logo/CourtCheckCheckmark.webm" type="video/webm"></video>
+    </a>
+    <div class="sidebar-nav" role="navigation">
+      <a class="sidebar-link active" href="dashboard.html" title="Dashboard" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span class="sidebar-label">Dashboard</span>
+      </a>
+      <a class="sidebar-link" href="players-list.html" title="Players">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="sidebar-label">Players</span>
+      </a>
+      <a class="sidebar-link" href="upload-flow.html" title="Upload video">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span class="sidebar-label">Upload video</span>
+      </a>
+      <a class="sidebar-link" href="matches-list.html" title="Recordings">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 14h4M17 9h4M17 14h4"/></svg>
+        <span class="sidebar-label">Recordings</span>
+      </a>
+    </div>
+    <div class="sidebar-foot">
+      <div class="user-menu-wrap">
+        <button class="avatar" id="userMenuToggle" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false">BL</button>
+        <div class="user-menu" id="userMenu" role="menu" aria-hidden="true">
+          <div class="user-menu-head">
+            <div class="user-menu-avatar">BL</div>
+            <div class="user-menu-id">
+              <span class="user-menu-name">Coach B. Le</span>
+              <span class="user-menu-email">brian@ucdavistennis.com</span>
+            </div>
+          </div>
+          <div class="user-menu-divider"></div>
+          <button class="user-menu-item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>Account settings</span>
+          </button>
+          <button class="user-menu-item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Team settings</span>
+          </button>
+          <button class="user-menu-item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>Help &amp; feedback</span>
+          </button>
+          <div class="user-menu-divider"></div>
+          <button class="user-menu-item user-menu-item-danger" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span>Sign out</span>
+          </button>
+        </div>
+      </div>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      </button>
+    </div>
+  </aside>
+  <script>
+    (function () {
+      const KEY = 'cc-sidebar-collapsed';
+      if (localStorage.getItem(KEY) === '1') document.body.classList.add('sidebar-collapsed');
+      const collapseBtn = document.getElementById('sidebarCollapse');
+      if (collapseBtn) {
+        collapseBtn.addEventListener('click', () => {
+          const collapsed = document.body.classList.toggle('sidebar-collapsed');
+          localStorage.setItem(KEY, collapsed ? '1' : '0');
+          collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+          collapseBtn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        });
+      }
+      // User menu — click avatar to toggle, click outside or Esc to close
+      const menuToggle = document.getElementById('userMenuToggle');
+      const menu = document.getElementById('userMenu');
+      if (menuToggle && menu) {
+        function closeMenu() {
+          menu.classList.remove('is-open');
+          menuToggle.setAttribute('aria-expanded', 'false');
+          menu.setAttribute('aria-hidden', 'true');
+        }
+        menuToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = menu.classList.toggle('is-open');
+          menuToggle.setAttribute('aria-expanded', String(isOpen));
+          menu.setAttribute('aria-hidden', String(!isOpen));
+        });
+        document.addEventListener('click', (e) => {
+          if (!menu.contains(e.target) && e.target !== menuToggle) closeMenu();
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') closeMenu();
+        });
+      }
+      // Checkmark webm (visible only when sidebar is collapsed): still at rest, plays on hover
+      const checkmark = document.querySelector('.app-sidebar .logo-checkmark');
+      if (checkmark) {
+        checkmark.pause();
+        try { checkmark.currentTime = 0; } catch (e) {}
+        const brand = checkmark.closest('.sidebar-brand');
+        if (brand) {
+          brand.addEventListener('mouseenter', () => {
+            try { checkmark.currentTime = 0; checkmark.play(); } catch (e) {}
+          });
+          brand.addEventListener('mouseleave', () => {
+            checkmark.pause();
+            try { checkmark.currentTime = 0; } catch (e) {}
+          });
+        }
+      }
+    })();
+  </script>
+  <!-- app sidebar (end) -->
+
+
+  
+
+
+  
+
+
+  
+
+
+  
+
+
+  <!-- Page-load splash: plays the locked CourtCheckAnimation once per session on dashboard entry -->
+  <div class="splash" id="splash" aria-hidden="true">
+    <video id="splashVideo" muted playsinline autoplay preload="auto">
+      <source src="../logo/CourtCheckAnimation.webm" type="video/webm">
+      <source src="../logo/CourtCheckAnimation.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <script>
+    (function () {
+      const splash = document.getElementById('splash');
+      const video = document.getElementById('splashVideo');
+      if (!splash || !video) return;
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let seen = false;
+      try { seen = sessionStorage.getItem('ccDashSplashSeen') === '1'; } catch (e) {}
+      if (reduce || seen) {
+        splash.classList.add('is-hidden');
+        document.body.classList.remove('splash-locked');
+        return;
+      }
+      try { sessionStorage.setItem('ccDashSplashSeen', '1'); } catch (e) {}
+      let dismissed = false;
+      function dismiss() {
+        if (dismissed) return;
+        dismissed = true;
+        splash.classList.add('is-hiding');
+        setTimeout(() => {
+          splash.classList.add('is-hidden');
+          document.body.classList.remove('splash-locked');
+        }, 640);
+      }
+      video.addEventListener('ended', dismiss);
+      setTimeout(dismiss, 4500);
+      setTimeout(() => {
+        if (!splash.classList.contains('is-hidden')) {
+          splash.classList.add('is-hidden');
+          document.body.classList.remove('splash-locked');
+        }
+      }, 6000);
+      splash.addEventListener('click', dismiss);
+    })();
+  </script>
+
+  
+
+
+  
+
+
+  <main class="container">
+
+    <!-- HERO -->
+    <section class="hero reveal reveal-1">
+      <span class="eyebrow">Friday · May 2, 2026</span>
+      <h1 class="display">Welcome, <span class="ital">Coach Le.</span></h1>
+      <p class="lede">CourtCheck reads your recordings the way an experienced assistant coach watches it back — every shot in context, every pattern in plain English. Upload your first recording below and we'll surface insights by morning.</p>
+      <div class="hero-cta-row">
+        <button class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+          Upload your first recording
+        </button>
+        <button class="btn btn-ghost">See a sample analysis →</button>
+      </div>
+    </section>
+
+    <!-- UPLOAD SPOTLIGHT -->
+    <div class="upload-spotlight reveal reveal-2">
+      <div class="copy">
+        <span class="eyebrow">Drop a recording</span>
+        <h2 style="margin-top: 14px;">Five minutes to your <span class="ital">first insight</span>.</h2>
+        <p>Upload an MP4 from this morning's recording. Within ~15 minutes you'll have shot patterns, court coverage, spacing analysis, and a coaching report — ready to read between practices.</p>
+        <div class="timing">
+          <span><span class="num">60</span>sec to upload</span>
+          <span><span class="num">15</span>min to analyze</span>
+          <span><span class="num">5</span>min to your first pattern</span>
+        </div>
+      </div>
+      <div class="stage" role="button" tabindex="0" aria-label="Upload a recording">
+        <div class="stage-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/>
+            <path d="M12 12v9"/>
+            <path d="m16 16-4-4-4 4"/>
+          </svg>
+        </div>
+        <div class="stage-text">
+          <div class="stage-label">Drop your recording</div>
+          <div class="stage-sub">or <span class="browse-link">browse files</span></div>
+        </div>
+        <div class="stage-types">MP4 · MOV · AVI · max 500 MB</div>
+      </div>
+    </div>
+
+    <!-- EMPTY PREVIEW CARDS -->
+    <section class="reveal reveal-3">
+      <div class="preview-head">
+        <h3>What you'll see <span class="ital">after the first recording</span>.</h3>
+        <p class="h3-sub">A glimpse of the dashboard. Upload to make it yours.</p>
+      </div>
+
+      <div class="grid-3">
+        <div class="empty-card">
+          <div class="icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.5.5 0 0 1-.96 0L9.24 2.18a.5.5 0 0 0-.96 0l-2.35 8.36A2 2 0 0 1 4 12H2"/></svg>
+          </div>
+          <h4>Patterns, in plain English.</h4>
+          <p>"Lin wins 71% of service games when she opens with a slice." We extract patterns from at least 2 recordings before surfacing them.</p>
+          <div class="post">Earned after first recording</div>
+        </div>
+        <div class="empty-card">
+          <div class="icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0Z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>
+          </div>
+          <h4>Shots, mapped to the court.</h4>
+          <p>Every bounce, every contact, every stroke type — overlaid on a court tile so you can see what film won't tell you in 90 minutes.</p>
+          <div class="empty-court">
+            <svg viewBox="0 0 27 39" preserveAspectRatio="none">
+              <rect x="1" y="1" width="25" height="37" fill="none" stroke="white" stroke-width="0.3" opacity="0.6"/>
+              <line x1="1" y1="18" x2="26" y2="18" stroke="white" stroke-width="0.25" opacity="0.5"/>
+              <line x1="13.5" y1="18" x2="13.5" y2="38" stroke="white" stroke-width="0.25" opacity="0.5"/>
+            </svg>
+          </div>
+        </div>
+        <div class="empty-card">
+          <div class="icon-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+          </div>
+          <h4>Spacing, called out.</h4>
+          <p>"Squeezed" or "long" — was contact tight or reaching? We flag the technical patterns that matter for Wednesday's drills.</p>
+          <div class="post">Earned after first recording</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="how-it-works reveal reveal-4">
+      <span class="eyebrow">How it works</span>
+      <div class="how-grid" style="margin-top: 18px;">
+        <div class="how-step">
+          <span class="step-num">i.</span>
+          <h5>Upload film</h5>
+          <p>MP4 from your camera, your phone, or your team's cloud. Up to 500 MB per recording.</p>
+        </div>
+        <div class="how-step">
+          <span class="step-num">ii.</span>
+          <h5>We watch it</h5>
+          <p>~15 min on average. You don't have to wait — we'll email when it's ready.</p>
+        </div>
+        <div class="how-step">
+          <span class="step-num">iii.</span>
+          <h5>Patterns surface</h5>
+          <p>Shot maps, spacing, court coverage, and a written coaching report. All in the dashboard.</p>
+        </div>
+        <div class="how-step">
+          <span class="step-num">iv.</span>
+          <h5>You coach better</h5>
+          <p>Drills get specific. Match prep gets sharper. Player conversations get backed by film.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLOSING -->
+    <section class="closing">
+      <h2 class="display">Drop your first recording.</h2>
+      <p>The dashboard fills in with every recording you upload. Patterns get sharper after the second. Spacing diagnostics get useful after the third.</p>
+      <button class="btn btn-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+        Upload a match
+      </button>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="container">
+      <span>CourtCheck · First-session view</span>
+      <span>v0.1 · brand mock</span>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      const toggle = document.getElementById('themeToggle');
+      const body = document.body;
+      const stored = localStorage.getItem('cc-theme');
+      if (stored === 'dark') body.classList.add('dark');
+      toggle.addEventListener('click', () => {
+        body.classList.toggle('dark');
+        localStorage.setItem('cc-theme', body.classList.contains('dark') ? 'dark' : 'light');
+      });
+    })();
+  </script>
+
+  <script>
+    // brand-mark hover-to-play splash animation
+    (function () {
+      const marks = document.querySelectorAll('.brand-mark');
+      marks.forEach(mark => {
+        const video = mark.querySelector('video');
+        if (!video) return;
+        mark.addEventListener('mouseenter', () => {
+          try { video.currentTime = 0; video.play(); } catch (e) {}
+        });
+        mark.addEventListener('mouseleave', () => {
+          video.pause();
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>

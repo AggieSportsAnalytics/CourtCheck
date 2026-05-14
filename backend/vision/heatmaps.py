@@ -7,6 +7,8 @@ from backend.vision.drawing import STROKE_COLORS_BGR
 _DEFAULT_BOUNCE_COLOR_BGR: tuple[int, int, int] = (0, 220, 200)   # teal (unknown)
 _DEFAULT_SHOT_COLOR_BGR:   tuple[int, int, int] = (40, 180, 255)   # amber (no label)
 _OUT_COLOR_BGR:            tuple[int, int, int] = (0, 0, 220)      # red  (out of bounds)
+_FAR_SIDE_COLOR_BGR:       tuple[int, int, int] = (128, 128, 128)  # gray (far-side player, no classification)
+_NET_Y:                    int                  = 1748              # net Y in court-reference coordinates
 
 
 def build_heatmap_court_background():
@@ -111,7 +113,10 @@ def generate_minimap_heatmaps(
             continue
 
         label = _lookup_stroke_label(i, frame_stroke_labels)
-        color_bgr = STROKE_COLORS_BGR.get(label, _DEFAULT_BOUNCE_COLOR_BGR) if label else _DEFAULT_BOUNCE_COLOR_BGR
+        if yy < _NET_Y:
+            color_bgr = _FAR_SIDE_COLOR_BGR
+        else:
+            color_bgr = STROKE_COLORS_BGR.get(label, _DEFAULT_BOUNCE_COLOR_BGR) if label else _DEFAULT_BOUNCE_COLOR_BGR
         is_out = (in_bounds_bounces is not None) and (i not in in_bounds_bounces)
         _draw_bounce_dot(bounce_overlay, xx, yy, color_bgr, is_out)
 
@@ -174,7 +179,10 @@ def generate_player_shot_dot_map(
             label = frame_labels.get(track_id)
             if label is None:
                 label = _lookup_stroke_label(frame_idx, frame_stroke_labels)
-            color_bgr = STROKE_COLORS_BGR.get(label, _DEFAULT_SHOT_COLOR_BGR) if label else _DEFAULT_SHOT_COLOR_BGR
+            if cy < _NET_Y:
+                color_bgr = _FAR_SIDE_COLOR_BGR
+            else:
+                color_bgr = STROKE_COLORS_BGR.get(label, _DEFAULT_SHOT_COLOR_BGR) if label else _DEFAULT_SHOT_COLOR_BGR
 
             cv2.circle(overlay, (cx, cy), 32, color_bgr, -1, cv2.LINE_AA)       # filled dot
 

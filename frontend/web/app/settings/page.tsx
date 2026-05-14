@@ -1,237 +1,254 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { createBrowserClient } from "@supabase/ssr";
-import Link from "next/link";
+import { useState } from 'react'
+import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
+import { createBrowserClient } from '@supabase/ssr'
+import { ThemeToggle } from '@/components/brand/ThemeToggle'
+
+type SaveMsg = { kind: 'ok' | 'err'; text: string }
 
 export default function SettingsPage() {
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useAuth()
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
 
-  const currentName = user?.user_metadata?.name || user?.email?.split("@")[0] || "";
-  const email = user?.email || "";
+  const currentName = user?.user_metadata?.name || user?.email?.split('@')[0] || ''
+  const email = user?.email || ''
+  const role = user?.user_metadata?.role || 'Coach'
 
-  const [displayName, setDisplayName] = useState(currentName);
-  const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
-  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [displayName, setDisplayName] = useState(currentName)
+  const [saving, setSaving] = useState(false)
+  const [saveMsg, setSaveMsg] = useState<SaveMsg | null>(null)
+  const [confirmSignOut, setConfirmSignOut] = useState(false)
 
-  const handleSaveName = async () => {
-    if (!displayName.trim() || displayName.trim() === currentName) return;
-    setSaving(true);
-    setSaveMsg(null);
+  async function handleSaveName() {
+    const next = displayName.trim()
+    if (!next || next === currentName) return
+    setSaving(true)
+    setSaveMsg(null)
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { name: displayName.trim() },
-      });
-      if (error) throw error;
-      setSaveMsg({ type: "ok", text: "Display name updated." });
+      const { error } = await supabase.auth.updateUser({ data: { name: next } })
+      if (error) throw error
+      setSaveMsg({ kind: 'ok', text: 'Display name updated.' })
     } catch (e) {
-      setSaveMsg({ type: "err", text: (e as Error).message });
+      setSaveMsg({ kind: 'err', text: (e as Error).message })
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const initials = currentName
-    .split(" ")
+    .split(' ')
     .filter(Boolean)
     .slice(0, 2)
     .map((p: string) => p[0]?.toUpperCase())
-    .join("");
-
-  const cardStyle = {
-    background: 'rgba(255,255,255,0.02)',
-    border: '1px solid rgba(255,255,255,0.07)',
-  } as React.CSSProperties;
-
-  const dividerStyle = {
-    borderTop: '1px solid rgba(255,255,255,0.07)',
-  } as React.CSSProperties;
+    .join('')
 
   return (
-    <div className="px-6 py-8 max-w-2xl">
-      {/* Page header */}
-      <div className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#B4F000' }}>
+    <div className="container mx-auto max-w-[760px] px-6 md:px-14 py-10">
+      {/* Header */}
+      <section className="pt-6 pb-7">
+        <span
+          aria-hidden
+          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court dark:text-court-light"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-clay dark:bg-clay-soft" />
           Account
+        </span>
+        <h1
+          className="text-ink mt-4"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 500,
+            letterSpacing: '-0.022em',
+            lineHeight: 1.15,
+            fontSize: 'clamp(40px, 4.8vw, 64px)',
+            paddingTop: '0.08em',
+          }}
+        >
+          Your <em>settings</em>.
+        </h1>
+        <p className="text-ink-soft text-base mt-3">
+          Manage your account, display, and signed-in sessions.
         </p>
-        <h1 className="text-3xl font-black tracking-tight text-white">Settings</h1>
-        <p className="text-sm mt-1" style={{ color: '#5A5A66' }}>Manage your account preferences</p>
-      </div>
+      </section>
 
       {/* Profile section */}
-      <div className="rounded-2xl mb-4 overflow-hidden" style={cardStyle}>
-        <div className="px-5 py-4" style={dividerStyle}>
-          <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#5A5A66' }}>Profile</h3>
-        </div>
-
-        {/* Avatar preview */}
-        <div className="px-5 py-4 flex items-center gap-4" style={dividerStyle}>
-          <div
-            className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-            style={{ background: '#B4F000', color: '#07070A' }}
+      <section className="cc-card p-7 mb-6">
+        <header className="flex items-center justify-between gap-4 mb-5">
+          <h2 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court dark:text-court-light">
+            Profile
+          </h2>
+          <Link
+            href="/profile"
+            className="font-mono uppercase tracking-[0.14em] text-[0.66rem] text-ink-mute hover:text-ink transition-colors"
           >
-            {initials || "P"}
+            View profile →
+          </Link>
+        </header>
+
+        {/* Identity row */}
+        <div className="flex items-center gap-4 pb-5 border-b border-line-soft">
+          <div
+            className="w-14 h-14 rounded-full flex items-center justify-center text-cream flex-shrink-0"
+            style={{
+              background: 'var(--color-court)',
+              fontFamily: 'var(--font-display)',
+              fontWeight: 500,
+              fontSize: '1.4rem',
+            }}
+          >
+            {initials || 'P'}
           </div>
-          <div>
-            <p className="text-sm text-white font-medium">{currentName}</p>
-            <p className="text-xs mt-0.5" style={{ color: '#5A5A66' }}>{email}</p>
+          <div className="min-w-0">
+            <p
+              className="text-ink"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 500,
+                fontSize: '1.25rem',
+                letterSpacing: '-0.012em',
+                lineHeight: 1.25,
+                paddingTop: '0.06em',
+              }}
+            >
+              {currentName}
+            </p>
+            <p className="text-ink-mute font-mono text-[0.72rem] tracking-[0.04em] mt-0.5">
+              {email}
+            </p>
+            <p className="text-court dark:text-court-light font-mono uppercase tracking-[0.14em] text-[0.62rem] mt-1">
+              {role}
+            </p>
           </div>
         </div>
 
         {/* Display name */}
-        <div className="px-5 py-4" style={dividerStyle}>
-          <label className="block text-xs font-medium mb-1.5" style={{ color: '#5A5A66' }}>
-            Display Name
+        <div className="pt-5 pb-5 border-b border-line-soft">
+          <label
+            htmlFor="displayName"
+            className="block font-mono uppercase tracking-[0.14em] text-[0.66rem] text-ink-mute mb-2"
+          >
+            Display name
           </label>
           <div className="flex gap-2">
             <input
+              id="displayName"
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your name"
-              className="flex-1 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none transition-colors"
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.1)',
-              }}
-              onFocus={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(180,240,0,0.4)'; }}
-              onBlur={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)'; }}
+              className="flex-1 rounded-md px-3 py-2.5 text-sm bg-cream text-ink placeholder:text-ink-mute border border-line focus:border-court focus:outline-none focus:ring-1 focus:ring-court transition-colors"
             />
             <button
+              type="button"
               onClick={handleSaveName}
               disabled={saving || !displayName.trim() || displayName.trim() === currentName}
-              className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{
-                background: 'rgba(180,240,0,0.1)',
-                border: '1px solid rgba(180,240,0,0.2)',
-                color: '#B4F000',
-              }}
+              className="px-4 py-2.5 rounded-md text-sm font-medium bg-court text-cream hover:-translate-y-px transition-transform disabled:opacity-50 disabled:translate-y-0 disabled:cursor-not-allowed dark:bg-court-deep dark:hover:bg-court"
             >
-              {saving ? "Saving…" : "Save"}
+              {saving ? 'Saving.' : 'Save'}
             </button>
           </div>
           {saveMsg && (
-            <p className={`text-xs mt-1.5 ${saveMsg.type === "ok" ? "text-green-400" : "text-red-400"}`}>
+            <p
+              className={`text-xs mt-2 ${
+                saveMsg.kind === 'ok'
+                  ? 'text-court dark:text-court-light'
+                  : 'text-clay dark:text-clay-soft'
+              }`}
+            >
               {saveMsg.text}
             </p>
           )}
         </div>
 
-        {/* Email (read only) */}
-        <div className="px-5 pb-5" style={dividerStyle}>
-          <label className="block text-xs font-medium mb-1.5" style={{ color: '#5A5A66' }}>
-            Email <span style={{ color: '#3A3A44' }}>(read only)</span>
+        {/* Email (read-only) */}
+        <div className="pt-5">
+          <label
+            htmlFor="email"
+            className="block font-mono uppercase tracking-[0.14em] text-[0.66rem] text-ink-mute mb-2"
+          >
+            Email <span className="text-ink-mute/70">(read only)</span>
           </label>
           <input
+            id="email"
             type="email"
             value={email}
             readOnly
-            className="w-full rounded-lg px-3 py-2 text-sm cursor-not-allowed"
-            style={{
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px solid rgba(255,255,255,0.06)',
-              color: '#5A5A66',
-            }}
+            className="w-full rounded-md px-3 py-2.5 text-sm bg-shade text-ink-soft border border-line cursor-not-allowed"
           />
+          <p className="text-ink-mute text-xs mt-2">
+            Need to change this? <em>Contact support</em>.
+          </p>
         </div>
-      </div>
+      </section>
 
-      {/* App section */}
-      <div className="rounded-2xl mb-4 overflow-hidden" style={cardStyle}>
-        <div className="px-5 py-4" style={dividerStyle}>
-          <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#5A5A66' }}>App</h3>
-        </div>
-        <div className="px-5 py-4 flex items-center justify-between">
-          <div>
-            <p className="text-sm text-white">Dashboard</p>
-            <p className="text-xs mt-0.5" style={{ color: '#5A5A66' }}>Return to your analytics overview</p>
+      {/* Appearance */}
+      <section className="cc-card p-7 mb-6">
+        <h2 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court dark:text-court-light mb-5">
+          Appearance
+        </h2>
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-ink text-base font-medium">Theme</p>
+            <p className="text-ink-soft text-sm mt-0.5">
+              Cream paper by day, stadium at night. Tap to flip.
+            </p>
           </div>
-          <Link
-            href="/"
-            className="text-xs font-semibold transition-colors"
-            style={{ color: '#B4F000' }}
-          >
-            Go to dashboard →
-          </Link>
+          <ThemeToggle />
         </div>
-        <div className="px-5 py-4 flex items-center justify-between" style={dividerStyle}>
-          <div>
-            <p className="text-sm text-white">Profile</p>
-            <p className="text-xs mt-0.5" style={{ color: '#5A5A66' }}>View your player profile and career stats</p>
-          </div>
-          <Link
-            href="/profile"
-            className="text-xs font-semibold transition-colors"
-            style={{ color: '#B4F000' }}
-          >
-            View profile →
-          </Link>
-        </div>
-      </div>
+      </section>
 
-      {/* Account section */}
-      <div className="rounded-2xl overflow-hidden" style={cardStyle}>
-        <div className="px-5 py-4" style={dividerStyle}>
-          <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#5A5A66' }}>Account</h3>
-        </div>
+      {/* Account */}
+      <section className="cc-card p-7">
+        <h2 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court dark:text-court-light mb-5">
+          Account
+        </h2>
 
         {!confirmSignOut ? (
-          <div className="px-5 py-4 flex items-center justify-between">
-            <div>
-              <p className="text-sm text-white">Sign Out</p>
-              <p className="text-xs mt-0.5" style={{ color: '#5A5A66' }}>Sign out of your account on this device</p>
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-ink text-base font-medium">Sign out</p>
+              <p className="text-ink-soft text-sm mt-0.5">
+                End your session on this device.
+              </p>
             </div>
             <button
+              type="button"
               onClick={() => setConfirmSignOut(true)}
-              className="text-xs rounded-lg px-3 py-1.5 transition-colors"
-              style={{
-                color: '#F87171',
-                border: '1px solid rgba(239,68,68,0.2)',
-                background: 'transparent',
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.06)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+              className="px-4 py-2.5 rounded-md text-sm font-medium border border-clay text-clay hover:bg-clay hover:text-cream transition-colors dark:border-clay-soft dark:text-clay-soft dark:hover:bg-clay-soft dark:hover:text-cream"
             >
-              Sign Out
+              Sign out
             </button>
           </div>
         ) : (
-          <div className="px-5 py-4">
-            <p className="text-sm text-white mb-3">Are you sure you want to sign out?</p>
-            <div className="flex gap-2">
+          <div>
+            <p className="text-ink text-base mb-4">
+              Sign out of CourtCheck on this device?
+            </p>
+            <div className="flex flex-wrap gap-2">
               <button
-                onClick={signOut}
-                className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                style={{
-                  background: 'rgba(239,68,68,0.08)',
-                  border: '1px solid rgba(239,68,68,0.2)',
-                  color: '#F87171',
-                }}
+                type="button"
+                onClick={() => signOut()}
+                className="px-4 py-2.5 rounded-md text-sm font-medium bg-clay text-cream hover:-translate-y-px transition-transform"
               >
-                Yes, sign out
+                Yes, sign me out
               </button>
               <button
+                type="button"
                 onClick={() => setConfirmSignOut(false)}
-                className="px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#9CA3AF',
-                }}
+                className="px-4 py-2.5 rounded-md text-sm font-medium border border-line text-ink-soft hover:border-ink hover:text-ink transition-colors"
               >
                 Cancel
               </button>
             </div>
           </div>
         )}
-      </div>
+      </section>
     </div>
-  );
+  )
 }

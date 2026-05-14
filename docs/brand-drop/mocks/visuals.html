@@ -1,0 +1,1943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CourtCheck · Visuals</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream:        #F4F0E6;
+      --paper:        #FBF8F1;
+      --surface:      #FFFFFF;
+      --shade:        #ECE6D5;
+      --line:         #DDD7C5;
+      --line-soft:    #EAE4D2;
+      --ink:          #1A1815;
+      --ink-soft:     #43403A;
+      --ink-mute:     #837F77;
+      --court:        #2E5341;
+      --court-deep:   #1F3D2E;
+      --court-light:  #6E8C7C;
+      --clay:         #B05B36;
+      --clay-soft:    #D08866;
+      --lime:         #BFC846;
+      --lime-soft:    #E1E7A6;
+      --plum:         #7B4E6E;
+      --amber:        #C8923A;
+      --slate:        #5C6B7A;
+      --bg-grad-1:    rgba(176,91,54,0.06);
+      --bg-grad-2:    rgba(46,83,65,0.07);
+      --court-surface: #A85E3A;  /* slightly desaturated clay so dots pop */
+      --radius:       2px;
+      --radius-lg:    14px;
+      --shadow:       0 1px 0 rgba(26,24,21,0.04), 0 18px 48px -24px rgba(26,24,21,0.16);
+      --shadow-hover: 0 1px 0 rgba(26,24,21,0.04), 0 24px 60px -22px rgba(26,24,21,0.22);
+
+      --ease-out:     cubic-bezier(0.2, 0.8, 0.2, 1);
+      --ease-in-out:  cubic-bezier(0.4, 0, 0.2, 1);
+      --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+      --dur-quick:    160ms;
+      --dur-base:     240ms;
+      --dur-reveal:   480ms;
+      --dur-hero:     800ms;
+      --dur-loop:     2400ms;
+    }
+
+    body.dark {
+      --cream:        #07080F;
+      --paper:        #1F2940;
+      --surface:      #2B374F;
+      --shade:        #11161F;
+      --line:         #2F3B52;
+      --line-soft:    #1E2735;
+      --ink:          #F4F0E6;
+      --ink-soft:     #A8B0C0;
+      --ink-mute:     #6B7388;
+      --court:        #6FA88B;
+      --court-deep:   #4A8268;
+      --court-light:  #9FC6B0;
+      --clay:         #E07A52;
+      --clay-soft:    #F0A07F;
+      --lime:         #DDE970;
+      --lime-soft:    #9BAD30;
+      --court-surface: #6B3A24;
+      --bg-grad-1:    rgba(176,91,54,0.08);
+      --bg-grad-2:    rgba(111,168,139,0.06);
+      --shadow:       0 1px 0 rgba(0,0,0,0.40), 0 24px 60px -28px rgba(0,0,0,0.60);
+      --shadow-hover: 0 1px 0 rgba(0,0,0,0.40), 0 28px 80px -28px rgba(0,0,0,0.70);
+      --plum:#B584A6; --amber:#DDB166; --slate:#889DB3;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: var(--cream); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.55;
+      letter-spacing: -0.005em;
+      -webkit-font-smoothing: antialiased;
+      background-image:
+        radial-gradient(1200px 600px at 92% -10%, var(--bg-grad-1), transparent 60%),
+        radial-gradient(900px 700px at -10% 110%, var(--bg-grad-2), transparent 65%);
+      background-attachment: fixed;
+      transition: background-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .display {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 72;
+      font-weight: 500;
+      letter-spacing: -0.022em;
+      line-height: 1.0;
+    }
+    .ital { color: var(--clay); font-style: italic; font-weight: 400; }
+    .num {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 72;
+      font-weight: 500;
+      font-feature-settings: 'tnum';
+    }
+    .mono {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--court);
+    }
+    .eyebrow::before {
+      content: ""; width: 6px; height: 6px;
+      background: var(--clay); border-radius: 50%;
+    }
+
+    .container { max-width: 1320px; margin: 0 auto; padding: 0 56px; }
+
+    .brand-mark { display: flex; align-items: center; gap: 12px; }
+    .brand-mark .logo { height: 56px; width: auto; display: block; }
+    .brand-mark .logo-dark { display: none; }
+    body.dark .brand-mark .logo-light { display: none; }
+    body.dark .brand-mark .logo-dark { display: block; }
+    .brand-mark .name {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 60;
+      font-weight: 500;
+      font-size: 1.25rem;
+      letter-spacing: -0.018em;
+    }
+    .theme-toggle {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--line); background: var(--paper);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--ink); padding: 0;
+      transition: background var(--dur-base) var(--ease-out),
+                  border-color var(--dur-base) var(--ease-out),
+                  transform var(--dur-base) var(--ease-out);
+    }
+    .theme-toggle:hover { transform: rotate(20deg); border-color: var(--ink); }
+    .theme-toggle svg { width: 16px; height: 16px; }
+    .theme-toggle .moon { display: block; }
+    .theme-toggle .sun  { display: none; }
+    body.dark .theme-toggle .moon { display: none; }
+    body.dark .theme-toggle .sun  { display: block; }
+
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--court); color: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Newsreader', serif;
+      font-weight: 500; font-size: 0.95rem;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .reveal { opacity: 0; transform: translateY(8px); animation: reveal-in var(--dur-reveal) var(--ease-out) forwards; }
+      .reveal-1 { animation-delay: 80ms; }
+      .reveal-2 { animation-delay: 160ms; }
+      .reveal-3 { animation-delay: 240ms; }
+      .reveal-4 { animation-delay: 320ms; }
+      .reveal-5 { animation-delay: 400ms; }
+    }
+    @keyframes reveal-in {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .page-head { padding: 56px 0 36px; }
+    .greeting {
+      display: flex; align-items: end; justify-content: space-between;
+      gap: 32px; margin-bottom: 8px;
+    }
+    .greeting h1 { font-size: clamp(40px, 4.8vw, 64px); }
+    .greeting .h1-meta { color: var(--ink-mute); margin-top: 14px; font-size: 0.95rem; }
+
+    .period-pills {
+      display: flex; gap: 4px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 100px;
+      padding: 4px;
+    }
+    .pill {
+      padding: 8px 16px;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--ink-mute);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      transition: background var(--dur-quick) var(--ease-out), color var(--dur-quick) var(--ease-out);
+    }
+    .pill:hover { color: var(--ink); }
+    .pill.active { background: var(--ink); color: var(--cream); }
+
+    .grid { display: grid; gap: 20px; }
+    .grid-12 { grid-template-columns: repeat(12, 1fr); }
+    .col-7 { grid-column: span 7; } .col-5 { grid-column: span 5; }
+    .col-4 { grid-column: span 4; } .col-6 { grid-column: span 6; }
+    .col-8 { grid-column: span 8; } .col-12 { grid-column: span 12; }
+    @media (max-width: 960px) {
+      .col-7, .col-5, .col-4, .col-6, .col-8 { grid-column: span 12; }
+    }
+
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      transition: transform var(--dur-base) var(--ease-out),
+                  box-shadow var(--dur-base) var(--ease-out),
+                  border-color var(--dur-base) var(--ease-out);
+    }
+    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+    .card .card-head {
+      display: flex; justify-content: space-between; align-items: start;
+      margin-bottom: 20px;
+    }
+    .card h3 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 60;
+      font-weight: 500;
+      font-size: 1.4rem;
+      letter-spacing: -0.014em;
+      margin-bottom: 6px;
+    }
+    .card .card-sub { color: var(--ink-soft); font-size: 0.95rem; }
+    .card-foot {
+      margin-top: 20px; padding-top: 16px;
+      border-top: 1px solid var(--line-soft);
+      display: flex; justify-content: space-between;
+      font-size: 0.85rem; color: var(--ink-mute);
+    }
+    .pos { color: var(--court); font-weight: 500; }
+    .neg { color: var(--clay); font-weight: 500; }
+    body.dark .pos { color: var(--court-light); }
+
+    .hero-stat-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 36px;
+      display: grid; grid-template-columns: 1fr; gap: 24px;
+      transition: box-shadow var(--dur-base) var(--ease-out);
+    }
+    .hero-stat-card .head {
+      display: flex; justify-content: space-between; align-items: start;
+    }
+    .hero-stat-card h3 {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1.5rem;
+      letter-spacing: -0.015em;
+      max-width: 24ch;
+      line-height: 1.2;
+    }
+    .hero-stat-card .big-num {
+      font-size: clamp(86px, 10vw, 144px);
+      line-height: 1.0;
+      letter-spacing: -0.03em;
+    }
+    .hero-stat-card .big-num .unit {
+      font-size: 0.36em;
+      color: var(--ink-mute);
+      margin-left: 6px;
+    }
+    .hero-stat-card .label { font-size: 1rem; color: var(--ink-soft); margin-bottom: 8px; }
+    .hero-stat-card .compare { font-size: 0.95rem; font-weight: 500; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 22px;
+      border-radius: 100px;
+      font-weight: 500;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: none;
+      transition: transform var(--dur-quick) var(--ease-spring),
+                  background var(--dur-base) var(--ease-out);
+    }
+    .btn-primary { background: var(--ink); color: var(--cream); }
+    body.dark .btn-primary { background: var(--court-deep); color: var(--cream); }
+    .btn-primary:hover { transform: translateY(-1px); }
+    .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    .btn-ghost:hover { border-color: var(--ink); }
+
+    .tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 11px;
+      border-radius: 100px;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+    .tag.green { background: rgba(46,83,65,0.10); color: var(--court); }
+    .tag.clay  { background: rgba(176,91,54,0.10); color: var(--clay); }
+    .tag.lime  { background: rgba(191,200,70,0.18); color: #6E7522; }
+    body.dark .tag.green { background: rgba(176,91,54,0.16); color: var(--court-light); }
+    body.dark .tag.clay  { background: rgba(224,122,82,0.15); color: var(--clay-soft); }
+    body.dark .tag.lime  { background: rgba(221,233,112,0.15); color: var(--lime); }
+    .tag.dot::before {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor;
+    }
+
+    .court-tile {
+      width: 100%;
+      aspect-ratio: 27 / 39;  /* half-court vertical — real court ratio */
+      background: var(--court-surface);
+      border-radius: 8px;
+      overflow: hidden;
+      display: block;
+      max-width: 360px;
+      margin: 0 auto;
+    }
+    .court-tile svg { display: block; width: 100%; height: 100%; }
+    .court-half-label {
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-mute);
+      margin-top: 10px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: 110px 1fr 60px;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 0;
+    }
+    .bar-row .bar-label { font-size: 0.92rem; color: var(--ink-soft); font-weight: 500; }
+    .bar-row .bar-track {
+      height: 22px;
+      background: var(--shade);
+      border-radius: 100px;
+      overflow: hidden;
+      position: relative;
+    }
+    body.dark .bar-row .bar-track { background: var(--surface); }
+    .bar-row .bar-fill {
+      height: 100%;
+      border-radius: 100px;
+      width: 0;
+      transform-origin: left center;
+      /* Smooth ease-out-quart: no overshoot, satisfying settle at the end */
+      transition: width 760ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .bar-row .bar-value {
+      text-align: right;
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1rem;
+      color: var(--ink);
+    }
+
+    .match-list { display: flex; flex-direction: column; }
+    .match-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      gap: 20px;
+      align-items: center;
+      padding: 18px 12px;
+      border-bottom: 1px solid var(--line-soft);
+      cursor: pointer;
+      transition: background var(--dur-quick) var(--ease-out);
+      border-radius: 8px;
+    }
+    .match-row:hover { background: var(--shade); }
+    body.dark .match-row:hover { background: var(--surface); }
+    .match-row:last-child { border-bottom: none; }
+    .match-row .match-meta { display: flex; flex-direction: column; gap: 2px; }
+    .match-row .match-title {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1.05rem;
+      letter-spacing: -0.01em;
+    }
+    .match-row .match-sub { font-size: 0.85rem; color: var(--ink-mute); }
+    .match-row .match-score {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1.1rem;
+      letter-spacing: -0.01em;
+      color: var(--court);
+    }
+    body.dark .match-row .match-score { color: var(--court-light); }
+    .match-row .match-score.lost { color: var(--clay); }
+    .match-row .arrow {
+      color: var(--ink-mute);
+      transition: transform var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+    }
+    .match-row:hover .arrow { transform: translateX(4px); color: var(--ink); }
+
+    .insight {
+      padding: 20px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      margin-bottom: 12px;
+      transition: transform var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out);
+    }
+    .insight:hover { transform: translateY(-1px); border-color: var(--ink-mute); }
+    .insight .insight-head {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .insight .insight-text {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1.1rem;
+      letter-spacing: -0.012em;
+      line-height: 1.35;
+    }
+    .insight .insight-text .num { color: var(--clay); }
+    body.dark .insight .insight-text .num { color: var(--clay-soft); }
+
+    .section { padding: 28px 0 56px; }
+    .section + .section { border-top: 1px solid var(--line-soft); padding-top: 56px; }
+    .section h2 {
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-size: 1.6rem;
+      letter-spacing: -0.014em;
+      margin-bottom: 4px;
+    }
+    .section .h2-sub { color: var(--ink-mute); font-size: 0.95rem; margin-bottom: 24px; }
+
+    /* Court overlay primitives — opacity is owned by JS (IntersectionObserver-driven).
+       No keyframe animations here so JS-set opacity values aren't overridden. */
+    .shot-dot, .heatmap-zone, .spacing-line, .spacing-endpoint {
+      transition: opacity var(--dur-reveal) var(--ease-out);
+    }
+    .shot-dot.dim, .spacing-line.dim, .spacing-endpoint.dim {
+      opacity: 0.10 !important;
+    }
+
+    /* === Interactive legend === */
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .legend-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px 7px 12px;
+      border-radius: 100px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--ink-soft);
+      transition: background var(--dur-base) var(--ease-out),
+                  border-color var(--dur-base) var(--ease-out),
+                  color var(--dur-base) var(--ease-out),
+                  transform var(--dur-quick) var(--ease-out);
+      user-select: none;
+    }
+    .legend-chip:hover {
+      border-color: var(--ink-mute);
+      transform: translateY(-1px);
+    }
+    .legend-chip.active {
+      border-color: var(--ink);
+      color: var(--ink);
+      background: var(--cream);
+    }
+    body.dark .legend-chip {
+      background: var(--paper);
+      border-color: var(--line);
+    }
+    body.dark .legend-chip.active {
+      background: var(--surface);
+      border-color: var(--ink-soft);
+      color: var(--ink);
+    }
+    .legend-chip .swatch {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .legend-chip .count {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--ink-mute);
+      margin-left: 2px;
+    }
+    .legend-chip.muted { opacity: 0.45; }
+    .legend-chip.muted:hover { opacity: 1; }
+
+    /* === Coaching insight callout (under court visualizations) === */
+    .coaching-insight {
+      margin-top: 16px;
+      padding: 14px 18px;
+      background: var(--shade);
+      border-radius: 12px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      color: var(--ink-soft);
+    }
+    .coaching-insight strong {
+      color: var(--ink);
+      font-family: 'Newsreader', serif;
+      font-weight: 500;
+      font-feature-settings: 'tnum';
+      letter-spacing: -0.005em;
+    }
+    .coaching-insight .insight-arrow {
+      color: var(--clay);
+      font-weight: 600;
+      flex-shrink: 0;
+      font-family: 'Newsreader', serif;
+      font-style: italic;
+    }
+    body.dark .coaching-insight { background: var(--paper); }
+    body.dark .coaching-insight .insight-arrow { color: var(--clay-soft); }
+
+    /* === Quality legend (color key for spacing visualization) === */
+    /* Mini-lines mirror the chart's visual language; lengths reinforce squeezed/ideal/long. */
+    .quality-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 22px;
+      padding: 14px 0 10px;
+      margin-top: 14px;
+      border-top: 1px solid var(--line-soft);
+      font-size: 0.82rem;
+      color: var(--ink-soft);
+    }
+    .quality-legend .qkey {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 500;
+    }
+    .quality-legend .qline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+    }
+    .quality-legend .qline svg { display: block; }
+
+    /* === 71% tile hover + spacing legend === */
+
+    /* Hero stat tile: mirror .card hover (lift + shadow + border shift) so the 71% tile
+       feels of-a-piece with the smaller stat cards next to it. */
+    .hero-stat-card {
+      transition: transform 200ms var(--ease-out),
+                  box-shadow 200ms var(--ease-out),
+                  border-color 200ms var(--ease-out);
+    }
+    .hero-stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+      border-color: var(--ink-mute);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hero-stat-card,
+      .hero-stat-card:hover {
+        transition: none;
+        transform: none;
+      }
+    }
+
+    /* Player vs ball legend: which dot is which on the spacing viz.
+       Placed inside the spacing card, just below the quality (squeezed/ideal/long) legend
+       so all keys for the viz sit together. Eyebrow-style typography keeps it unobtrusive. */
+    .marker-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+      padding: 10px 0 0;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+    .marker-legend .mkey {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .marker-legend .mswatch {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: inline-block;
+    }
+    .marker-legend .mswatch.player {
+      background: var(--paper);
+      border: 1.2px solid var(--ink-soft);
+    }
+    .marker-legend .mswatch.ball {
+      background: var(--lime);
+      border: 1.2px solid var(--ink-soft);
+    }
+
+    /* === BRAND-MARK HOVER VIDEO === */
+    .brand-mark { position: relative; }
+    .brand-mark .logo-video {
+      display: none;
+      height: 56px;
+      width: auto;
+      background: transparent;
+    }
+    body.dark .brand-mark .logo-video {
+      filter: invert(1) hue-rotate(180deg);
+    }
+    .brand-mark:hover .logo-light,
+    .brand-mark:hover .logo-dark { display: none; }
+    .brand-mark:hover .logo-video { display: block; }
+    body.dark .brand-mark:hover .logo-light,
+    body.dark .brand-mark:hover .logo-dark { display: none; }
+    body.dark .brand-mark:hover .logo-video { display: block; }
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    /* === APP SIDEBAR (in-product nav; replaces the top bar on internal routes) === */
+    body { padding-left: 200px; transition: padding-left 220ms var(--ease-out); }
+    .app-sidebar {
+      position: fixed; top: 0; left: 0;
+      width: 200px; height: 100vh;
+      background: var(--paper);
+      border-right: 1px solid var(--line-soft);
+      display: flex; flex-direction: column;
+      padding: 22px 14px;
+      z-index: 50;
+      box-sizing: border-box;
+      transition: width 220ms var(--ease-out), padding 220ms var(--ease-out);
+    }
+    .app-sidebar .sidebar-brand {
+      position: relative;
+      display: flex; justify-content: center; align-items: center;
+      min-height: 76px;
+      padding: 8px 4px 16px;
+      margin-bottom: 10px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    /* Logo fills the sidebar width and scales tall; max-height caps growth at ~64px */
+    .app-sidebar .sidebar-brand .logo {
+      width: 100%; height: auto;
+      max-width: 100%; max-height: 64px;
+      display: block;
+      object-fit: contain;
+    }
+    .app-sidebar .sidebar-brand .logo-dark { display: none; }
+    .app-sidebar .sidebar-brand .logo-video {
+      display: none;
+      width: 100%; height: auto; max-height: 64px;
+      object-fit: contain; background: transparent;
+    }
+    /* Checkmark-only WebM — shown when sidebar is collapsed (no wordmark room) */
+    .app-sidebar .sidebar-brand .logo-checkmark {
+      display: none;
+      width: auto; height: auto;
+      max-width: 100%; max-height: 48px;
+      object-fit: contain; background: transparent;
+    }
+    body.dark .app-sidebar .sidebar-brand .logo-light { display: none; }
+    body.dark .app-sidebar .sidebar-brand .logo-dark { display: block; }
+    body.dark .app-sidebar .sidebar-brand .logo-video { filter: invert(1) hue-rotate(180deg); }
+    body.dark .app-sidebar .sidebar-brand .logo-checkmark { filter: invert(1) hue-rotate(180deg); }
+    .app-sidebar .sidebar-brand:hover .logo-light,
+    .app-sidebar .sidebar-brand:hover .logo-dark { display: none; }
+    .app-sidebar .sidebar-brand:hover .logo-video { display: block; }
+    body.dark .app-sidebar .sidebar-brand:hover .logo-light,
+    body.dark .app-sidebar .sidebar-brand:hover .logo-dark { display: none; }
+    body.dark .app-sidebar .sidebar-brand:hover .logo-video { display: block; }
+    .app-sidebar .sidebar-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .app-sidebar .sidebar-link {
+      position: relative;
+      display: flex; align-items: center; gap: 12px;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: var(--ink-soft);
+      font-size: 0.92rem; font-weight: 500;
+      transition: background var(--dur-quick) var(--ease-out),
+                  color var(--dur-quick) var(--ease-out);
+    }
+    .app-sidebar .sidebar-link svg { width: 18px; height: 18px; flex-shrink: 0; stroke: currentColor; }
+    .app-sidebar .sidebar-link:hover { background: var(--shade); color: var(--ink); }
+    .app-sidebar .sidebar-link:focus-visible { outline: 2px solid var(--court); outline-offset: 2px; }
+    .app-sidebar .sidebar-link.active { background: var(--shade); color: var(--ink); font-weight: 600; }
+    /* Active route accent rail — supplements color/weight so meaning isn't color-only */
+    .app-sidebar .sidebar-link.active::before {
+      content: ''; position: absolute; left: -14px; top: 8px; bottom: 8px;
+      width: 3px; border-radius: 0 3px 3px 0; background: var(--court);
+    }
+    body.dark .app-sidebar .sidebar-link.active::before { background: var(--court-light); }
+    body.dark .app-sidebar .sidebar-link:hover,
+    body.dark .app-sidebar .sidebar-link.active { background: var(--surface); }
+    .app-sidebar .sidebar-foot {
+      display: flex; align-items: center; justify-content: flex-start; gap: 10px;
+      padding: 14px 6px 4px;
+      border-top: 1px solid var(--line-soft);
+    }
+    /* Collapse toggle (chevron). Sits absolute in the top-right corner of the sidebar
+       so it doesn't crowd the brand-mark or the foot row. Stays in place when collapsed. */
+    .sidebar-collapse {
+      position: absolute; top: 14px; right: 8px;
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 1px solid var(--line); background: var(--paper);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--ink-mute); padding: 0;
+      z-index: 51;
+      transition: background var(--dur-base) var(--ease-out),
+                  border-color var(--dur-base) var(--ease-out),
+                  color var(--dur-base) var(--ease-out);
+    }
+    .sidebar-collapse:hover { border-color: var(--ink); color: var(--ink); }
+    .sidebar-collapse svg { width: 13px; height: 13px; transition: transform 220ms var(--ease-out); }
+    body.sidebar-collapsed .sidebar-collapse svg { transform: rotate(180deg); }
+
+    /* === COLLAPSED state — applied by user toggle OR by narrow viewport === */
+    body.sidebar-collapsed { padding-left: 72px; }
+    body.sidebar-collapsed .app-sidebar { width: 72px; padding: 22px 8px; }
+    /* Show ONLY the checkmark webm in collapsed mode (no room for the wordmark) */
+    body.sidebar-collapsed .app-sidebar .sidebar-brand {
+      min-height: 56px; padding: 4px 0 14px; margin-bottom: 8px;
+    }
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-light,
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-dark,
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-video { display: none; }
+    body.sidebar-collapsed .app-sidebar .sidebar-brand .logo-checkmark { display: block; }
+    body.sidebar-collapsed .app-sidebar .sidebar-brand:hover .logo-checkmark { display: block; }
+    body.sidebar-collapsed .app-sidebar .sidebar-link { justify-content: center; padding: 12px; }
+    body.sidebar-collapsed .app-sidebar .sidebar-link.active::before { left: -8px; }
+    body.sidebar-collapsed .app-sidebar .sidebar-label { display: none; }
+    body.sidebar-collapsed .app-sidebar .sidebar-foot { flex-direction: column; gap: 12px; padding: 14px 0 4px; }
+
+    @media (max-width: 1100px) {
+      body { padding-left: 72px; }
+      .app-sidebar { width: 72px; padding: 22px 8px; }
+      .app-sidebar .sidebar-brand { min-height: 56px; padding: 4px 0 14px; margin-bottom: 8px; }
+      .app-sidebar .sidebar-brand .logo-light,
+      .app-sidebar .sidebar-brand .logo-dark,
+      .app-sidebar .sidebar-brand .logo-video { display: none; }
+      .app-sidebar .sidebar-brand .logo-checkmark { display: block; }
+      .app-sidebar .sidebar-link { justify-content: center; padding: 12px; }
+      .app-sidebar .sidebar-link.active::before { left: -8px; }
+      .app-sidebar .sidebar-label { display: none; }
+      .app-sidebar .sidebar-foot { flex-direction: column; gap: 12px; padding: 14px 0 4px; }
+    }
+
+    /* === USER MENU (pops up from the avatar in sidebar-foot) === */
+    .user-menu-wrap { position: relative; }
+    button.avatar {
+      background: var(--court); color: var(--cream);
+      border: none; cursor: pointer; padding: 0;
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 0.95rem;
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform var(--dur-quick) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+    }
+    button.avatar:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+    button.avatar:focus-visible { outline: 2px solid var(--court); outline-offset: 2px; }
+    body.dark button.avatar { background: var(--court-deep); }
+
+    /* Menu pops UP from the avatar, left-aligned to the avatar (which sits next to the
+       night-mode toggle on the left side of the foot row). Stays clear of main content
+       on the right and grows upward into the sidebar. */
+    .user-menu {
+      position: absolute;
+      bottom: calc(100% + 12px);
+      left: 0;
+      width: 248px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      box-shadow: var(--shadow-hover);
+      padding: 6px;
+      z-index: 60;
+      opacity: 0; transform: translateY(8px); pointer-events: none;
+      transition: opacity var(--dur-quick) var(--ease-out), transform var(--dur-quick) var(--ease-out);
+    }
+    .user-menu.is-open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .user-menu-head {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 10px 12px;
+      min-width: 0;
+    }
+    .user-menu-head .user-menu-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--court); color: var(--cream);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Newsreader', serif; font-weight: 500; font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+    body.dark .user-menu-head .user-menu-avatar { background: var(--court-deep); }
+    .user-menu-head .user-menu-id { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+    .user-menu-head .user-menu-name {
+      font-family: 'Newsreader', serif; font-weight: 500;
+      font-size: 0.96rem; letter-spacing: -0.012em;
+      color: var(--ink); line-height: 1.1;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-menu-head .user-menu-email {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem; letter-spacing: 0.04em;
+      color: var(--ink-mute);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-menu-divider {
+      height: 1px; background: var(--line-soft); margin: 4px 0;
+    }
+    .user-menu-item {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; text-align: left;
+      padding: 9px 10px;
+      background: transparent; border: none;
+      border-radius: 8px;
+      font-family: inherit; font-size: 0.9rem; font-weight: 500;
+      color: var(--ink);
+      cursor: pointer;
+      transition: background var(--dur-quick) var(--ease-out);
+    }
+    .user-menu-item svg { width: 15px; height: 15px; stroke: currentColor; flex-shrink: 0; color: var(--ink-mute); }
+    .user-menu-item:hover { background: var(--shade); }
+    body.dark .user-menu-item:hover { background: var(--surface); }
+    .user-menu-item:hover svg { color: var(--ink); }
+    .user-menu-item-danger { color: var(--clay); }
+    .user-menu-item-danger svg { color: var(--clay); }
+    .user-menu-item-danger:hover { background: rgba(176,91,54,0.10); }
+    body.dark .user-menu-item-danger { color: var(--clay-soft); }
+    body.dark .user-menu-item-danger:hover { background: rgba(224,122,82,0.15); }
+    body.dark .user-menu-item-danger svg { color: var(--clay-soft); }
+
+    /* === END APP SIDEBAR === */
+  </style>
+</head>
+<body>
+
+  <!-- app sidebar (begin) -->
+  <aside class="app-sidebar" aria-label="Primary navigation">
+    <button class="sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar" aria-expanded="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <a class="brand-mark sidebar-brand" href="dashboard.html" aria-label="CourtCheck home">
+      <img class="logo logo-light" src="../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+      <img class="logo logo-dark" src="../logo/CourtCheckLogoDark.png" alt="CourtCheck">
+      <video class="logo logo-video" muted playsinline preload="metadata" aria-hidden="true"><source src="../logo/CourtCheckAnimation.webm" type="video/webm"><source src="../logo/CourtCheckAnimation.mp4" type="video/mp4"></video>
+      <video class="logo logo-checkmark" muted playsinline preload="metadata" aria-hidden="true"><source src="../logo/CourtCheckCheckmark.webm" type="video/webm"></video>
+    </a>
+    <div class="sidebar-nav" role="navigation">
+      <a class="sidebar-link" href="dashboard.html" title="Dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <span class="sidebar-label">Dashboard</span>
+      </a>
+      <a class="sidebar-link" href="players-list.html" title="Players">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span class="sidebar-label">Players</span>
+      </a>
+      <a class="sidebar-link" href="upload-flow.html" title="Upload video">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span class="sidebar-label">Upload video</span>
+      </a>
+      <a class="sidebar-link active" href="matches-list.html" title="Recordings" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 14h4M17 9h4M17 14h4"/></svg>
+        <span class="sidebar-label">Recordings</span>
+      </a>
+    </div>
+    <div class="sidebar-foot">
+      <div class="user-menu-wrap">
+        <button class="avatar" id="userMenuToggle" aria-label="Account menu" aria-haspopup="menu" aria-expanded="false">BL</button>
+        <div class="user-menu" id="userMenu" role="menu" aria-hidden="true">
+          <div class="user-menu-head">
+            <div class="user-menu-avatar">BL</div>
+            <div class="user-menu-id">
+              <span class="user-menu-name">Coach B. Le</span>
+              <span class="user-menu-email">brian@ucdavistennis.com</span>
+            </div>
+          </div>
+          <div class="user-menu-divider"></div>
+          <button class="user-menu-item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span>Account settings</span>
+          </button>
+          <button class="user-menu-item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Team settings</span>
+          </button>
+          <button class="user-menu-item" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>Help &amp; feedback</span>
+          </button>
+          <div class="user-menu-divider"></div>
+          <button class="user-menu-item user-menu-item-danger" role="menuitem">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span>Sign out</span>
+          </button>
+        </div>
+      </div>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+      </button>
+    </div>
+  </aside>
+  <script>
+    (function () {
+      const KEY = 'cc-sidebar-collapsed';
+      if (localStorage.getItem(KEY) === '1') document.body.classList.add('sidebar-collapsed');
+      const collapseBtn = document.getElementById('sidebarCollapse');
+      if (collapseBtn) {
+        collapseBtn.addEventListener('click', () => {
+          const collapsed = document.body.classList.toggle('sidebar-collapsed');
+          localStorage.setItem(KEY, collapsed ? '1' : '0');
+          collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+          collapseBtn.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+        });
+      }
+      // User menu — click avatar to toggle, click outside or Esc to close
+      const menuToggle = document.getElementById('userMenuToggle');
+      const menu = document.getElementById('userMenu');
+      if (menuToggle && menu) {
+        function closeMenu() {
+          menu.classList.remove('is-open');
+          menuToggle.setAttribute('aria-expanded', 'false');
+          menu.setAttribute('aria-hidden', 'true');
+        }
+        menuToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isOpen = menu.classList.toggle('is-open');
+          menuToggle.setAttribute('aria-expanded', String(isOpen));
+          menu.setAttribute('aria-hidden', String(!isOpen));
+        });
+        document.addEventListener('click', (e) => {
+          if (!menu.contains(e.target) && e.target !== menuToggle) closeMenu();
+        });
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') closeMenu();
+        });
+      }
+      // Checkmark webm (visible only when sidebar is collapsed): still at rest, plays on hover
+      const checkmark = document.querySelector('.app-sidebar .logo-checkmark');
+      if (checkmark) {
+        checkmark.pause();
+        try { checkmark.currentTime = 0; } catch (e) {}
+        const brand = checkmark.closest('.sidebar-brand');
+        if (brand) {
+          brand.addEventListener('mouseenter', () => {
+            try { checkmark.currentTime = 0; checkmark.play(); } catch (e) {}
+          });
+          brand.addEventListener('mouseleave', () => {
+            checkmark.pause();
+            try { checkmark.currentTime = 0; } catch (e) {}
+          });
+        }
+      }
+    })();
+  </script>
+  <!-- app sidebar (end) -->
+
+
+  
+
+
+  
+
+
+  
+
+
+  
+
+
+  
+
+  
+
+<div class="container">
+
+    <div class="page-head">
+      <div class="greeting">
+        <div class="reveal reveal-1">
+          <span class="eyebrow">Friday · May 2, 2026</span>
+          <h1 class="display" style="margin-top: 16px;">
+            Good evening, <span class="ital">Coach Le.</span>
+          </h1>
+          <div class="h1-meta">3 recordings processed this week. 1 player to keep an eye on.</div>
+        </div>
+        <div class="period-pills reveal reveal-2">
+          <button class="pill">Today</button>
+          <button class="pill active">This week</button>
+          <button class="pill">Season</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-12 reveal reveal-2" style="margin-bottom: 20px;">
+
+      <div class="hero-stat-card col-7">
+        <div class="head">
+          <div>
+            <span class="eyebrow">Latest recording · UCD vs Stanford</span>
+            <h3 style="margin-top: 14px;">M. Lin won serving when <span class="ital">opening with the slice</span>.</h3>
+          </div>
+          <span class="tag green dot">Pattern</span>
+        </div>
+        <div>
+          <div class="big-num num"><span data-count-to="71">0</span><span class="unit">%</span></div>
+          <div class="label">Win rate when first serve was a slice (n=24)</div>
+          <div class="compare pos">▲ +18 pts vs flat first serve</div>
+        </div>
+      </div>
+
+      <div class="col-5" style="display: grid; gap: 20px;">
+
+        <div class="card">
+          <div class="card-head">
+            <span class="eyebrow">First serve in</span>
+            <span class="tag clay dot">Watch</span>
+          </div>
+          <div class="num" style="font-size: 4.4rem; line-height: 1.0; letter-spacing: -0.025em;"><span data-count-to="58">0</span><span style="font-size:0.4em;color:var(--ink-mute);">%</span></div>
+          <div class="card-sub" style="margin-top: 4px;">Last 5 recordings</div>
+          <div class="card-foot">
+            <span class="neg">▼ 4.6 vs season avg</span>
+            <span class="mono">SET AVG</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <span class="eyebrow">Break points won</span>
+            <span class="tag green dot">On track</span>
+          </div>
+          <div class="num" style="font-size: 4.4rem; line-height: 1.0; letter-spacing: -0.025em;"><span data-count-to="64">0</span><span style="font-size:0.4em;color:var(--ink-mute);">%</span></div>
+          <div class="card-sub" style="margin-top: 4px;">9 of 14 this week</div>
+          <div class="card-foot">
+            <span class="pos">▲ 12 pts vs season avg</span>
+            <span class="mono">SEASON</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="grid grid-12 reveal reveal-3" style="margin-bottom: 20px;">
+
+      <div class="card col-4">
+        <div class="card-head">
+          <div>
+            <span class="eyebrow">Shot map · M. Lin · Stanford match</span>
+            <h3 style="margin-top: 12px;">Every bounce, by stroke.</h3>
+            <div class="card-sub">Tap a stroke to isolate. Hover for detail.</div>
+          </div>
+        </div>
+        <div class="court-tile" id="courtShotMap"></div>
+        <div class="court-half-label">Opponent's half · where shots land</div>
+        <div class="legend" id="shotMapLegend"></div>
+      </div>
+
+      <div class="card col-4">
+        <div class="card-head">
+          <div>
+            <span class="eyebrow">Spacing · M. Lin</span>
+            <h3 style="margin-top: 12px;">Are you reaching, or stepping in?</h3>
+            <div class="card-sub">Player → ball at contact. Length = distance.</div>
+          </div>
+        </div>
+        <div class="court-tile" id="courtSpacing"></div>
+        <div class="court-half-label">Your player's half · contact spacing</div>
+        <div class="quality-legend">
+          <span class="qkey">
+            <span class="qline">
+              <svg width="14" height="8" viewBox="0 0 14 8" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="2" cy="4" r="1.6" fill="white" stroke="var(--clay)" stroke-width="0.7"/>
+                <line x1="3" y1="4" x2="11" y2="4" stroke="var(--clay)" stroke-width="1.6" stroke-linecap="round"/>
+                <circle cx="12" cy="4" r="1.4" fill="var(--lime)" stroke="var(--clay)" stroke-width="0.7"/>
+              </svg>
+            </span>
+            Squeezed
+          </span>
+          <span class="qkey">
+            <span class="qline">
+              <svg width="26" height="8" viewBox="0 0 26 8" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="2" cy="4" r="1.6" fill="white" stroke="var(--court)" stroke-width="0.7"/>
+                <line x1="3" y1="4" x2="23" y2="4" stroke="var(--court)" stroke-width="1.6" stroke-linecap="round"/>
+                <circle cx="24" cy="4" r="1.4" fill="var(--lime)" stroke="var(--court)" stroke-width="0.7"/>
+              </svg>
+            </span>
+            Ideal
+          </span>
+          <span class="qkey">
+            <span class="qline">
+              <svg width="42" height="8" viewBox="0 0 42 8" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="2" cy="4" r="1.6" fill="white" stroke="var(--amber)" stroke-width="0.7"/>
+                <line x1="3" y1="4" x2="39" y2="4" stroke="var(--amber)" stroke-width="1.6" stroke-linecap="round"/>
+                <circle cx="40" cy="4" r="1.4" fill="var(--lime)" stroke="var(--amber)" stroke-width="0.7"/>
+              </svg>
+            </span>
+            Long (reaching)
+          </span>
+        </div>
+        <div class="marker-legend" aria-label="Marker key">
+          <span class="mkey"><span class="mswatch player" aria-hidden="true"></span>Player</span>
+          <span class="mkey"><span class="mswatch ball" aria-hidden="true"></span>Ball</span>
+        </div>
+        <div class="legend" id="spacingLegend"></div>
+        <div class="coaching-insight" id="spacingInsight">
+          <span class="insight-arrow">→</span>
+          <span><strong>23</strong> shots at ideal extension. <strong>8</strong> squeezed (too close to the ball). <strong>4</strong> reaching (too far). Step back a half-step on returns to clean up the squeezed shots.</span>
+        </div>
+      </div>
+
+      <div class="card col-4">
+        <div class="card-head">
+          <div>
+            <span class="eyebrow">Coverage · M. Lin</span>
+            <h3 style="margin-top: 12px;">Where you live on the court.</h3>
+            <div class="card-sub">Heat = total time at each position, full recording.</div>
+          </div>
+        </div>
+        <div class="court-tile" id="courtCoverage"></div>
+        <div class="court-half-label">Your player's half · time at position</div>
+        <div class="coaching-insight" style="margin-top: 32px;">
+          <span class="insight-arrow">→</span>
+          <span><strong>82%</strong> of your recording was within 2 feet of the baseline. Only <strong>9%</strong> inside the service boxes. Stepping in on second-serve returns could shorten points.</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="grid grid-12 reveal reveal-4" style="margin-bottom: 20px;">
+
+      <div class="card col-5">
+        <div class="card-head">
+          <div>
+            <span class="eyebrow">Shot mix · M. Lin</span>
+            <h3 style="margin-top: 12px;">How she played, season to date.</h3>
+            <div class="card-sub">Categorical — no shot is "better."</div>
+          </div>
+        </div>
+        <div id="shotBars" style="margin-top: 8px;"></div>
+      </div>
+
+      <div class="card col-7">
+        <div class="card-head">
+          <div>
+            <span class="eyebrow">Recent recordings</span>
+            <h3 style="margin-top: 12px;">Three recordings this week.</h3>
+            <div class="card-sub">Tap any recording for the full breakdown.</div>
+          </div>
+          <button class="btn btn-ghost" style="padding: 8px 14px; font-size: 0.85rem;">All recordings →</button>
+        </div>
+        <div class="match-list">
+          <div class="match-row">
+            <div class="avatar" style="background: var(--court);">ML</div>
+            <div class="match-meta">
+              <span class="match-title">M. Lin <span style="color:var(--ink-mute);">vs</span> D. Park</span>
+              <span class="match-sub">Stanford · Singles 1 · Apr 28</span>
+            </div>
+            <span class="match-score">6-3, 4-6, 7-5</span>
+            <span class="arrow">→</span>
+          </div>
+          <div class="match-row">
+            <div class="avatar" style="background: var(--clay);">JR</div>
+            <div class="match-meta">
+              <span class="match-title">J. Rivera <span style="color:var(--ink-mute);">vs</span> S. Cho</span>
+              <span class="match-sub">Cal · Singles 3 · Apr 26</span>
+            </div>
+            <span class="match-score lost">4-6, 5-7</span>
+            <span class="arrow">→</span>
+          </div>
+          <div class="match-row">
+            <div class="avatar" style="background: var(--plum);">AT</div>
+            <div class="match-meta">
+              <span class="match-title">A. Tran <span style="color:var(--ink-mute);">vs</span> R. Patel</span>
+              <span class="match-sub">UCLA · Singles 2 · Apr 24</span>
+            </div>
+            <span class="match-score">6-2, 6-4</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="section reveal reveal-5">
+      <h2>Patterns surfaced this week</h2>
+      <div class="h2-sub">Auto-detected from recordings. We surface only patterns observed across at least 2 recordings.</div>
+
+      <div class="insight">
+        <div class="insight-head">
+          <span class="eyebrow">Pattern · M. Lin</span>
+          <span class="tag green dot">High confidence</span>
+        </div>
+        <div class="insight-text">
+          When Lin opens a service game with a slice, she wins <span class="num">71%</span> of those games. When she opens with flat, only <span class="num">53%</span>.
+        </div>
+      </div>
+
+      <div class="insight">
+        <div class="insight-head">
+          <span class="eyebrow">Pattern · D. Park (opponent)</span>
+          <span class="tag clay dot">Watch</span>
+        </div>
+        <div class="insight-text">
+          Park returns <span class="num">64%</span> of second serves to the ad-side baseline corner. M. Lin's next match: shade returner toward ad on second serve.
+        </div>
+      </div>
+
+      <div class="insight">
+        <div class="insight-head">
+          <span class="eyebrow">Pattern · J. Rivera</span>
+          <span class="tag clay dot">Concern</span>
+        </div>
+        <div class="insight-text">
+          Rivera's first-serve % drops <span class="num">11 pts</span> after a long deuce-side rally. Pattern observed in 4 of last 5 matches. Worth a Wednesday drill.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // === Theme toggle ===
+    (function() {
+      const toggle = document.getElementById('themeToggle');
+      const body = document.body;
+      const stored = localStorage.getItem('cc-theme');
+      if (stored === 'dark') body.classList.add('dark');
+      toggle.addEventListener('click', () => {
+        body.classList.toggle('dark');
+        localStorage.setItem('cc-theme', body.classList.contains('dark') ? 'dark' : 'light');
+      });
+    })();
+
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const NS = 'http://www.w3.org/2000/svg';
+
+    // === Count-up for big numbers (scroll-triggered, replays on re-entry) ===
+    // Each [data-count-to] element observes its own card's visibility.
+    // When the card scrolls into view: count from 0 → target.
+    // When it scrolls out: reset to 0 silently so re-entry replays.
+    document.querySelectorAll('[data-count-to]').forEach(el => {
+      const target = +el.dataset.countTo;
+      const duration = 720;
+      let rafId = null;
+
+      function runCount() {
+        if (rafId) cancelAnimationFrame(rafId);
+        if (reduce) { el.textContent = String(target); return; }
+        const start = performance.now();
+        function step(now) {
+          const t = Math.min(1, (now - start) / duration);
+          el.textContent = String(Math.round(target * t));
+          if (t < 1) rafId = requestAnimationFrame(step);
+          else { rafId = null; el.textContent = String(target); }
+        }
+        rafId = requestAnimationFrame(step);
+      }
+      function reset() {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        el.textContent = '0';
+      }
+
+      // Observe the nearest card so the trigger fires when the whole card enters view,
+      // not just the number itself (which would fire too late on tall cards).
+      const card = el.closest('.card, .hero-stat-card') || el;
+      let isInView = false;
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !isInView) { isInView = true; runCount(); }
+          else if (!entry.isIntersecting && isInView) { isInView = false; reset(); }
+        });
+      }, { threshold: 0.35 });
+      io.observe(card);
+    });
+
+    // === Court SVG (vertical orientation, half-court) ===
+    // half: 'top' (opponent's side, y=0-39) or 'bottom' (player's side, y=39-78)
+    // Real proportions: 27ft wide × 78ft long, displayed vertically.
+    // viewBox crops to one half so each card shows the relevant data area at real scale.
+    function buildCourtSVG(half) {
+      const svg = document.createElementNS(NS, 'svg');
+      const yMin = half === 'bottom' ? 39 : 0;
+      const yMax = half === 'bottom' ? 78 : 39;
+      svg.setAttribute('viewBox', `0 ${yMin} 27 39`);
+      svg.setAttribute('preserveAspectRatio', 'none');
+
+      // Boundary (only the half visible) — drawn full-court so it extends to net edge
+      const boundary = document.createElementNS(NS, 'rect');
+      boundary.setAttribute('x', 1); boundary.setAttribute('y', 1);
+      boundary.setAttribute('width', 25); boundary.setAttribute('height', 76);
+      boundary.setAttribute('fill', 'none');
+      boundary.setAttribute('stroke', 'white');
+      boundary.setAttribute('stroke-width', 0.3);
+
+      // Net (horizontal, at y=39, full width)
+      const net = document.createElementNS(NS, 'line');
+      net.setAttribute('x1', 0); net.setAttribute('y1', 39);
+      net.setAttribute('x2', 27); net.setAttribute('y2', 39);
+      net.setAttribute('stroke', 'white'); net.setAttribute('stroke-width', 0.5);
+
+      // Service lines (horizontal): y=18 (top half) and y=60 (bottom half)
+      function svcLine(y) {
+        const l = document.createElementNS(NS, 'line');
+        l.setAttribute('x1', 1); l.setAttribute('y1', y);
+        l.setAttribute('x2', 26); l.setAttribute('y2', y);
+        l.setAttribute('stroke', 'white'); l.setAttribute('stroke-width', 0.25);
+        return l;
+      }
+
+      // Center service line (vertical, x=13.5, between service lines)
+      const center = document.createElementNS(NS, 'line');
+      center.setAttribute('x1', 13.5); center.setAttribute('y1', 18);
+      center.setAttribute('x2', 13.5); center.setAttribute('y2', 60);
+      center.setAttribute('stroke', 'white'); center.setAttribute('stroke-width', 0.25);
+
+      // Center marks on baselines (small ticks)
+      function centerMark(y1, y2) {
+        const l = document.createElementNS(NS, 'line');
+        l.setAttribute('x1', 13.5); l.setAttribute('y1', y1);
+        l.setAttribute('x2', 13.5); l.setAttribute('y2', y2);
+        l.setAttribute('stroke', 'white'); l.setAttribute('stroke-width', 0.3);
+        return l;
+      }
+
+      svg.appendChild(boundary);
+      svg.appendChild(net);
+      svg.appendChild(svcLine(18));
+      svg.appendChild(svcLine(60));
+      svg.appendChild(center);
+      svg.appendChild(centerMark(0.5, 1));
+      svg.appendChild(centerMark(77, 77.5));
+
+      // Drop-shadow filter for dots (defined here so each tile has its own ID-namespaced filter)
+      const defs = document.createElementNS(NS, 'defs');
+      const filter = document.createElementNS(NS, 'filter');
+      const filterId = 'dot-shadow-' + Math.random().toString(36).slice(2, 8);
+      filter.setAttribute('id', filterId);
+      filter.setAttribute('x', '-50%'); filter.setAttribute('y', '-50%');
+      filter.setAttribute('width', '200%'); filter.setAttribute('height', '200%');
+      const blur = document.createElementNS(NS, 'feGaussianBlur');
+      blur.setAttribute('in', 'SourceAlpha'); blur.setAttribute('stdDeviation', 0.25);
+      const offset = document.createElementNS(NS, 'feOffset');
+      offset.setAttribute('dy', 0.2); offset.setAttribute('result', 'off');
+      const transfer = document.createElementNS(NS, 'feComponentTransfer');
+      const fa = document.createElementNS(NS, 'feFuncA');
+      fa.setAttribute('type', 'linear'); fa.setAttribute('slope', 0.45);
+      transfer.appendChild(fa);
+      const merge = document.createElementNS(NS, 'feMerge');
+      const m1 = document.createElementNS(NS, 'feMergeNode');
+      const m2 = document.createElementNS(NS, 'feMergeNode'); m2.setAttribute('in', 'SourceGraphic');
+      merge.appendChild(m1); merge.appendChild(m2);
+      filter.appendChild(blur);
+      filter.appendChild(offset);
+      filter.appendChild(transfer);
+      filter.appendChild(merge);
+      defs.appendChild(filter);
+      svg.appendChild(defs);
+      svg.dataset.shadowId = filterId;
+
+      return svg;
+    }
+
+    // === Stroke vocabulary (matches backend STROKE_COLORS_BGR) ===
+    // Backend categories: Forehand, Backhand, Serve/Overhead, Slice
+    // Mapped to brand categorical palette (out of brand palette in ui-philosophy.md)
+    const STROKES = [
+      { key: 'forehand',  label: 'Forehand',       color: 'var(--court)' },
+      { key: 'backhand',  label: 'Backhand',       color: 'var(--plum)' },    // distinct hue from forehand
+      { key: 'serve',     label: 'Serve/Overhead', color: 'var(--amber)' },
+      { key: 'volley',    label: 'Volley',         color: 'var(--clay)' },
+    ];
+
+    // === Filter state ===
+    // null = "show all"; otherwise an active stroke key
+    const filterState = { shotMap: null, spacing: null };
+
+    function setShotMapFilter(key) {
+      filterState.shotMap = filterState.shotMap === key ? null : key;
+      applyShotMapFilter();
+      renderLegend('shotMapLegend', shotMapCounts(), filterState.shotMap, setShotMapFilter);
+    }
+    function applyShotMapFilter() {
+      const dots = document.querySelectorAll('#courtShotMap .shot-dot');
+      dots.forEach(d => {
+        const stroke = d.dataset.stroke;
+        if (!filterState.shotMap || stroke === filterState.shotMap) {
+          d.classList.remove('dim');
+        } else {
+          d.classList.add('dim');
+        }
+      });
+    }
+
+    // (heatmap filter logic removed — court coverage is a single unfiltered view)
+
+    // === Legend rendering ===
+    function renderLegend(targetId, counts, activeKey, onClick) {
+      const target = document.getElementById(targetId);
+      target.replaceChildren();
+      STROKES.forEach(s => {
+        const chip = document.createElement('button');
+        chip.className = 'legend-chip';
+        chip.dataset.stroke = s.key;
+        if (activeKey === s.key) chip.classList.add('active');
+        if (activeKey && activeKey !== s.key) chip.classList.add('muted');
+
+        const swatch = document.createElement('span');
+        swatch.className = 'swatch';
+        swatch.style.background = s.color;
+        const label = document.createElement('span');
+        label.textContent = s.label;
+        const count = document.createElement('span');
+        count.className = 'count';
+        count.textContent = counts[s.key] != null ? counts[s.key] : '';
+
+        chip.appendChild(swatch);
+        chip.appendChild(label);
+        if (counts[s.key] != null) chip.appendChild(count);
+        chip.addEventListener('click', () => onClick(s.key));
+        target.appendChild(chip);
+      });
+      // "All" reset chip when a filter is active
+      if (activeKey) {
+        const reset = document.createElement('button');
+        reset.className = 'legend-chip';
+        reset.style.fontStyle = 'italic';
+        reset.textContent = 'Show all';
+        reset.addEventListener('click', () => onClick(activeKey)); // toggle off
+        target.appendChild(reset);
+      }
+    }
+
+    // === Sample shot map data (M. Lin's shots landing on opponent's half = top half, y < 39) ===
+    // Coordinate system: x=0-27 (width, left=0 right=27), y=0-78 (length, top=0 bottom=78)
+    // Net at y=39. Opponent's baseline at y=0. Player's baseline at y=78.
+    const SHOT_DOTS = [
+      // Forehand cross-court winners landing deep on opponent's right (x>13.5, y near baseline)
+      {x:21, y:5,  stroke:'forehand'}, {x:23, y:7,  stroke:'forehand'},
+      {x:19, y:11, stroke:'forehand'}, {x:24, y:9,  stroke:'forehand'},
+      {x:22, y:14, stroke:'forehand'}, {x:25, y:13, stroke:'forehand'},
+      {x:20, y:17, stroke:'forehand'}, {x:23, y:18, stroke:'forehand'},
+      // Backhand cross-court to opponent's left (x<13.5, deep)
+      {x:5,  y:6,  stroke:'backhand'}, {x:7,  y:9,  stroke:'backhand'},
+      {x:4,  y:13, stroke:'backhand'}, {x:6,  y:16, stroke:'backhand'},
+      {x:8,  y:11, stroke:'backhand'}, {x:3,  y:8,  stroke:'backhand'},
+      // Serve/Overhead landing in opponent's service boxes (y=18 to 39)
+      {x:18, y:25, stroke:'serve'},    {x:21, y:28, stroke:'serve'},
+      {x:24, y:32, stroke:'serve'},    {x:7,  y:24, stroke:'serve'},
+      {x:5,  y:30, stroke:'serve'},    {x:9,  y:34, stroke:'serve'},
+      // Volley winners — close to net (y just below 39), often at sharp angles
+      {x:5,  y:36, stroke:'volley'},   {x:22, y:36, stroke:'volley'},
+      {x:3,  y:33, stroke:'volley'},   {x:24, y:34, stroke:'volley'},
+    ];
+
+    function shotMapCounts() {
+      const c = { forehand: 0, backhand: 0, serve: 0, slice: 0 };
+      SHOT_DOTS.forEach(d => c[d.stroke]++);
+      return c;
+    }
+
+    function buildShotMap() {
+      const tile = document.getElementById('courtShotMap');
+      const svg = buildCourtSVG('top');
+      tile.appendChild(svg);
+      const filterUrl = `url(#${svg.dataset.shadowId})`;
+      const colorByStroke = Object.fromEntries(STROKES.map(s => [s.key, s.color]));
+
+      // Build the dots; track them so IntersectionObserver can replay.
+      const dotPairs = [];   // each { halo, dot, delay, haloOpacity, dotOpacity }
+      STROKES.forEach((stroke, strokeIdx) => {
+        const strokeShots = SHOT_DOTS.filter(d => d.stroke === stroke.key);
+        strokeShots.forEach((d, i) => {
+          const halo = document.createElementNS(NS, 'circle');
+          halo.setAttribute('cx', d.x); halo.setAttribute('cy', d.y);
+          halo.setAttribute('r', 1.15);
+          halo.setAttribute('fill', 'white');
+          halo.setAttribute('filter', filterUrl);
+          halo.classList.add('shot-dot');
+          halo.dataset.stroke = d.stroke;
+
+          const dot = document.createElementNS(NS, 'circle');
+          dot.setAttribute('cx', d.x); dot.setAttribute('cy', d.y);
+          dot.setAttribute('r', 0.85);
+          dot.setAttribute('fill', colorByStroke[d.stroke]);
+          dot.classList.add('shot-dot');
+          dot.dataset.stroke = d.stroke;
+
+          // Initial state: hidden
+          halo.style.opacity = '0';
+          dot.style.opacity = '0';
+
+          svg.appendChild(halo);
+          svg.appendChild(dot);
+          dotPairs.push({
+            halo, dot,
+            delay: strokeIdx * 100 + i * 30,
+            haloOpacity: 0.85,
+            dotOpacity: 0.95,
+          });
+        });
+      });
+
+      if (reduce) {
+        dotPairs.forEach(p => { p.halo.style.opacity = p.haloOpacity; p.dot.style.opacity = p.dotOpacity; });
+        return;
+      }
+
+      // Scroll-triggered: animate dots in with stagger; reset on scroll-out so re-entry replays
+      let isInView = false;
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !isInView) {
+            isInView = true;
+            dotPairs.forEach(p => {
+              setTimeout(() => {
+                // Filter state may dim some — respect it
+                const dimmed = p.halo.classList.contains('dim') || p.dot.classList.contains('dim');
+                if (!dimmed) {
+                  p.halo.style.opacity = p.haloOpacity;
+                  p.dot.style.opacity = p.dotOpacity;
+                }
+              }, p.delay);
+            });
+          } else if (!entry.isIntersecting && isInView) {
+            isInView = false;
+            dotPairs.forEach(p => {
+              p.halo.style.transition = 'none';
+              p.dot.style.transition = 'none';
+              p.halo.style.opacity = '0';
+              p.dot.style.opacity = '0';
+              p.halo.offsetWidth;
+              p.halo.style.transition = '';
+              p.dot.style.transition = '';
+            });
+          }
+        });
+      }, { threshold: 0.25 });
+      io.observe(tile);
+    }
+
+    // === Spacing visualization — player vs ball location at contact ===
+    // Coaching language: "squeezed" (player too close to ball, cramped) vs "long" (reaching, off-balance).
+    // Each shot: a line from player position → ball position. Length encodes distance, color encodes quality.
+    // Bottom half-court (player's side, y=39 to 77).
+    const SPACING_QUALITIES = {
+      ideal:    { color: 'var(--court)',  label: 'Ideal extension' },
+      squeezed: { color: 'var(--clay)',   label: 'Squeezed (too close)' },
+      long:     { color: 'var(--amber)',  label: 'Reaching (too far)' },
+    };
+
+    const SPACING_SHOTS = [
+      // Forehand contacts (deuce/right side, mostly ideal, a few squeezed)
+      { stroke: 'forehand', px: 19, py: 73, bx: 22, by: 71, q: 'ideal' },
+      { stroke: 'forehand', px: 20, py: 75, bx: 23, by: 73, q: 'ideal' },
+      { stroke: 'forehand', px: 21, py: 71, bx: 25, by: 69, q: 'ideal' },
+      { stroke: 'forehand', px: 18, py: 76, bx: 19, by: 75, q: 'squeezed' },
+      { stroke: 'forehand', px: 22, py: 72, bx: 23, by: 71, q: 'squeezed' },
+      { stroke: 'forehand', px: 16, py: 74, bx: 25, by: 71, q: 'long' },
+      { stroke: 'forehand', px: 20, py: 75, bx: 23, by: 72, q: 'ideal' },
+      { stroke: 'forehand', px: 19, py: 73, bx: 22, by: 70, q: 'ideal' },
+
+      // Backhand contacts (ad/left side, more squeezed — ad-side cramping pattern)
+      { stroke: 'backhand', px: 5, py: 73, bx: 8, by: 70, q: 'ideal' },
+      { stroke: 'backhand', px: 6, py: 75, bx: 7, by: 75, q: 'squeezed' },
+      { stroke: 'backhand', px: 7, py: 72, bx: 7, by: 71, q: 'squeezed' },
+      { stroke: 'backhand', px: 4, py: 74, bx: 7, by: 72, q: 'ideal' },
+      { stroke: 'backhand', px: 5, py: 73, bx: 6, by: 73, q: 'squeezed' },
+      { stroke: 'backhand', px: 8, py: 71, bx: 11, by: 68, q: 'ideal' },
+      { stroke: 'backhand', px: 3, py: 75, bx: 9, by: 72, q: 'long' },
+
+      // Serves (player at baseline, ball contact point projected to court ~2-3 ft in)
+      { stroke: 'serve', px: 13, py: 77, bx: 13, by: 75, q: 'ideal' },
+      { stroke: 'serve', px: 14, py: 77, bx: 14, by: 75, q: 'ideal' },
+      { stroke: 'serve', px: 13, py: 77, bx: 15, by: 75, q: 'ideal' },
+      { stroke: 'serve', px: 14, py: 77, bx: 14, by: 75, q: 'ideal' },
+
+      // Volleys (close to net, often quick reactions — more reaching)
+      { stroke: 'volley', px: 13, py: 45, bx: 17, by: 43, q: 'long' },
+      { stroke: 'volley', px: 12, py: 47, bx: 12, by: 45, q: 'ideal' },
+      { stroke: 'volley', px: 14, py: 44, bx: 18, by: 42, q: 'long' },
+      { stroke: 'volley', px: 11, py: 46, bx: 13, by: 44, q: 'ideal' },
+    ];
+
+    function buildSpacing() {
+      const tile = document.getElementById('courtSpacing');
+      const svg = buildCourtSVG('bottom');
+      tile.appendChild(svg);
+      const elements = [];   // each shot adds: line + player-end + ball-end
+
+      SPACING_SHOTS.forEach((s, i) => {
+        const color = SPACING_QUALITIES[s.q].color;
+
+        const line = document.createElementNS(NS, 'line');
+        line.setAttribute('x1', s.px); line.setAttribute('y1', s.py);
+        line.setAttribute('x2', s.bx); line.setAttribute('y2', s.by);
+        line.setAttribute('stroke', color);
+        line.setAttribute('stroke-width', 0.5);
+        line.setAttribute('stroke-linecap', 'round');
+        line.classList.add('spacing-line');
+        line.dataset.stroke = s.stroke;
+        line.dataset.quality = s.q;
+        line.style.opacity = '0';
+
+        // Player end: small filled white circle (you, the player)
+        const playerDot = document.createElementNS(NS, 'circle');
+        playerDot.setAttribute('cx', s.px); playerDot.setAttribute('cy', s.py);
+        playerDot.setAttribute('r', 0.55);
+        playerDot.setAttribute('fill', 'white');
+        playerDot.setAttribute('stroke', color);
+        playerDot.setAttribute('stroke-width', 0.18);
+        playerDot.classList.add('spacing-endpoint');
+        playerDot.dataset.stroke = s.stroke;
+        playerDot.style.opacity = '0';
+
+        // Ball end: small open circle (the ball, in lime since lime = "the ball" semantically)
+        const ballDot = document.createElementNS(NS, 'circle');
+        ballDot.setAttribute('cx', s.bx); ballDot.setAttribute('cy', s.by);
+        ballDot.setAttribute('r', 0.45);
+        ballDot.setAttribute('fill', 'var(--lime)');
+        ballDot.setAttribute('stroke', color);
+        ballDot.setAttribute('stroke-width', 0.18);
+        ballDot.classList.add('spacing-endpoint');
+        ballDot.dataset.stroke = s.stroke;
+        ballDot.style.opacity = '0';
+
+        svg.appendChild(line);
+        svg.appendChild(playerDot);
+        svg.appendChild(ballDot);
+        elements.push({ line, playerDot, ballDot, stroke: s.stroke, delay: i * 25 });
+      });
+
+      function applyFilter() {
+        const f = filterState.spacing;
+        elements.forEach(e => {
+          const dim = f && e.stroke !== f;
+          [e.line, e.playerDot, e.ballDot].forEach(el => {
+            el.classList.toggle('dim', dim);
+          });
+        });
+      }
+
+      function show() {
+        elements.forEach(e => {
+          setTimeout(() => {
+            const dim = e.line.classList.contains('dim');
+            const opacity = dim ? '0.10' : '1';
+            e.line.style.opacity = opacity;
+            e.playerDot.style.opacity = opacity;
+            e.ballDot.style.opacity = opacity;
+          }, e.delay);
+        });
+      }
+
+      function hide() {
+        elements.forEach(e => {
+          [e.line, e.playerDot, e.ballDot].forEach(el => {
+            el.style.transition = 'none';
+            el.style.opacity = '0';
+            el.offsetWidth;
+            el.style.transition = '';
+          });
+        });
+      }
+
+      if (reduce) {
+        elements.forEach(e => {
+          e.line.style.opacity = '1';
+          e.playerDot.style.opacity = '1';
+          e.ballDot.style.opacity = '1';
+        });
+        return { applyFilter };
+      }
+
+      let isInView = false;
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !isInView) { isInView = true; show(); }
+          else if (!entry.isIntersecting && isInView) { isInView = false; hide(); }
+        });
+      }, { threshold: 0.25 });
+      io.observe(tile);
+
+      return { applyFilter };
+    }
+
+    function spacingCounts() {
+      const c = { forehand: 0, backhand: 0, serve: 0, volley: 0 };
+      SPACING_SHOTS.forEach(s => c[s.stroke]++);
+      return c;
+    }
+
+    function setSpacingFilter(key) {
+      filterState.spacing = filterState.spacing === key ? null : key;
+      spacingHandle.applyFilter();
+      renderLegend('spacingLegend', spacingCounts(), filterState.spacing, setSpacingFilter);
+    }
+
+    // === Court coverage — fine-grained heatmap of where M. Lin spent the match ===
+    // 8 cols × 12 rows = 96 zones over the half-court (~3×3 ft per cell).
+    // Resolution that's actually useful for analysis ("deep deuce corner" vs "deep deuce center").
+    const COVERAGE_ROWS = 12;
+    const COVERAGE_COLS = 8;
+
+    function generateCoverage(rows, cols) {
+      const grid = [];
+      for (let r = 0; r < rows; r++) {
+        const row = [];
+        for (let c = 0; c < cols; c++) {
+          const lengthFrac = r / (rows - 1);                  // 0=net, 1=baseline
+          const widthFrac  = (c + 0.5) / cols;                // 0=left, 1=right
+          // Length: peaks at baseline (concave, sharp falloff toward net)
+          const lengthIntensity = Math.pow(lengthFrac, 1.7);
+          // Width: peaks slightly right of center (right-handed deuce-side bias)
+          const widthDist  = Math.abs(widthFrac - 0.55);
+          const widthIntensity = Math.max(0, 1 - Math.pow(widthDist * 1.8, 1.5));
+          // Combine, then add deterministic micro-noise so the field looks observed, not synthetic
+          let intensity = lengthIntensity * widthIntensity;
+          const seed = ((r * 17 + c * 23) % 100) / 100;
+          intensity *= 0.82 + seed * 0.32;
+          row.push(Math.min(1, Math.max(0, intensity)));
+        }
+        grid.push(row);
+      }
+      return grid;
+    }
+
+    const COURT_COVERAGE = generateCoverage(COVERAGE_ROWS, COVERAGE_COLS);
+
+    function buildCoverage() {
+      const tile = document.getElementById('courtCoverage');
+      const svg = buildCourtSVG('bottom');
+      tile.appendChild(svg);
+      const halfH = 38, halfW = 25;
+      const cellH = halfH / COVERAGE_ROWS;
+      const cellW = halfW / COVERAGE_COLS;
+      const yOffset = 39;
+      const firstLine = svg.children[1] || null;
+      const zones = [];
+
+      COURT_COVERAGE.forEach((row, r) => {
+        row.forEach((intensity, c) => {
+          const rect = document.createElementNS(NS, 'rect');
+          rect.setAttribute('x', 1 + c * cellW);
+          rect.setAttribute('y', yOffset + r * cellH);
+          rect.setAttribute('width', cellW);
+          rect.setAttribute('height', cellH);
+          rect.setAttribute('fill', 'var(--lime)');
+          rect.style.opacity = '0';
+          rect.classList.add('heatmap-zone');
+          svg.insertBefore(rect, firstLine);
+          // Stagger from baseline (r = ROWS-1) toward net (r = 0):
+          // hottest zones reveal first, then emptier areas fill in last.
+          const delay = (COVERAGE_ROWS - 1 - r) * 35;
+          zones.push({ rect, target: 0.04 + intensity * 0.66, delay });
+        });
+      });
+
+      if (reduce) {
+        zones.forEach(z => { z.rect.style.opacity = z.target; });
+        return;
+      }
+
+      function show() {
+        zones.forEach(z => {
+          setTimeout(() => { z.rect.style.opacity = z.target; }, z.delay);
+        });
+      }
+      function hide() {
+        zones.forEach(z => {
+          z.rect.style.transition = 'none';
+          z.rect.style.opacity = '0';
+          z.rect.offsetWidth;
+          z.rect.style.transition = '';
+        });
+      }
+
+      let isInView = false;
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !isInView) { isInView = true; show(); }
+          else if (!entry.isIntersecting && isInView) { isInView = false; hide(); }
+        });
+      }, { threshold: 0.2 });
+      io.observe(tile);
+    }
+
+    buildShotMap();
+    const spacingHandle = buildSpacing();
+    buildCoverage();
+    renderLegend('shotMapLegend', shotMapCounts(), null, setShotMapFilter);
+    renderLegend('spacingLegend', spacingCounts(), null, setSpacingFilter);
+
+    // === Bar chart (built via DOM, scroll-triggered animation) ===
+    function buildBars() {
+      const target = document.getElementById('shotBars');
+      const data = [
+        { label: 'Forehand',       pct: 42, color: 'var(--court)' },
+        { label: 'Backhand',       pct: 31, color: 'var(--plum)' },
+        { label: 'Volley',         pct: 15, color: 'var(--clay)' },
+        { label: 'Serve/Overhead', pct:  8, color: 'var(--amber)' },
+        { label: 'Other',          pct:  4, color: 'var(--slate)' },
+      ];
+      const BAR_DUR = 760;
+      const BAR_STAGGER = 100;
+      const bars = [];
+
+      data.forEach((d) => {
+        const row = document.createElement('div');
+        row.className = 'bar-row';
+        const label = document.createElement('span');
+        label.className = 'bar-label';
+        label.textContent = d.label;
+        const track = document.createElement('div');
+        track.className = 'bar-track';
+        const fill = document.createElement('div');
+        fill.className = 'bar-fill';
+        fill.style.background = d.color;
+        track.appendChild(fill);
+        const value = document.createElement('span');
+        value.className = 'bar-value';
+        value.textContent = '0%';
+        value.style.opacity = '0';
+        value.style.transition = 'opacity 320ms var(--ease-out)';
+        row.appendChild(label);
+        row.appendChild(track);
+        row.appendChild(value);
+        target.appendChild(row);
+        bars.push({ fill, value, pct: d.pct, tickRafId: null });
+      });
+
+      // Reduced-motion: skip animation entirely
+      if (reduce) {
+        bars.forEach(b => {
+          b.fill.style.transition = 'none';
+          b.fill.style.width = b.pct + '%';
+          b.value.textContent = b.pct + '%';
+          b.value.style.opacity = '1';
+        });
+        return;
+      }
+
+      function reset() {
+        bars.forEach(b => {
+          // Cancel any in-flight count-up so leftover ticks don't fight the reset
+          if (b.tickRafId) { cancelAnimationFrame(b.tickRafId); b.tickRafId = null; }
+          b.fill.style.transition = 'none';
+          b.fill.style.width = '0';
+          b.value.textContent = '0%';
+          b.value.style.opacity = '0';
+          // Force reflow so the reset is committed before transitions resume
+          // eslint-disable-next-line no-unused-expressions
+          b.fill.offsetWidth;
+          b.fill.style.transition = '';
+        });
+      }
+
+      function animate() {
+        bars.forEach((b, i) => {
+          const delay = i * BAR_STAGGER;
+          setTimeout(() => {
+            b.fill.style.width = b.pct + '%';
+            b.value.style.opacity = '1';
+            const start = performance.now();
+            function tick(now) {
+              const t = Math.min(1, (now - start) / BAR_DUR);
+              const eased = 1 - Math.pow(1 - t, 4); // ease-out-quart
+              b.value.textContent = Math.round(b.pct * eased) + '%';
+              if (t < 1) {
+                b.tickRafId = requestAnimationFrame(tick);
+              } else {
+                b.value.textContent = b.pct + '%';
+                b.tickRafId = null;
+              }
+            }
+            b.tickRafId = requestAnimationFrame(tick);
+          }, delay);
+        });
+      }
+
+      // Trigger on scroll-into-view, reset on scroll-out so re-entry replays
+      let isInView = false;
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && !isInView) {
+            isInView = true;
+            animate();
+          } else if (!entry.isIntersecting && isInView) {
+            isInView = false;
+            reset();
+          }
+        });
+      }, { threshold: 0.25 });
+      io.observe(target);
+    }
+    buildBars();
+  </script>
+
+  <script>
+    // brand-mark hover-to-play splash animation
+    (function () {
+      const marks = document.querySelectorAll('.brand-mark');
+      marks.forEach(mark => {
+        const video = mark.querySelector('video');
+        if (!video) return;
+        mark.addEventListener('mouseenter', () => {
+          try { video.currentTime = 0; video.play(); } catch (e) {}
+        });
+        mark.addEventListener('mouseleave', () => {
+          video.pause();
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>

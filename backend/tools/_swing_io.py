@@ -24,6 +24,7 @@ MANIFEST_COLUMNS = [
     "label",
     "annotator",
     "labeled_at",
+    "assigned_to",
 ]
 SWING_CLIPS_BUCKET = "swing-clips"
 SWING_LABELS_TABLE = "swing_labels"
@@ -115,12 +116,54 @@ def db_save_label(clip_id: str, label: str, annotator: str, client=None) -> None
     }).eq("clip_id", clip_id).execute()
 
 
-def db_seed_from_csv(csv_path: Path, client=None) -> int:
-    """Bulk-upsert all rows from a manifest CSV into swing_labels. Returns row count."""
+def db_set_assigned_to(clip_id: str, assigned_to: str, client=None) -> None:
+    """Set the annotator assignment for a single clip."""
+    client = client or get_supabase_client()
+    client.table(SWING_LABELS_TABLE).update(
+        {"assigned_to": assigned_to}
+    ).eq("clip_id", clip_id).execute()
+
+
+def db_bulk_set_assigned_to(assignments: dict[str, str], client=None) -> int:
+    """Set assigned_to for many clips in one batch.
+
+    `assignments` maps clip_id → annotator name.
+    Returns rows updated.
+    """
+    client = client or get_supabase_client()
+    by_annotator: dict[str, list[str]] = {}
+    for clip_id, name in assignments.items():
+        by_annotator.setdefault(name, []).append(clip_id)
+
+    updated = 0
+    for name, clip_ids in by_annotator.items():
+        CHUNK = 200
+        for i in range(0, len(clip_ids), CHUNK):
+            batch = clip_ids[i : i + CHUNK]
+            client.table(SWING_LABELS_TABLE).update(
+                {"assigned_to": name}
+            ).in_("clip_id", batch).execute()
+            updated += len(batch)
+    return updated
+
+
+def db_seed_from_csv(csv_path: Path, client=None, preserve_labels: bool = True) -> int:
+    """Bulk-upsert all rows from a manifest CSV into swing_labels.
+
+    With `preserve_labels=True` (default), any row that already has a non-empty
+    label in the DB keeps its label/annotator/labeled_at — only the
+    metadata + assignment is updated. This is what you want when re-running
+    the seed after assignments change.
+    """
     import json
 
     client = client or get_supabase_client()
     df = read_manifest(csv_path)
+
+    # Ensure every expected column exists (older CSVs may pre-date assigned_to)
+    for col in MANIFEST_COLUMNS:
+        if col not in df.columns:
+            df[col] = ""
 
     # Cast numeric columns so Supabase accepts them as numbers, not strings
     for col in ("peak_frame", "window_start", "window_end", "player_idx"):
@@ -133,6 +176,19 @@ def db_seed_from_csv(csv_path: Path, client=None) -> int:
 
     # Replace empty labeled_at with None (DB expects NULL, not empty string)
     df["labeled_at"] = df["labeled_at"].replace("", None)
+
+    if preserve_labels:
+        # Fetch existing labels and merge into the dataframe so the upsert
+        # doesn't wipe anyone's prior work.
+        existing = db_get_all(client=client)
+        if not existing.empty:
+            labeled = existing[existing["label"].astype(str) != ""].set_index("clip_id")
+            for clip_id, row in labeled.iterrows():
+                mask = df["clip_id"] == clip_id
+                if mask.any():
+                    df.loc[mask, "label"] = row["label"]
+                    df.loc[mask, "annotator"] = row["annotator"]
+                    df.loc[mask, "labeled_at"] = row["labeled_at"] or None
 
     # Serialize via pandas JSON to convert numpy types → Python native types
     records: list[dict] = json.loads(df.to_json(orient="records"))

@@ -7,10 +7,11 @@ import { APP_CONFIG } from '@/constants';
 
 interface VideoUploadProps {
   onUploadComplete?: () => void;
+  playerId?: string | null;
 }
 
-const VideoUpload = ({ onUploadComplete }: VideoUploadProps) => {
-  const { match_id, status, progress, error, handleFile, getStatusMessage } = useVideoUpload(onUploadComplete);
+const VideoUpload = ({ onUploadComplete, playerId }: VideoUploadProps) => {
+  const { match_id, status, progress, error, handleFile, getStatusMessage } = useVideoUpload(onUploadComplete, playerId);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {

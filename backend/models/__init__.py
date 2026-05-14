@@ -4,4 +4,5 @@ from backend.models.player_tracker import PlayerTracker
 from backend.models.bounce_detector import BounceDetector
 from backend.models.stroke_detector import ActionRecognition
 from backend.models.stroke_classifier_tcn import PoseStrokeClassifier
+from backend.models.trajectory_rectifier import TrajectoryRectifier
 

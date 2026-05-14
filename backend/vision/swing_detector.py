@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from backend.training.features import hip_center_normalize
+
 
 WRIST_LEFT_IDX = 9
 WRIST_RIGHT_IDX = 10
@@ -168,13 +170,17 @@ def extract_pose_sequence(
 
     # Resize to target_len via linear interpolation
     if seq.shape[0] == target_len:
-        return seq
-    indices = np.linspace(0, seq.shape[0] - 1, target_len)
-    resampled = np.stack([
-        np.interp(indices, np.arange(seq.shape[0]), seq[:, d])
-        for d in range(34)
-    ], axis=1).astype(np.float32)
-    return resampled
+        resampled = seq
+    else:
+        indices = np.linspace(0, seq.shape[0] - 1, target_len)
+        resampled = np.stack([
+            np.interp(indices, np.arange(seq.shape[0]), seq[:, d])
+            for d in range(34)
+        ], axis=1).astype(np.float32)
+
+    # Hip-center + torso-height scale normalization — must match normalize_keypoints()
+    # in features.py exactly so inference uses the same distribution as training.
+    return hip_center_normalize(resampled)
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
@@ -236,21 +242,40 @@ def _ball_near_player(
     player_detections: list,
     track_id: int,
     proximity: float,
+    window: int = 10,
 ) -> bool:
-    """Return True if the ball is within `proximity` pixels of the player bbox."""
-    if frame_idx >= len(ball_track) or frame_idx >= len(player_detections):
-        return True  # can't check — don't filter out
+    """
+    Return True if the ball comes within `proximity` pixels of the player bbox
+    in any frame within [frame_idx - window, frame_idx + window].
 
-    ball_pos = ball_track[frame_idx]
-    if ball_pos is None or ball_pos[0] is None or ball_pos[1] is None:
-        return True  # ball not detected — don't filter
+    Scans the full window so that sparse ball detections (TrackNet misses
+    a few frames around impact) still count. Returns False only when NO
+    frame in the window has a ball detection within proximity — i.e. the
+    peak wrist velocity genuinely has no ball nearby.
+    """
+    if frame_idx >= len(player_detections):
+        return True  # can't check — don't filter
 
     bbox = player_detections[frame_idx].get(track_id)
     if bbox is None:
         return False
 
-    bx, by = float(ball_pos[0]), float(ball_pos[1])
     x1, y1, x2, y2 = bbox
     cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
-    dist = ((bx - cx) ** 2 + (by - cy) ** 2) ** 0.5
-    return dist <= proximity
+
+    n = len(ball_track)
+    lo = max(0, frame_idx - window)
+    hi = min(n - 1, frame_idx + window)
+
+    found_any_ball = False
+    for check in range(lo, hi + 1):
+        bp = ball_track[check]
+        if bp is None or bp[0] is None or bp[1] is None:
+            continue
+        found_any_ball = True
+        dist = ((float(bp[0]) - cx) ** 2 + (float(bp[1]) - cy) ** 2) ** 0.5
+        if dist <= proximity:
+            return True
+
+    # If we never saw a ball in the window, don't filter (ball tracking gap)
+    return not found_any_ball

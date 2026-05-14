@@ -1,226 +1,283 @@
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import Logo from './Logo';
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { LayoutDashboard, Users, Upload, Film, ChevronLeft, LogOut, UserCircle, Settings } from 'lucide-react'
+import { ThemeToggle } from '@/components/brand/ThemeToggle'
+import { BrandMark } from '@/components/brand/BrandMark'
 
-interface SidebarProps {
-  username: string;
+type SidebarUser = {
+  name: string
+  email: string
+  initials: string
+  imageUrl?: string | null
 }
 
-interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ReactNode;
+type Props = {
+  user: SidebarUser
+  onSignOut: () => Promise<void> | void
 }
 
-interface RecentRecording {
-  id: string;
-  filename: string;
-  status: string;
-  createdAt: string;
+type NavItem = {
+  name: string
+  href: string
+  icon: ReactNode
+  match: (pathname: string) => boolean
 }
 
-const Sidebar = ({ username }: SidebarProps) => {
-  const pathname = usePathname();
-  const [recentRecordings, setRecentRecordings] = useState<RecentRecording[]>([]);
+const NAV_ITEMS: NavItem[] = [
+  {
+    name: 'Dashboard',
+    href: '/',
+    icon: <LayoutDashboard className="size-[18px]" strokeWidth={1.75} />,
+    match: (p) => p === '/',
+  },
+  {
+    name: 'Players',
+    href: '/players',
+    icon: <Users className="size-[18px]" strokeWidth={1.75} />,
+    match: (p) => p.startsWith('/players'),
+  },
+  {
+    name: 'Upload video',
+    href: '/upload',
+    icon: <Upload className="size-[18px]" strokeWidth={1.75} />,
+    match: (p) => p.startsWith('/upload'),
+  },
+  {
+    name: 'Recordings',
+    href: '/recordings',
+    icon: <Film className="size-[18px]" strokeWidth={1.75} />,
+    match: (p) => p.startsWith('/recordings'),
+  },
+]
+
+export default function Sidebar({ user, onSignOut }: Props) {
+  const pathname = usePathname() || '/'
+  const [collapsed, setCollapsed] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    let cancelled = false;
-    fetch('/api/recordings')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!cancelled && data?.recordings) {
-          setRecentRecordings(
-            data.recordings
-              .filter((r: RecentRecording) => r.status === 'done')
-              .slice(0, 3)
-          );
-        }
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, []);
+    try {
+      const stored = localStorage.getItem('cc-sidebar-collapsed')
+      const start = stored === '1'
+      setCollapsed(start)
+      document.body.classList.toggle('sidebar-collapsed', start)
+    } catch {}
 
-  const navItems: NavItem[] = [
-    {
-      name: 'Dashboard',
-      href: '/',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      ),
-    },
-    {
-      name: 'Upload Video',
-      href: '/upload',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-        </svg>
-      ),
-    },
-    {
-      name: 'Overall Stats',
-      href: '/overall-stats',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      ),
-    },
-    {
-      name: 'Recordings',
-      href: '/recordings',
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-        </svg>
-      ),
-    },
-  ];
+    const mq = window.matchMedia('(max-width: 1100px)')
+    function applyViewport() {
+      if (mq.matches) {
+        document.body.classList.add('sidebar-collapsed')
+      } else {
+        try {
+          const stored = localStorage.getItem('cc-sidebar-collapsed')
+          document.body.classList.toggle('sidebar-collapsed', stored === '1')
+        } catch {}
+      }
+    }
+    applyViewport()
+    mq.addEventListener('change', applyViewport)
+    return () => mq.removeEventListener('change', applyViewport)
+  }, [])
 
-  const isActive = (href: string) => {
-    if (href === '/') return pathname === '/';
-    return pathname.startsWith(href);
-  };
+  useEffect(() => {
+    if (!menuOpen) return
+    function onClick(e: MouseEvent) {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
 
-  const initials = username
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join('');
+  function toggleCollapse() {
+    const mq = window.matchMedia('(max-width: 1100px)')
+    if (mq.matches) return
+    const next = !collapsed
+    setCollapsed(next)
+    document.body.classList.toggle('sidebar-collapsed', next)
+    try {
+      localStorage.setItem('cc-sidebar-collapsed', next ? '1' : '0')
+    } catch {}
+  }
 
   return (
-    <div className="w-60 bg-secondary h-full flex flex-col shrink-0" style={{ borderRight: '1px solid rgba(255,255,255,0.07)' }}>
-      {/* Logo */}
-      <div className="p-5 flex items-center gap-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <Link href="/landing">
-          <Logo />
-        </Link>
-      </div>
+    <aside
+      aria-label="Primary navigation"
+      className="app-sidebar fixed top-0 left-0 z-50 flex flex-col bg-paper border-r border-line-soft box-border"
+      style={{
+        width: collapsed ? 72 : 200,
+        height: '100vh',
+        padding: collapsed ? '22px 8px' : '22px 14px',
+        transition: 'width 220ms var(--ease-out), padding 220ms var(--ease-out)',
+      }}
+    >
+      {/* Collapse handle on the right edge — clear of the brand-mark, vertically centered. */}
+      <button
+        type="button"
+        onClick={toggleCollapse}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className="sidebar-collapse absolute z-[51] size-[22px] rounded-full border border-line bg-paper text-ink-mute hover:border-ink hover:text-ink flex items-center justify-center transition-colors cursor-pointer shadow-sm"
+        style={{
+          top: '50%',
+          right: -11,
+          transform: 'translateY(-50%)',
+        }}
+      >
+        <ChevronLeft
+          className="size-[11px]"
+          style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 220ms var(--ease-out)' }}
+        />
+      </button>
 
-      {/* User */}
-      <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-full flex items-center justify-center text-primary font-bold text-xs shrink-0"
-            style={{ background: '#B4F000' }}
+      {/* Brand */}
+      <Link
+        href="/"
+        className="brand-mark relative flex items-center justify-center"
+        style={{
+          minHeight: collapsed ? 56 : 76,
+          padding: collapsed ? '4px 0 14px' : '8px 4px 16px',
+          marginBottom: collapsed ? 8 : 10,
+          borderBottom: '1px solid var(--color-line-soft)',
+        }}
+        aria-label="CourtCheck home"
+      >
+        {!collapsed ? (
+          <BrandMark href={null} heightPx={56} withHoverVideo />
+        ) : (
+          // Collapsed: show just the checkmark webm (no wordmark room)
+          <video
+            muted
+            playsInline
+            preload="metadata"
+            className="object-contain dark:invert dark:hue-rotate-180"
+            style={{ maxHeight: 48, width: 'auto' }}
+            onMouseEnter={(e) => {
+              const v = e.currentTarget
+              v.currentTime = 0
+              v.play().catch(() => {})
+            }}
+            onMouseLeave={(e) => e.currentTarget.pause()}
           >
-            {initials || 'U'}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{username}</p>
-            <p className="text-xs" style={{ color: '#5A5A66' }}>Tennis Player</p>
-          </div>
-        </div>
-      </div>
+            <source src="/CourtCheckCheckmark.webm" type="video/webm" />
+          </video>
+        )}
+      </Link>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-3">
-        <div className="space-y-0.5">
-          {navItems.map((item) => (
+      {/* Nav */}
+      <nav className="sidebar-nav flex flex-col gap-[2px] flex-1">
+        {NAV_ITEMS.map((item) => {
+          const active = item.match(pathname)
+          return (
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150 text-sm ${
-                isActive(item.href)
-                  ? 'font-semibold'
-                  : 'font-medium hover:bg-white/5'
-              }`}
-              style={
-                isActive(item.href)
-                  ? { background: 'rgba(180,240,0,0.12)', color: '#B4F000' }
-                  : { color: '#6B6B78' }
-              }
-              aria-label={`Navigate to ${item.name}`}
+              title={item.name}
+              aria-current={active ? 'page' : undefined}
+              className={`sidebar-link relative flex items-center gap-3 min-h-[44px] rounded-[8px] px-3 text-[0.92rem] transition-colors ${
+                active
+                  ? 'bg-shade text-ink font-semibold'
+                  : 'text-ink-soft font-medium hover:bg-shade hover:text-ink'
+              } ${collapsed ? 'justify-center !px-3' : ''}`}
             >
+              {active && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-2 bottom-2 w-[3px] rounded-r-[3px] bg-court"
+                  style={{ left: collapsed ? -8 : -14 }}
+                />
+              )}
               {item.icon}
-              <span>{item.name}</span>
+              {!collapsed && <span className="sidebar-label">{item.name}</span>}
             </Link>
-          ))}
-        </div>
+          )
+        })}
+      </nav>
 
-        {/* Recent Analyses */}
-        <div className="mt-6">
-          <div className="flex items-center justify-between px-3 mb-2">
-            <h3 className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#3A3A44' }}>
-              Recent
-            </h3>
-            {recentRecordings.length > 0 && (
+      {/* Foot row: avatar + theme toggle (collapse handle is on the right edge of the sidebar). */}
+      <div
+        className={`sidebar-foot flex items-center gap-[10px] ${collapsed ? 'flex-col gap-3 py-[14px_0_4px]' : ''}`}
+        style={{
+          padding: collapsed ? '14px 0 4px' : '14px 6px 4px',
+          borderTop: '1px solid var(--color-line-soft)',
+        }}
+      >
+        <div ref={menuRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((s) => !s)}
+            aria-label="Account menu"
+            aria-expanded={menuOpen}
+            className="size-9 rounded-full bg-court text-cream font-display text-[0.95rem] font-medium inline-flex items-center justify-center transition-transform hover:-translate-y-[1px] cursor-pointer"
+          >
+            {user.initials || 'U'}
+          </button>
+          {menuOpen && (
+            <div
+              role="menu"
+              className="absolute left-0 w-[248px] rounded-[12px] bg-paper border border-line shadow-pop p-[6px] z-[60]"
+              style={{ bottom: 'calc(100% + 12px)' }}
+            >
+              <div className="flex items-center gap-[10px] p-[10px_10px_12px] min-w-0">
+                <div className="size-9 rounded-full bg-court text-cream font-display text-[0.95rem] font-medium inline-flex items-center justify-center shrink-0">
+                  {user.initials || 'U'}
+                </div>
+                <div className="flex flex-col min-w-0 gap-[1px]">
+                  <div className="font-display font-medium text-[0.96rem] tracking-[-0.012em] text-ink leading-tight truncate">
+                    {user.name}
+                  </div>
+                  <div className="font-mono text-[0.66rem] tracking-[0.04em] text-ink-mute truncate">
+                    {user.email}
+                  </div>
+                </div>
+              </div>
+              <div className="h-px bg-line-soft my-1" />
               <Link
-                href="/recordings"
-                className="text-[10px] transition-colors"
-                style={{ color: '#4A4A55' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#B4F000'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = '#4A4A55'; }}
+                href="/profile"
+                role="menuitem"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-[10px] w-full text-left px-[10px] py-[9px] rounded-[8px] text-[0.9rem] font-medium text-ink hover:bg-shade transition-colors"
               >
-                See all
+                <UserCircle className="size-[15px] text-ink-mute" />
+                Profile
               </Link>
-            )}
-          </div>
-
-          {recentRecordings.length === 0 ? (
-            <div className="px-3 py-2">
-              <p className="text-xs" style={{ color: '#3A3A44' }}>
-                No analyses yet.{' '}
-                <Link href="/upload" className="transition-colors" style={{ color: '#B4F000' }}>
-                  Upload a video
-                </Link>
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-0.5">
-              {recentRecordings.map((rec, i) => {
-                const shortName =
-                  rec.filename.length > 18
-                    ? rec.filename.slice(0, 15) + '…'
-                    : rec.filename;
-                const active = pathname === `/recordings/${rec.id}`;
-                return (
-                  <Link
-                    key={rec.id}
-                    href={`/recordings/${rec.id}`}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-150 text-sm"
-                    style={
-                      active
-                        ? { background: 'rgba(180,240,0,0.12)', color: '#B4F000' }
-                        : { color: '#6B6B78' }
-                    }
-                    onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'; if (!active) (e.currentTarget as HTMLElement).style.color = '#FAFAFA'; }}
-                    onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent'; if (!active) (e.currentTarget as HTMLElement).style.color = '#6B6B78'; }}
-                    aria-label={`View analysis ${i + 1}`}
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: active ? '#B4F000' : '#2A2A33' }} />
-                    <span className="truncate text-xs">{shortName}</span>
-                  </Link>
-                );
-              })}
+              <Link
+                href="/settings"
+                role="menuitem"
+                onClick={() => setMenuOpen(false)}
+                className="flex items-center gap-[10px] w-full text-left px-[10px] py-[9px] rounded-[8px] text-[0.9rem] font-medium text-ink hover:bg-shade transition-colors"
+              >
+                <Settings className="size-[15px] text-ink-mute" />
+                Settings
+              </Link>
+              <div className="h-px bg-line-soft my-1" />
+              <button
+                type="button"
+                role="menuitem"
+                onClick={async () => {
+                  setMenuOpen(false)
+                  await onSignOut()
+                }}
+                className="flex items-center gap-[10px] w-full text-left px-[10px] py-[9px] rounded-[8px] text-[0.9rem] font-medium text-clay hover:bg-shade transition-colors cursor-pointer"
+              >
+                <LogOut className="size-[15px]" />
+                Sign out
+              </button>
             </div>
           )}
         </div>
-      </nav>
-
-      {/* Footer */}
-      <div className="p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <Link
-          href="/upload"
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-150 text-sm font-semibold"
-          style={{ background: 'rgba(180,240,0,0.1)', color: '#B4F000', border: '1px solid rgba(180,240,0,0.15)' }}
-          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(180,240,0,0.18)'; }}
-          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(180,240,0,0.1)'; }}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          Upload Video
-        </Link>
+        <ThemeToggle />
       </div>
-    </div>
-  );
-};
-
-export default Sidebar;
+    </aside>
+  )
+}

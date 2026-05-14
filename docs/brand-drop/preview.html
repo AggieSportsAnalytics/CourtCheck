@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CourtCheck · brand drop preview (v2 locked)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream:#F4F0E6; --paper:#FBF8F1; --surface:#FFFFFF; --shade:#ECE6D5;
+      --line:#DDD7C5; --line-soft:#EAE4D2;
+      --ink:#1A1815; --ink-soft:#43403A; --ink-mute:#837F77;
+      --court:#2E5341; --court-deep:#1F3D2E; --court-light:#6E8C7C;
+      --court-surface:#A85E3A;
+      --clay:#B05B36; --clay-soft:#D08866;
+      --lime:#BFC846;
+      --plum:#7B4E6E; --amber:#C8923A; --slate:#5C6B7A;
+      --shadow:0 1px 0 rgba(26,24,21,0.04), 0 18px 48px -24px rgba(26,24,21,0.16);
+    }
+    body.dark {
+      --cream:#07080F; --paper:#1F2940; --surface:#2B374F; --shade:#11161F;
+      --line:#2F3B52; --line-soft:#1E2735;
+      --ink:#F4F0E6; --ink-soft:#A8B0C0; --ink-mute:#6B7388;
+      --court:#6FA88B; --court-deep:#4A8268; --court-light:#9FC6B0;
+      --court-surface:#6B3A24;
+      --clay:#E07A52; --clay-soft:#F0A07F;
+      --lime:#DDE970;
+      --plum:#B584A6; --amber:#DDB166; --slate:#889DB3;
+      --shadow:0 1px 0 rgba(0,0,0,0.4), 0 18px 48px -24px rgba(0,0,0,0.55);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: var(--cream); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      font-size: 16px; line-height: 1.55; letter-spacing: -0.005em;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 240ms cubic-bezier(0.2,0.8,0.2,1), color 240ms cubic-bezier(0.2,0.8,0.2,1);
+    }
+    .display { font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 96; font-weight: 500; letter-spacing: -0.022em; line-height: 1.0; }
+    .ital { font-style: italic; font-weight: 400; }
+    .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-mute); }
+
+    header {
+      padding: 28px 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--court);
+    }
+    .eyebrow::before { content: ""; width: 6px; height: 6px; background: var(--clay); border-radius: 50%; }
+    .theme-toggle {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--line); background: var(--paper);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--ink);
+      transition: background 240ms, border-color 240ms, transform 240ms;
+    }
+    .theme-toggle:hover { transform: rotate(20deg); border-color: var(--ink); }
+    .theme-toggle svg { width: 16px; height: 16px; }
+    .theme-toggle .moon { display: block; } .theme-toggle .sun { display: none; }
+    body.dark .theme-toggle .moon { display: none; } body.dark .theme-toggle .sun { display: block; }
+
+    main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 64px 56px 96px;
+    }
+    @media (max-width: 720px) { main { padding: 40px 28px 64px; } header { padding: 22px 28px; } }
+
+    section { margin-bottom: 88px; }
+    section h2 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 96;
+      font-weight: 500;
+      font-size: clamp(32px, 4.6vw, 56px);
+      letter-spacing: -0.022em;
+      line-height: 1.02;
+      margin: 10px 0 28px;
+    }
+    section h2 .ital { color: var(--clay); }
+
+    .panel-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 880px) { .panel-grid { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel-body { padding: 32px; display: flex; align-items: center; justify-content: center; min-height: 240px; }
+    .panel-body img,
+    .panel-body video { max-width: 100%; height: auto; display: block; border-radius: 8px; }
+    .panel-foot {
+      padding: 14px 18px;
+      border-top: 1px solid var(--line-soft);
+      display: flex; align-items: center; justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    .panel-foot .replay {
+      background: transparent; border: 0; cursor: pointer;
+      font: inherit; color: var(--court);
+      letter-spacing: 0.14em;
+      padding: 4px 10px; border-radius: 100px;
+      transition: background 160ms;
+    }
+    .panel-foot .replay:hover { background: var(--shade); }
+
+    /* Forced dark mode card (uses the canonical dark palette so this stays in sync with the mocks) */
+    .panel.force-dark {
+      background: #1F2940;
+      border-color: #2F3B52;
+      color: #F4F0E6;
+    }
+    .panel.force-dark .panel-foot {
+      border-top-color: #1E2735;
+      color: #6B7388;
+    }
+    .panel.force-dark .panel-foot .replay { color: #9FC6B0; }
+
+    /* === Palette swatches (compact, fits the whole panel in one screen) === */
+    .palette-body {
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: flex-start;
+      gap: 18px;
+      padding: 24px 28px;
+      min-height: 0;
+    }
+    .palette-group {}
+    .palette-head {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-mute); margin-bottom: 8px;
+    }
+    .palette-row {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (max-width: 760px) { .palette-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .swatch { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+    .swatch .chip {
+      width: 100%; aspect-ratio: 1;
+      border-radius: 6px;
+      border: 1px solid rgba(26,24,21,0.10);
+    }
+    .swatch .lbl {
+      font-family: 'Inter Tight', sans-serif;
+      font-size: 0.72rem; font-weight: 500;
+      color: var(--ink); line-height: 1.1;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .swatch .hex {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem; color: var(--ink-mute);
+      font-feature-settings: 'tnum'; letter-spacing: 0.02em;
+    }
+    /* Force-dark panel overrides for palette */
+    .panel.force-dark .palette-head { color: #6B7388; }
+    .panel.force-dark .swatch .lbl { color: #F4F0E6; }
+    .panel.force-dark .swatch .hex { color: #6B7388; }
+    .panel.force-dark .swatch .chip { border-color: rgba(255,255,255,0.10); }
+
+    /* Hero "as it'd appear on landing" preview */
+    .hero-preview {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 56px;
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 48px;
+      align-items: center;
+    }
+    @media (max-width: 880px) { .hero-preview { grid-template-columns: 1fr; padding: 32px; gap: 32px; } }
+    .hero-preview h1 {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 144;
+      font-weight: 500;
+      font-size: clamp(40px, 6vw, 84px);
+      letter-spacing: -0.025em;
+      line-height: 0.98;
+      margin: 20px 0 24px;
+    }
+    .hero-preview h1 .ital { color: var(--clay); font-style: italic; font-weight: 400; display: block; }
+    .hero-preview .lede {
+      color: var(--ink-soft);
+      font-size: 1.05rem;
+      line-height: 1.5;
+      max-width: 42ch;
+      margin-bottom: 28px;
+    }
+    .hero-preview .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .hero-preview .btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 12px 22px; border-radius: 100px;
+      font-weight: 500; font-size: 0.95rem;
+      text-decoration: none;
+    }
+    .hero-preview .btn-primary { background: var(--court); color: var(--cream); }
+    body.dark .hero-preview .btn-primary { background: var(--court-deep); }
+    .hero-preview .btn-ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    .hero-preview .hero-video-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.05), 0 10px 32px -16px rgba(0,0,0,0.18);
+    }
+    .hero-preview .hero-video-card video { display: block; width: 100%; height: auto; }
+    .hero-preview .hero-trust {
+      margin-top: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+
+    footer {
+      padding: 32px 56px;
+      border-top: 1px solid var(--line-soft);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-mute);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    /* === Mocks grid (Section 6) === */
+    .mocks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 24px;
+    }
+    .mock-card {
+      display: flex; flex-direction: column;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      overflow: hidden;
+      text-decoration: none; color: inherit;
+      box-shadow: var(--shadow);
+      transition: transform 240ms cubic-bezier(0.2,0.8,0.2,1), box-shadow 240ms cubic-bezier(0.2,0.8,0.2,1);
+    }
+    .mock-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 1px 0 rgba(26,24,21,0.06), 0 24px 60px -28px rgba(26,24,21,0.22);
+    }
+    .mock-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      background: var(--shade);
+      pointer-events: none; /* iframe doesn't capture clicks — the parent <a> does */
+    }
+    .mock-frame iframe {
+      position: absolute;
+      top: 0; left: 0;
+      width: 200%;
+      height: 200%;
+      border: 0;
+      transform: scale(0.5);
+      transform-origin: top left;
+      pointer-events: none;
+    }
+    .mock-foot {
+      padding: 16px 20px;
+      border-top: 1px solid var(--line-soft);
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .mock-title {
+      font-family: 'Newsreader', serif;
+      font-variation-settings: 'opsz' 60;
+      font-weight: 500;
+      font-size: 1.15rem;
+      letter-spacing: -0.012em;
+      color: var(--ink);
+    }
+    .mock-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <span class="eyebrow">CourtCheck · Brand Drop · v2 Locked</span>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    </button>
+  </header>
+
+  <main>
+
+    <!-- Section 1: Logo lockup masters -->
+    <section>
+      <span class="eyebrow">01 · Logo Lockup Masters</span>
+      <h2>The mark, <span class="ital">locked.</span></h2>
+
+      <div class="panel-grid">
+        <div class="panel">
+          <div class="panel-body" style="background: #F4F0E6;">
+            <img src="logo/CourtCheckLogoLight.png" alt="CourtCheck logo lockup, light mode">
+          </div>
+          <div class="panel-foot">
+            <span>CourtCheckLogoLight.png</span>
+            <span>Light Master</span>
+          </div>
+        </div>
+
+        <div class="panel force-dark">
+          <div class="panel-body" style="background: #07080F;">
+            <img src="logo/CourtCheckLogoDark.png" alt="CourtCheck logo lockup, dark mode">
+          </div>
+          <div class="panel-foot">
+            <span>CourtCheckLogoDark.png</span>
+            <span>Dark Master</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Logo splash animation -->
+    <section>
+      <span class="eyebrow">02 · Logo Splash Animation</span>
+      <h2>The mark, <span class="ital">in motion.</span></h2>
+
+      <div class="panel">
+        <div class="panel-body" style="background: #F4F0E6;">
+          <video
+            id="logoSplash"
+            src="logo/CourtCheckAnimation.mp4"
+            autoplay muted playsinline
+            style="max-width: 720px;"
+          ></video>
+        </div>
+        <div class="panel-foot">
+          <span>CourtCheckAnimation.mp4 · 5s plays once</span>
+          <button class="replay" id="replayLogo">↻ Replay</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Hero bounce animation -->
+    <section>
+      <span class="eyebrow">03 · Hero Bounce Animation</span>
+      <h2>The court, <span class="ital">looping.</span></h2>
+
+      <div class="panel">
+        <div class="panel-body" style="background: #F4F0E6;">
+          <video
+            src="motion/Bounce_Animated.mp4"
+            poster="motion/Bounce_Still.png"
+            autoplay muted loop playsinline
+            style="max-width: 900px;"
+          ></video>
+        </div>
+        <div class="panel-foot">
+          <span>motion/Bounce_Animated.mp4 · 6s seamless loop</span>
+          <span>Hero Background Video</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 4: Hero "in context" -->
+    <section>
+      <span class="eyebrow">04 · Hero in Context</span>
+      <h2>How it lands on the <span class="ital">landing page.</span></h2>
+
+      <div class="hero-preview">
+        <div>
+          <span class="eyebrow">For College Tennis Coaches</span>
+          <h1>
+            See every shot.
+            <span class="ital">Know every move.</span>
+          </h1>
+          <p class="lede">
+            CourtCheck turns raw match footage into deep performance insights. Ball tracking, heatmaps, stroke breakdown, and AI scouting reports — without rewinding a frame.
+          </p>
+          <div class="cta-row">
+            <a href="#" class="btn btn-primary">Upload your first match</a>
+            <a href="#" class="btn btn-ghost">See a sample analysis</a>
+          </div>
+          <p class="hero-trust">Free for the rest of the season · No credit card</p>
+        </div>
+        <div class="hero-video-card">
+          <video
+            src="motion/Bounce_Animated.mp4"
+            poster="motion/Bounce_Still.png"
+            autoplay muted loop playsinline
+          ></video>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 5: Hero still / poster frame -->
+    <section>
+      <span class="eyebrow">05 · Hero Source Frame</span>
+      <h2>The still, <span class="ital">as poster.</span></h2>
+
+      <div class="panel">
+        <div class="panel-body" style="background: #F4F0E6;">
+          <img src="motion/Bounce_Still.png" alt="Hero animation source frame" style="max-width: 900px;">
+        </div>
+        <div class="panel-foot">
+          <span>motion/Bounce_Still.png</span>
+          <span>Poster + Reduced-Motion Fallback</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 6: Mock pages -->
+    <section>
+      <span class="eyebrow">06 · Product Surface Mocks</span>
+      <h2>The full brand <span class="ital">in motion.</span></h2>
+      <p style="color: var(--ink-soft); font-size: 1rem; line-height: 1.55; max-width: 60ch; margin-bottom: 32px;">
+        Ten product surfaces, each rendered with the locked brand applied. Click any tile to open the full mock in a new tab. Each iframe below shows a scaled-down preview of the page's hero region.
+      </p>
+
+      <div class="mocks-grid">
+        <a class="mock-card" href="mocks/landing.html" target="_blank" rel="noopener">
+          <div class="mock-frame"><iframe src="mocks/landing.html" loading="lazy" tabindex="-1"></iframe></div>
+          <div class="mock-foot">
+            <span class="mock-title">Landing</span>
+            <span class="mock-meta">Public marketing · hero video</span>
+          </div>
+        </a>
+
+        <a class="mock-card" href="mocks/auth.html" target="_blank" rel="noopener">
+          <div class="mock-frame"><iframe src="mocks/auth.html" loading="lazy" tabindex="-1"></iframe></div>
+          <div class="mock-foot">
+            <span class="mock-title">Auth</span>
+            <span class="mock-meta">Sign in · Sign up · Reset</span>
+          </div>
+        </a>
+
+        <a class="mock-card" href="mocks/dashboard.html" target="_blank" rel="noopener">
+          <div class="mock-frame"><iframe src="mocks/dashboard.html" loading="lazy" tabindex="-1"></iframe></div>
+          <div class="mock-foot">
+            <span class="mock-title">Dashboard</span>
+            <span class="mock-meta">Coach overview · player roster</span>
+          </div>
+        </a>
+
+        <a class="mock-card" href="mocks/dashboard-empty.html" target="_blank" rel="noopener">
+          <div class="mock-frame"><iframe src="mocks/dashboard-empty.html" loading="lazy" tabindex="-1"></iframe></div>
+          <div class="mock-foot">
+            <span class="mock-title">Dashboard · Empty</span>
+            <span class="mock-meta">First-session state</span>
+          </div>
+        </a>
+
+        <a class="mock-card" href="mocks/visuals.html" target="_blank" rel="noopener">
+          <div class="mock-frame"><iframe src="mocks/visuals.html" loading="lazy" tabindex="-1"></iframe></div>
+          <div class="mock-foot">
+            <span class="mock-title">Visuals</span>
+            <span class="mock-meta">Per-clip viz · shot map, heatmap, spacing, coverage</span>
+          </div>
+        </a>
+
+        <a class="mock-card" href="mocks/upload-flow.html" target="_blank" rel="noopener">
+          <div class="mock-frame"><iframe src="mocks/upload-flow.html" loading="lazy" tabindex="-1"></iframe></div>
+          <div class="mock-foot">
+            <span class="mock-title">Upload Flow</span>
+            <span class="mock-meta">Idle · Uploading · Processing · Done</span>
+          </div>
+        </a>
+
+        <a class="mock-card" href="mocks/match-detail.html" target="_blank" rel="noopener">
+          <div class="mock-frame"><iframe src="mocks/match-detail.html" loading="lazy" tabindex="-1"></iframe></div>
+          <div class="mock-foot">
+            <span class="mock-title">Match Detail</span>
+            <span class="mock-meta">Video + notes + markers + tabs</span>
+          </div>
+        </a>
+
+        <a class="mock-card" href="mocks/player-profile.html" target="_blank" rel="noopener">
+          <div class="mock-frame"><iframe src="mocks/player-profile.html" loading="lazy" tabindex="-1"></iframe></div>
+          <div class="mock-foot">
+            <span class="mock-title">Player Profile</span>
+            <span class="mock-meta">Season trend · court tiles · match history</span>
+          </div>
+        </a>
+
+        <a class="mock-card" href="mocks/players-list.html" target="_blank" rel="noopener">
+          <div class="mock-frame"><iframe src="mocks/players-list.html" loading="lazy" tabindex="-1"></iframe></div>
+          <div class="mock-foot">
+            <span class="mock-title">Players</span>
+            <span class="mock-meta">Roster grid · gradient avatars</span>
+          </div>
+        </a>
+
+        <a class="mock-card" href="mocks/matches-list.html" target="_blank" rel="noopener">
+          <div class="mock-frame"><iframe src="mocks/matches-list.html" loading="lazy" tabindex="-1"></iframe></div>
+          <div class="mock-foot">
+            <span class="mock-title">Matches</span>
+            <span class="mock-meta">Table view · filter chips</span>
+          </div>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- Section 7: Color Palette (light + dark) -->
+    <section>
+      <span class="eyebrow">07 · Color Palette</span>
+      <h2>The palette, <span class="ital">in both modes.</span></h2>
+
+      <div class="panel-grid">
+
+        <!-- LIGHT PALETTE -->
+        <div class="panel">
+          <div class="panel-body palette-body" style="background:#F4F0E6">
+
+            <div class="palette-group">
+              <div class="palette-head">Surfaces</div>
+              <div class="palette-row">
+                <div class="swatch"><div class="chip" style="background:#F4F0E6"></div><span class="lbl">cream</span><span class="hex">#F4F0E6</span></div>
+                <div class="swatch"><div class="chip" style="background:#FBF8F1"></div><span class="lbl">paper</span><span class="hex">#FBF8F1</span></div>
+                <div class="swatch"><div class="chip" style="background:#FFFFFF"></div><span class="lbl">surface</span><span class="hex">#FFFFFF</span></div>
+                <div class="swatch"><div class="chip" style="background:#ECE6D5"></div><span class="lbl">shade</span><span class="hex">#ECE6D5</span></div>
+                <div class="swatch"><div class="chip" style="background:#DDD7C5"></div><span class="lbl">line</span><span class="hex">#DDD7C5</span></div>
+                <div class="swatch"><div class="chip" style="background:#EAE4D2"></div><span class="lbl">line-soft</span><span class="hex">#EAE4D2</span></div>
+              </div>
+            </div>
+
+            <div class="palette-group">
+              <div class="palette-head">Ink</div>
+              <div class="palette-row">
+                <div class="swatch"><div class="chip" style="background:#1A1815"></div><span class="lbl">ink</span><span class="hex">#1A1815</span></div>
+                <div class="swatch"><div class="chip" style="background:#43403A"></div><span class="lbl">ink-soft</span><span class="hex">#43403A</span></div>
+                <div class="swatch"><div class="chip" style="background:#837F77"></div><span class="lbl">ink-mute</span><span class="hex">#837F77</span></div>
+              </div>
+            </div>
+
+            <div class="palette-group">
+              <div class="palette-head">Brand · Court</div>
+              <div class="palette-row">
+                <div class="swatch"><div class="chip" style="background:#2E5341"></div><span class="lbl">court</span><span class="hex">#2E5341</span></div>
+                <div class="swatch"><div class="chip" style="background:#1F3D2E"></div><span class="lbl">court-deep</span><span class="hex">#1F3D2E</span></div>
+                <div class="swatch"><div class="chip" style="background:#6E8C7C"></div><span class="lbl">court-light</span><span class="hex">#6E8C7C</span></div>
+                <div class="swatch"><div class="chip" style="background:#A85E3A"></div><span class="lbl">court-surface</span><span class="hex">#A85E3A</span></div>
+              </div>
+            </div>
+
+            <div class="palette-group">
+              <div class="palette-head">Accents</div>
+              <div class="palette-row">
+                <div class="swatch"><div class="chip" style="background:#B05B36"></div><span class="lbl">clay</span><span class="hex">#B05B36</span></div>
+                <div class="swatch"><div class="chip" style="background:#D08866"></div><span class="lbl">clay-soft</span><span class="hex">#D08866</span></div>
+                <div class="swatch"><div class="chip" style="background:#BFC846"></div><span class="lbl">lime</span><span class="hex">#BFC846</span></div>
+                <div class="swatch"><div class="chip" style="background:#7B4E6E"></div><span class="lbl">plum</span><span class="hex">#7B4E6E</span></div>
+                <div class="swatch"><div class="chip" style="background:#C8923A"></div><span class="lbl">amber</span><span class="hex">#C8923A</span></div>
+                <div class="swatch"><div class="chip" style="background:#5C6B7A"></div><span class="lbl">slate</span><span class="hex">#5C6B7A</span></div>
+              </div>
+            </div>
+
+          </div>
+          <div class="panel-foot">
+            <span>Light mode</span>
+            <span>Locked</span>
+          </div>
+        </div>
+
+        <!-- DARK PALETTE -->
+        <div class="panel force-dark">
+          <div class="panel-body palette-body" style="background:#07080F">
+
+            <div class="palette-group">
+              <div class="palette-head">Surfaces</div>
+              <div class="palette-row">
+                <div class="swatch"><div class="chip" style="background:#07080F"></div><span class="lbl">cream</span><span class="hex">#07080F</span></div>
+                <div class="swatch"><div class="chip" style="background:#1F2940"></div><span class="lbl">paper</span><span class="hex">#1F2940</span></div>
+                <div class="swatch"><div class="chip" style="background:#2B374F"></div><span class="lbl">surface</span><span class="hex">#2B374F</span></div>
+                <div class="swatch"><div class="chip" style="background:#11161F"></div><span class="lbl">shade</span><span class="hex">#11161F</span></div>
+                <div class="swatch"><div class="chip" style="background:#2F3B52"></div><span class="lbl">line</span><span class="hex">#2F3B52</span></div>
+                <div class="swatch"><div class="chip" style="background:#1E2735"></div><span class="lbl">line-soft</span><span class="hex">#1E2735</span></div>
+              </div>
+            </div>
+
+            <div class="palette-group">
+              <div class="palette-head">Ink</div>
+              <div class="palette-row">
+                <div class="swatch"><div class="chip" style="background:#F4F0E6"></div><span class="lbl">ink</span><span class="hex">#F4F0E6</span></div>
+                <div class="swatch"><div class="chip" style="background:#A8B0C0"></div><span class="lbl">ink-soft</span><span class="hex">#A8B0C0</span></div>
+                <div class="swatch"><div class="chip" style="background:#6B7388"></div><span class="lbl">ink-mute</span><span class="hex">#6B7388</span></div>
+              </div>
+            </div>
+
+            <div class="palette-group">
+              <div class="palette-head">Brand · Court</div>
+              <div class="palette-row">
+                <div class="swatch"><div class="chip" style="background:#6FA88B"></div><span class="lbl">court</span><span class="hex">#6FA88B</span></div>
+                <div class="swatch"><div class="chip" style="background:#4A8268"></div><span class="lbl">court-deep</span><span class="hex">#4A8268</span></div>
+                <div class="swatch"><div class="chip" style="background:#9FC6B0"></div><span class="lbl">court-light</span><span class="hex">#9FC6B0</span></div>
+                <div class="swatch"><div class="chip" style="background:#6B3A24"></div><span class="lbl">court-surface</span><span class="hex">#6B3A24</span></div>
+              </div>
+            </div>
+
+            <div class="palette-group">
+              <div class="palette-head">Accents</div>
+              <div class="palette-row">
+                <div class="swatch"><div class="chip" style="background:#E07A52"></div><span class="lbl">clay</span><span class="hex">#E07A52</span></div>
+                <div class="swatch"><div class="chip" style="background:#F0A07F"></div><span class="lbl">clay-soft</span><span class="hex">#F0A07F</span></div>
+                <div class="swatch"><div class="chip" style="background:#DDE970"></div><span class="lbl">lime</span><span class="hex">#DDE970</span></div>
+                <div class="swatch"><div class="chip" style="background:#B584A6"></div><span class="lbl">plum</span><span class="hex">#B584A6</span></div>
+                <div class="swatch"><div class="chip" style="background:#DDB166"></div><span class="lbl">amber</span><span class="hex">#DDB166</span></div>
+                <div class="swatch"><div class="chip" style="background:#889DB3"></div><span class="lbl">slate</span><span class="hex">#889DB3</span></div>
+              </div>
+            </div>
+
+          </div>
+          <div class="panel-foot">
+            <span>Dark mode</span>
+            <span>Refreshed 2026-05-12</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span>CourtCheck Brand Drop · v2 Locked</span>
+    <span>preview.html · 2026-05-12</span>
+  </footer>
+
+  <script>
+    (function() {
+      const toggle = document.getElementById('themeToggle');
+      const body = document.body;
+      const stored = localStorage.getItem('cc-theme');
+      if (stored === 'dark') body.classList.add('dark');
+      toggle.addEventListener('click', () => {
+        body.classList.toggle('dark');
+        localStorage.setItem('cc-theme', body.classList.contains('dark') ? 'dark' : 'light');
+      });
+
+      const splash = document.getElementById('logoSplash');
+      const replay = document.getElementById('replayLogo');
+      if (splash && replay) {
+        replay.addEventListener('click', () => {
+          splash.currentTime = 0;
+          splash.play();
+        });
+      }
+    })();
+  </script>
+
+</body>
+</html>

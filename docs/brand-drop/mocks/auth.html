@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CourtCheck · Sign in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream:#F4F0E6; --paper:#FBF8F1; --surface:#FFFFFF; --shade:#ECE6D5;
+      --line:#DDD7C5; --line-soft:#EAE4D2;
+      --ink:#1A1815; --ink-soft:#43403A; --ink-mute:#837F77;
+      --court:#2E5341; --court-deep:#1F3D2E; --court-light:#6E8C7C;
+      --clay:#B05B36; --clay-soft:#D08866;
+      --lime:#BFC846;
+      --plum:#7B4E6E; --amber:#C8923A; --slate:#5C6B7A;
+      --bg-grad-1:rgba(176,91,54,0.08); --bg-grad-2:rgba(46,83,65,0.09);
+      --radius-lg:14px;
+      --shadow:0 1px 0 rgba(26,24,21,0.04), 0 24px 60px -28px rgba(26,24,21,0.18);
+      --ease-out:cubic-bezier(0.2, 0.8, 0.2, 1);
+      --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
+      --dur-quick:160ms; --dur-base:240ms; --dur-reveal:480ms;
+    }
+    body.dark {
+      --cream:#07080F; --paper:#1F2940; --surface:#2B374F; --shade:#11161F;
+      --line:#2F3B52; --line-soft:#1E2735;
+      --ink:#F4F0E6; --ink-soft:#A8B0C0; --ink-mute:#6B7388;
+      --court:#6FA88B; --court-deep:#4A8268; --court-light:#9FC6B0;
+      --clay:#E07A52; --clay-soft:#F0A07F;
+      --lime:#DDE970;
+      --bg-grad-1:rgba(176,91,54,0.10); --bg-grad-2:rgba(111,168,139,0.07);
+      --plum:#B584A6; --amber:#DDB166; --slate:#889DB3;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { background: var(--cream); color: var(--ink); }
+    body {
+      font-family: 'Inter Tight', system-ui, sans-serif;
+      font-size: 16px; line-height: 1.55; letter-spacing: -0.005em;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      background-image:
+        radial-gradient(900px 600px at 88% -8%, var(--bg-grad-1), transparent 55%),
+        radial-gradient(720px 600px at -8% 108%, var(--bg-grad-2), transparent 60%);
+      background-attachment: fixed;
+      transition: background-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+    }
+    a { color: inherit; text-decoration: none; }
+
+    .display { font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 72; font-weight: 500; letter-spacing: -0.022em; line-height: 1.05; }
+    .ital { color: var(--clay); font-style: italic; font-weight: 400; }
+    /* Display headlines: each .line span renders on its own line, balanced wrap */
+    h1 .line, h2 .line, h3 .line { display: block; }
+    h1, h2, h3 { text-wrap: balance; }
+
+    /* === Top bar (brand mark only) === */
+    .top-bar {
+      padding: 28px 56px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    @media (max-width: 600px) { .top-bar { padding: 22px 28px; } }
+    .brand-mark { display: flex; align-items: center; gap: 12px; }
+    .brand-mark .logo { height: 56px; width: auto; display: block; }
+    .brand-mark .logo-dark { display: none; }
+    body.dark .brand-mark .logo-light { display: none; }
+    body.dark .brand-mark .logo-dark { display: block; }
+    .brand-mark .name {
+      font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 60;
+      font-weight: 500; font-size: 1.25rem; letter-spacing: -0.018em;
+    }
+    .theme-toggle {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 1px solid var(--line); background: var(--paper);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--ink); padding: 0;
+      transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
+    }
+    .theme-toggle:hover { transform: rotate(20deg); border-color: var(--ink); }
+    .theme-toggle svg { width: 16px; height: 16px; }
+    .theme-toggle .moon { display: block; } .theme-toggle .sun  { display: none; }
+    body.dark .theme-toggle .moon { display: none; } body.dark .theme-toggle .sun { display: block; }
+
+    /* Dev-only state toggle */
+    .dev-toggle {
+      margin: 0 auto 24px;
+      max-width: 420px;
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px;
+      background: var(--paper);
+      border: 1px dashed var(--line);
+      border-radius: 100px;
+    }
+    .dev-toggle .label {
+      color: var(--ink-mute);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase;
+    }
+    .dev-toggle button {
+      padding: 5px 12px; border-radius: 100px; border: none;
+      background: transparent; color: var(--ink-soft);
+      font-size: 0.78rem; font-weight: 500; cursor: pointer;
+      transition: background var(--dur-quick) var(--ease-out), color var(--dur-quick) var(--ease-out);
+    }
+    .dev-toggle button:hover { color: var(--ink); }
+    .dev-toggle button.active { background: var(--ink); color: var(--cream); }
+
+    /* === Auth main: centered card === */
+    main {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px 28px 64px;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 44px 40px;
+      box-shadow: var(--shadow);
+    }
+    @media (max-width: 480px) { .auth-card { padding: 36px 28px; } }
+
+    .auth-pane { display: none; }
+    .auth-card[data-state="login"]    .auth-login    { display: block; }
+    .auth-card[data-state="signup"]   .auth-signup   { display: block; }
+    .auth-card[data-state="forgot"]   .auth-forgot   { display: block; }
+
+    .auth-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--court);
+    }
+    .auth-eyebrow::before { content: ""; width: 6px; height: 6px; background: var(--clay); border-radius: 50%; }
+
+    .auth-title {
+      font-size: clamp(32px, 4vw, 44px);
+      margin: 14px 0 8px;
+    }
+
+    .cc-wordmark { white-space: nowrap; }
+    .cc-court { font-style: normal; color: var(--ink); }
+    .cc-check { font-style: italic; font-weight: 400; color: var(--lime); }
+    body.dark .cc-court { color: var(--ink); }
+    body.dark .cc-check { color: var(--lime); }
+    .auth-sub {
+      color: var(--ink-soft);
+      font-size: 0.98rem;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+    .auth-sub a { color: var(--court); font-weight: 500; border-bottom: 1px solid currentColor; }
+    body.dark .auth-sub a { color: var(--court-light); }
+
+    /* === Form === */
+    .form-grid { display: grid; gap: 14px; margin-bottom: 18px; }
+    .field { display: grid; gap: 6px; }
+    .field label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    .field input, .field select {
+      width: 100%; padding: 12px 14px;
+      background: var(--shade);
+      border: 1px solid transparent;
+      border-radius: 10px;
+      font-family: inherit; font-size: 0.95rem; color: var(--ink);
+      transition: border-color var(--dur-quick) var(--ease-out), background var(--dur-quick) var(--ease-out);
+    }
+    body.dark .field input, body.dark .field select { background: var(--surface); }
+    .field input::placeholder { color: var(--ink-mute); }
+    .field input:focus, .field select:focus {
+      outline: none; border-color: var(--ink); background: var(--paper);
+    }
+    body.dark .field input:focus, body.dark .field select:focus { background: var(--surface); border-color: var(--ink); }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 480px) { .field-row { grid-template-columns: 1fr; } }
+
+    .meta-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.85rem;
+      margin-bottom: 22px;
+    }
+    .meta-row label {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer; color: var(--ink-soft);
+    }
+    .meta-row input[type="checkbox"] {
+      width: 16px; height: 16px;
+      accent-color: var(--court);
+      cursor: pointer;
+    }
+    .meta-row a { color: var(--court); font-weight: 500; }
+    body.dark .meta-row a { color: var(--court-light); }
+
+    .auth-submit {
+      width: 100%;
+      padding: 14px 22px;
+      background: var(--ink); color: var(--cream);
+      border: none; border-radius: 100px;
+      font-family: inherit; font-size: 0.98rem; font-weight: 500;
+      cursor: pointer;
+      transition: transform var(--dur-quick) var(--ease-spring), background var(--dur-base) var(--ease-out);
+      margin-bottom: 22px;
+    }
+    body.dark .auth-submit { background: var(--court-deep); color: var(--cream); }
+    .auth-submit:hover { transform: translateY(-1px); }
+
+    /* OR divider */
+    .or-divider {
+      display: flex; align-items: center; gap: 14px;
+      margin: 8px 0 22px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    .or-divider::before, .or-divider::after {
+      content: ""; flex: 1; height: 1px; background: var(--line);
+    }
+
+    /* SSO button (Google) */
+    .sso-btn {
+      width: 100%;
+      padding: 12px 18px;
+      background: var(--surface);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 100px;
+      font-family: inherit; font-size: 0.95rem; font-weight: 500;
+      cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+      transition: border-color var(--dur-quick) var(--ease-out), background var(--dur-quick) var(--ease-out);
+      margin-bottom: 22px;
+    }
+    .sso-btn:hover { border-color: var(--ink); }
+    body.dark .sso-btn { background: var(--surface); }
+    .sso-btn .g-icon {
+      width: 18px; height: 18px;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+
+    .auth-foot {
+      text-align: center;
+      font-size: 0.92rem;
+      color: var(--ink-soft);
+      padding-top: 18px;
+      border-top: 1px solid var(--line-soft);
+    }
+    .auth-foot a { color: var(--court); font-weight: 500; border-bottom: 1px solid currentColor; }
+    body.dark .auth-foot a { color: var(--court-light); }
+
+    .back-link {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-bottom: 22px;
+      font-size: 0.88rem;
+      color: var(--ink-mute);
+      transition: color var(--dur-quick) var(--ease-out);
+    }
+    .back-link:hover { color: var(--ink); }
+    .back-link svg { width: 14px; height: 14px; }
+
+    /* Confirmation pane (forgot-password sent state) */
+    .sent-state {
+      text-align: center;
+      padding: 12px 0 6px;
+    }
+    .sent-glyph {
+      width: 64px; height: 64px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: color-mix(in srgb, var(--court) 12%, transparent);
+      color: var(--court);
+      display: flex; align-items: center; justify-content: center;
+    }
+    body.dark .sent-glyph {
+      background: color-mix(in srgb, var(--court-light) 18%, transparent);
+      color: var(--court-light);
+    }
+    .sent-glyph svg { width: 26px; height: 26px; }
+    .sent-state h3 {
+      font-family: 'Newsreader', serif; font-weight: 500;
+      font-size: 1.5rem; letter-spacing: -0.014em;
+      margin-bottom: 8px;
+    }
+    .sent-state p {
+      color: var(--ink-soft); font-size: 0.95rem;
+      max-width: 32ch; margin: 0 auto 22px;
+      line-height: 1.5;
+    }
+    .sent-state .resend {
+      font-size: 0.85rem; color: var(--ink-mute);
+    }
+    .sent-state .resend a { color: var(--court); font-weight: 500; border-bottom: 1px solid currentColor; }
+    body.dark .sent-state .resend a { color: var(--court-light); }
+
+    /* Footer (just a quiet brand line) */
+    footer {
+      padding: 24px 56px 32px;
+      display: flex; justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--ink-mute);
+    }
+    @media (max-width: 600px) { footer { padding: 20px 28px 28px; flex-direction: column; gap: 6px; } }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .auth-card { animation: rise var(--dur-reveal) var(--ease-out); }
+    }
+    @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* === BRAND-MARK HOVER VIDEO === */
+    .brand-mark { position: relative; }
+    .brand-mark .logo-video {
+      display: none;
+      height: 56px;
+      width: auto;
+      background: transparent;
+    }
+    body.dark .brand-mark .logo-video {
+      filter: invert(1) hue-rotate(180deg);
+    }
+    .brand-mark:hover .logo-light,
+    .brand-mark:hover .logo-dark { display: none; }
+    .brand-mark:hover .logo-video { display: block; }
+    body.dark .brand-mark:hover .logo-light,
+    body.dark .brand-mark:hover .logo-dark { display: none; }
+    body.dark .brand-mark:hover .logo-video { display: block; }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <a href="#" class="brand-mark">
+      <img class="logo logo-light" src="../logo/CourtCheckLogoLight.png" alt="CourtCheck">
+      <img class="logo logo-dark" src="../logo/CourtCheckLogoDark.png" alt="CourtCheck">
+      <video class="logo logo-video" muted playsinline preload="metadata" aria-hidden="true"><source src="../logo/CourtCheckAnimation.webm" type="video/webm"><source src="../logo/CourtCheckAnimation.mp4" type="video/mp4"></video>
+    </a>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    </button>
+  </div>
+
+  <main>
+
+    <!-- Dev-only state toggle (would not ship). Click to switch between auth screens. -->
+    <div class="dev-toggle" role="tablist">
+      <span class="label">Demo</span>
+      <button data-state="login" class="active">Sign in</button>
+      <button data-state="signup">Sign up</button>
+      <button data-state="forgot">Reset</button>
+    </div>
+
+    <div class="auth-card" id="authCard" data-state="login">
+
+      <!-- LOGIN -->
+      <div class="auth-pane auth-login">
+        <span class="auth-eyebrow">Welcome back</span>
+        <h1 class="display auth-title">Sign in to <span class="cc-wordmark"><span class="cc-court">Court</span><span class="cc-check">Check</span></span>.</h1>
+        <p class="auth-sub">Pick up where you left off.</p>
+
+        <button class="sso-btn">
+          <span class="g-icon">
+            <svg viewBox="0 0 24 24" width="18" height="18">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+          </span>
+          Continue with Google
+        </button>
+
+        <div class="or-divider">or</div>
+
+        <form class="form-grid" onsubmit="return false;">
+          <div class="field">
+            <label for="email-l">Email</label>
+            <input id="email-l" type="email" placeholder="coach@school.edu" autocomplete="email"/>
+          </div>
+          <div class="field">
+            <label for="password-l">Password</label>
+            <input id="password-l" type="password" placeholder="••••••••" autocomplete="current-password"/>
+          </div>
+        </form>
+
+        <div class="meta-row">
+          <label><input type="checkbox" /> Stay signed in</label>
+          <a href="#" data-go="forgot">Forgot password?</a>
+        </div>
+
+        <button class="auth-submit">Sign in</button>
+
+        <div class="auth-foot">
+          New to CourtCheck? <a href="#" data-go="signup">Create an account</a>
+        </div>
+      </div>
+
+      <!-- SIGNUP -->
+      <div class="auth-pane auth-signup">
+        <span class="auth-eyebrow">Get started</span>
+        <h1 class="display auth-title">Create your <span class="ital">account</span>.</h1>
+        <p class="auth-sub"> Upload your first recording in under a minute.</p>
+
+        <button class="sso-btn">
+          <span class="g-icon">
+            <svg viewBox="0 0 24 24" width="18" height="18">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+            </svg>
+          </span>
+          Sign up with Google
+        </button>
+
+        <div class="or-divider">or</div>
+
+        <form class="form-grid" onsubmit="return false;">
+          <div class="field-row">
+            <div class="field">
+              <label for="first">First name</label>
+              <input id="first" type="text" placeholder="Brian" autocomplete="given-name"/>
+            </div>
+            <div class="field">
+              <label for="last">Last name</label>
+              <input id="last" type="text" placeholder="Le" autocomplete="family-name"/>
+            </div>
+          </div>
+          <div class="field">
+            <label for="email-s">Email</label>
+            <input id="email-s" type="email" placeholder="coach@school.edu" autocomplete="email"/>
+          </div>
+          <div class="field">
+            <label for="role">Role</label>
+            <select id="role">
+              <option>Coach</option>
+              <option>Player</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="team">Team / school</label>
+            <input id="team" type="text" placeholder="UC Davis Tennis"/>
+          </div>
+          <div class="field">
+            <label for="password-s">Password</label>
+            <input id="password-s" type="password" placeholder="At least 10 characters" autocomplete="new-password"/>
+          </div>
+        </form>
+
+        <button class="auth-submit">Create account</button>
+
+        <div class="auth-foot">
+          Already have an account? <a href="#" data-go="login">Sign in</a>
+        </div>
+      </div>
+
+      <!-- FORGOT PASSWORD -->
+      <div class="auth-pane auth-forgot">
+        <a href="#" class="back-link" data-go="login">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          Back to sign in
+        </a>
+
+        <span class="auth-eyebrow">Reset</span>
+        <h1 class="display auth-title">Get back <span class="ital">in.</span></h1>
+        <p class="auth-sub">Enter the email tied to your account. We'll send a secure reset link.</p>
+
+        <form class="form-grid" onsubmit="return false;">
+          <div class="field">
+            <label for="email-f">Email</label>
+            <input id="email-f" type="email" placeholder="coach@school.edu" autocomplete="email"/>
+          </div>
+        </form>
+
+        <button class="auth-submit" id="forgotSubmit" style="margin-top: 4px;">Send reset link</button>
+
+        <!-- Sent state (toggled visible after submit; swap by JS in production) -->
+        <div class="sent-state" id="sentState" style="display: none;">
+          <div class="sent-glyph">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12 6 6L20 6"/></svg>
+          </div>
+          <h3>Reset link sent.</h3>
+          <p>Check your inbox. The link expires in 15 minutes — for safety, not for stress.</p>
+          <p class="resend">Didn't get it? <a href="#">Resend</a></p>
+        </div>
+
+        <div class="auth-foot">
+          Remembered it? <a href="#" data-go="login">Sign in instead</a>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <footer>
+    <span>© 2026 CourtCheck</span>
+    <span>v0.1 · brand mock</span>
+  </footer>
+
+  <script>
+    (function() {
+      const toggle = document.getElementById('themeToggle');
+      const body = document.body;
+      const stored = localStorage.getItem('cc-theme');
+      if (stored === 'dark') body.classList.add('dark');
+      toggle.addEventListener('click', () => {
+        body.classList.toggle('dark');
+        localStorage.setItem('cc-theme', body.classList.contains('dark') ? 'dark' : 'light');
+      });
+    })();
+
+    // State toggle (dev-only) + inline links between panes
+    const card = document.getElementById('authCard');
+    function setState(state) {
+      card.dataset.state = state;
+      document.querySelectorAll('.dev-toggle button').forEach(b => {
+        b.classList.toggle('active', b.dataset.state === state);
+      });
+    }
+    document.querySelectorAll('.dev-toggle button').forEach(btn => {
+      btn.addEventListener('click', () => setState(btn.dataset.state));
+    });
+    document.querySelectorAll('[data-go]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        setState(link.dataset.go);
+      });
+    });
+
+    // Forgot-password "sent" state demo
+    const forgotSubmit = document.getElementById('forgotSubmit');
+    const sentState = document.getElementById('sentState');
+    if (forgotSubmit && sentState) {
+      forgotSubmit.addEventListener('click', () => {
+        forgotSubmit.style.display = 'none';
+        sentState.style.display = 'block';
+      });
+    }
+  </script>
+
+  <script>
+    // brand-mark hover-to-play splash animation
+    (function () {
+      const marks = document.querySelectorAll('.brand-mark');
+      marks.forEach(mark => {
+        const video = mark.querySelector('video');
+        if (!video) return;
+        mark.addEventListener('mouseenter', () => {
+          try { video.currentTime = 0; video.play(); } catch (e) {}
+        });
+        mark.addEventListener('mouseleave', () => {
+          video.pause();
+        });
+      });
+    })();
+  </script>
+
+</body>
+</html>

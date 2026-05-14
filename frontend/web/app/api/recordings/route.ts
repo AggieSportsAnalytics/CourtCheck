@@ -23,17 +23,18 @@ export async function GET() {
       }
     );
 
-    const { data: authData } = await supabase.auth.getClaims();
+    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!authData?.claims) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { data, error } = await supabaseAdmin
       .from("matches")
-      .select("id, name, status, progress, error, results_path, input_path, created_at, fps, num_frames, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, bounce_heatmap_path, player_heatmap_path")
-      .eq("user_id", authData.claims.sub)
-      .order("created_at", { ascending: false });
+      .select("id, name, status, progress, error, results_path, input_path, created_at, fps, num_frames, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, bounce_heatmap_path, player_heatmap_path, player_id")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(100);
 
     if (error) {
       console.error("Recordings fetch error", error);
@@ -74,6 +75,7 @@ export async function GET() {
           outBoundsBounces: match.out_bounds_bounces ?? null,
           hasBounceHeatmap: !!match.bounce_heatmap_path,
           hasPlayerHeatmap: !!match.player_heatmap_path,
+          player_id: match.player_id ?? null,
         };
       })
     );

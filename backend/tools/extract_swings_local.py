@@ -70,13 +70,16 @@ def _extract_clip(cap: cv2.VideoCapture, out_path: Path, start: int, end: int, f
     writer.release()
 
     # Transcode to H.264 so browsers can play it
-    subprocess.run([
+    result = subprocess.run([
         "ffmpeg", "-y", "-i", str(tmp_path),
         "-vcodec", "libx264", "-crf", "23", "-preset", "fast",
         "-movflags", "+faststart",
         str(out_path),
     ], capture_output=True)
     tmp_path.unlink(missing_ok=True)
+    if result.returncode != 0:
+        print(f"[WARN] ffmpeg failed for {out_path.name}: {result.stderr[-300:].decode(errors='replace')}")
+        return False
     return out_path.exists() and out_path.stat().st_size > 0
 
 

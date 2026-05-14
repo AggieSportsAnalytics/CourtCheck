@@ -1,31 +1,8 @@
-import { Navbar } from '@/components/landing/Navbar';
-import { Hero } from '@/components/landing/Hero';
-import { Problem } from '@/components/landing/Problem';
-import { Features } from '@/components/landing/Features';
-import { HowItWorks } from '@/components/landing/HowItWorks';
-import { SampleInsights } from '@/components/landing/SampleInsights';
-import { CTA } from '@/components/landing/CTA';
-import { Footer } from '@/components/landing/Footer';
+import { redirect } from 'next/navigation'
 
-export const metadata = {
-  title: 'CourtCheck — AI Tennis Analytics',
-  description:
-    'Turn your match footage into deep performance insights. Ball tracking, court heatmaps, stroke classification, and AI scouting reports.',
-};
-
+// The landing page is the locked brand-drop mock served verbatim from
+// public/landing.html (1844 lines of design-fidelity HTML/CSS/JS). The
+// React shell would re-derive what's already pixel-locked there.
 export default function LandingPage() {
-  return (
-    <div style={{ background: '#07070A', minHeight: '100vh' }}>
-      <Navbar />
-      <main>
-        <Hero />
-        <Problem />
-        <Features />
-        <HowItWorks />
-        <SampleInsights />
-        <CTA />
-      </main>
-      <Footer />
-    </div>
-  );
+  redirect('/landing.html')
 }

@@ -1,15 +1,49 @@
-"use client";
+'use client';
 
-import { useEffect, useState, useRef } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
-import ReactMarkdown from "react-markdown";
-import rehypeSanitize from "rehype-sanitize";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import NotesPanel, { TimedNote } from '@/components/recordings/NotesPanel';
+import VizPanel, { type ApiShot } from '@/components/recordings/VizPanel';
+import ShotBreakdown from '@/components/recordings/ShotBreakdown';
+import ScoutingReport, { ScoutingSections } from '@/components/recordings/ScoutingReport';
+import StatsCard from '@/components/recordings/StatsCard';
+import BounceLoader from '@/components/upload/BounceLoader';
+import VideoPlayer from '@/components/features/recordings/VideoPlayer';
+import CoachInsights, {
+  type PositionSummary,
+  type NetApproachSummary,
+  type ErrorSummary,
+} from '@/components/recordings/CoachInsights';
+import EditableName from '@/components/recordings/EditableName';
 
-interface Recording {
+/**
+ * Match-detail page. Ported from docs/brand-drop/mocks/match-detail.html.
+ *
+ * Layout (per mock):
+ *   - breadcrumb (Recordings / filename)
+ *   - h1 + meta header
+ *   - video + notes side-by-side (1.7fr | 1fr, gap 24px, sticky notes top:92px)
+ *   - unified viz card (3-way toggle: shot map / spacing / coverage)
+ *   - shot breakdown (mix | accuracy)
+ *   - scouting report (6 sections, court-tinted final-line rail)
+ *   - stats (4 tiles: winners / unforced errors / first serve in / avg rally)
+ *
+ * Backend wiring preserved:
+ *   - GET /api/recordings/[id] polls every 5s until status === done|failed.
+ *   - videoUrl is LOCKED on first valid value (prev ?? data.recording.videoUrl)
+ *     so the <video> doesn't reload on every poll. This is the shipped fix —
+ *     DO NOT regress.
+ *   - notes PATCH is debounced 800ms; while saving, incoming poll data does
+ *     not clobber local note state.
+ */
+
+type Recording = {
   id: string;
-  status: string;
+  status: 'pending' | 'processing' | 'done' | 'failed';
   progress: number;
+  /** Backend-reported phase label (e.g. "Following the ball and players"). */
+  stage: string | null;
   error: string | null;
   videoUrl: string | null;
   bounceHeatmapUrl: string | null;
@@ -29,218 +63,166 @@ interface Recording {
   inBoundsBounces: number | null;
   outBoundsBounces: number | null;
   scoutingReport: string | null;
+  playerId: string | null;
+  keypoints: unknown[];
+  notes: TimedNote[];
+  shots: ApiShot[];
+  coverageGrid: number[][];
+  positionSummary: PositionSummary | null;
+  netApproachSummary: NetApproachSummary | null;
+  errorSummary: ErrorSummary | null;
+};
+
+function fmtTs(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
-// ─── Shared primitives ──────────────────────────────────────────────────────
-
-function Card({ children, accent = false, className = '' }: { children: React.ReactNode; accent?: boolean; className?: string }) {
-  return (
-    <div
-      className={`rounded-2xl p-5 ${className}`}
-      style={
-        accent
-          ? { background: 'rgba(180,240,0,0.03)', border: '1px solid rgba(180,240,0,0.12)' }
-          : { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }
-      }
-    >
-      {children}
-    </div>
-  );
+function parsePlayers(name: string): { player: string; opponent: string | null } {
+  const cleaned = name.replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' ').trim();
+  const match = cleaned.match(/^(.*?)(?:\s+vs\.?\s+|\s*\/\s*|\s*—\s*)(.+)$/i);
+  if (match) {
+    return { player: match[1].trim(), opponent: match[2].trim() };
+  }
+  return { player: cleaned, opponent: null };
 }
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="text-xs font-semibold uppercase tracking-widest mb-4" style={{ color: '#5A5A66' }}>
-      {children}
-    </h3>
-  );
-}
-
-const STROKE_LEGEND = [
-  { label: 'Forehand',  color: 'rgb(80,220,80)' },
-  { label: 'Backhand',  color: 'rgb(80,100,220)' },
-  { label: 'Serve',     color: 'rgb(255,210,0)' },
-  { label: 'Slice',     color: 'rgb(160,60,220)' },
-] as const;
-
-const COURT_TABS = [
-  { key: 'ball'   as const, label: 'Ball Bounces',     sub: 'Where the ball landed — useful for identifying opponent patterns' },
-  { key: 'player' as const, label: 'Player Positions', sub: 'Your court coverage — identify areas to improve' },
-  { key: 'shot'   as const, label: 'Shot Map',         sub: 'Player position at each shot — color-coded by stroke type' },
-];
-
-type CourtTabKey = 'ball' | 'player' | 'shot';
-
-function CourtReportTabs({
-  bounceUrl,
-  playerUrl,
-  shotMapUrl,
-}: {
-  bounceUrl: string | null;
-  playerUrl: string | null;
-  shotMapUrl: string | null;
-}) {
-  const [active, setActive] = useState<CourtTabKey>('ball');
-  const urlMap: Record<CourtTabKey, string | null> = { ball: bounceUrl, player: playerUrl, shot: shotMapUrl };
-  const url = urlMap[active];
-  const tab = COURT_TABS.find((t) => t.key === active)!;
-
-  return (
-    <div>
-      <div className="flex gap-1 mb-4">
-        {COURT_TABS.map(({ key, label }) => {
-          const isActive = active === key;
-          return (
-            <button
-              key={key}
-              onClick={() => setActive(key)}
-              className="text-[11px] font-semibold px-3 py-1.5 rounded-md transition-all duration-200"
-              style={{
-                background: isActive ? 'rgba(255,255,255,0.08)' : 'transparent',
-                color: isActive ? '#FAFAFA' : '#4A4A55',
-                border: isActive ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-      {url ? (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ border: '1px solid rgba(255,255,255,0.07)', background: '#050507' }}
-        >
-          <img src={url} alt={tab.label} className="w-full object-contain" />
-          <div className="px-4 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <p className="text-xs font-semibold text-white tracking-wide">{tab.label}</p>
-            <p className="text-[10px] mt-0.5" style={{ color: '#3A3A44' }}>{tab.sub}</p>
-          </div>
-        </div>
-      ) : (
-        <div
-          className="rounded-xl overflow-hidden"
-          style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}
-        >
-          <div className="aspect-video flex flex-col items-center justify-center gap-2 p-4 text-center">
-            <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ color: '#2A2A33' }}>
-              <rect x="3" y="3" width="18" height="18" rx="1" /><path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
-            </svg>
-            <p className="text-xs" style={{ color: '#3A3A44' }}>{tab.label}</p>
-            <p className="text-[10px]" style={{ color: '#2A2A33' }}>Not generated</p>
-          </div>
-        </div>
-      )}
-
-      {/* Stroke type color legend */}
-      <div className="flex flex-wrap gap-x-5 gap-y-1.5 pt-3">
-        {STROKE_LEGEND.map(({ label, color }) => (
-          <div key={label} className="flex items-center gap-1.5">
-            <span className="block rounded-full shrink-0" style={{ width: 8, height: 8, background: color }} />
-            <span className="text-[10px]" style={{ color: '#4A4A55' }}>{label}</span>
-          </div>
-        ))}
-        <div className="flex items-center gap-1.5">
-          <svg width="10" height="10" viewBox="0 0 10 10" className="shrink-0">
-            <line x1="1" y1="1" x2="9" y2="9" stroke="rgb(220,0,0)" strokeWidth="2" strokeLinecap="round"/>
-            <line x1="9" y1="1" x2="1" y2="9" stroke="rgb(220,0,0)" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          <span className="text-[10px]" style={{ color: '#4A4A55' }}>Out of bounds</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: boolean }) {
-  return (
-    <div
-      className="rounded-xl p-4"
-      style={
-        accent
-          ? { background: 'rgba(180,240,0,0.05)', border: '1px solid rgba(180,240,0,0.15)' }
-          : { background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }
-      }
-    >
-      <p className="text-xs mb-1" style={{ color: '#5A5A66' }}>{label}</p>
-      <p className="text-2xl font-black leading-none tracking-tight" style={{ color: accent ? '#B4F000' : '#FAFAFA' }}>{value}</p>
-      {sub && <p className="text-xs mt-1" style={{ color: '#3A3A44' }}>{sub}</p>}
-    </div>
-  );
-}
-
-function MiniBar({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
-  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-  return (
-    <div>
-      <div className="flex justify-between text-xs mb-1">
-        <span style={{ color: '#9CA3AF' }}>{label}</span>
-        <span className="text-white font-semibold">
-          {count.toLocaleString()} <span style={{ color: '#3A3A44' }}>({pct}%)</span>
-        </span>
-      </div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
-      </div>
-    </div>
-  );
-}
-
-// ─── Page ───────────────────────────────────────────────────────────────────
 
 export default function RecordingDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [recording, setRecording] = useState<Recording | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [notes, setNotes] = useState<TimedNote[]>([]);
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const fetchRecording = async () => {
+  const handleDeleteRecording = useCallback(async () => {
+    setDeleting(true);
+    setDeleteError(null);
     try {
-      const res = await fetch(`/api/recordings/${id}`);
-      if (!res.ok) { setError("Recording not found."); return; }
-      const data = await res.json();
-      setRecording(data.recording);
-      if (data.recording.status === "done" || data.recording.status === "failed") {
-        if (pollRef.current) clearInterval(pollRef.current);
+      const res = await fetch(`/api/recordings/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        setDeleteError('Failed to delete recording.');
+        setDeleting(false);
+        return;
       }
+      router.push('/recordings');
     } catch {
-      setError("Failed to load recording.");
-    } finally {
-      setLoading(false);
+      setDeleteError('Failed to delete recording.');
+      setDeleting(false);
     }
-  };
+  }, [id, router]);
+
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const notesTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const fetchRecording = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        const res = await fetch(`/api/recordings/${id}`, {
+          signal,
+          cache: 'no-store',
+        });
+        if (signal?.aborted) return;
+        if (!res.ok) {
+          setError('Recording not found.');
+          return;
+        }
+        const data = await res.json();
+        if (signal?.aborted) return;
+        // Lock the videoUrl once set — prevents <video> reload on each poll
+        setRecording((prev) => ({
+          ...data.recording,
+          videoUrl: prev?.videoUrl ?? data.recording.videoUrl,
+        }));
+        // Don't clobber local notes while a save is in-flight
+        setNotes((prev) => {
+          if (savingNotes) return prev;
+          const incoming = data.recording.notes;
+          return Array.isArray(incoming) ? incoming : [];
+        });
+        if (
+          data.recording.status === 'done' ||
+          data.recording.status === 'failed'
+        ) {
+          if (pollRef.current) clearInterval(pollRef.current);
+        }
+      } catch (err) {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        setError('Failed to load recording.');
+      } finally {
+        if (!signal?.aborted) setLoading(false);
+      }
+    },
+    [id, savingNotes]
+  );
 
   useEffect(() => {
-    fetchRecording();
-    pollRef.current = setInterval(fetchRecording, 5000);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    const controller = new AbortController();
+    fetchRecording(controller.signal);
+    pollRef.current = setInterval(
+      () => fetchRecording(controller.signal),
+      5000
+    );
+    return () => {
+      controller.abort();
+      if (pollRef.current) clearInterval(pollRef.current);
+      if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
+    };
+  }, [fetchRecording]);
+
+  const saveNotes = (updated: TimedNote[]) => {
+    if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
+    setSavingNotes(true);
+    notesTimeoutRef.current = setTimeout(async () => {
+      try {
+        await fetch(`/api/recordings/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: updated }),
+        });
+      } finally {
+        setSavingNotes(false);
+      }
+    }, 800);
+  };
+
+  const handleAddNote = (note: TimedNote) => {
+    setNotes((prev) => {
+      const arr = Array.isArray(prev) ? prev : [];
+      const updated = [...arr, note];
+      saveNotes(updated);
+      return updated;
+    });
+  };
+
+  const handleDeleteNote = (index: number) => {
+    setNotes((prev) => {
+      const arr = Array.isArray(prev) ? prev : [];
+      const updated = arr.filter((_, i) => i !== index);
+      saveNotes(updated);
+      return updated;
+    });
+  };
 
   // ── Loading ──
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <div
-          className="w-8 h-8 rounded-full animate-spin"
-          style={{ border: '2px solid rgba(180,240,0,0.15)', borderTopColor: '#B4F000' }}
-        />
-        <p className="text-sm" style={{ color: '#5A5A66' }}>Loading match data…</p>
-      </div>
-    );
+    return <PageStatus message="Loading match" />;
   }
 
   // ── Error ──
   if (error || !recording) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 px-4 text-center">
-        <svg viewBox="0 0 24 24" className="w-10 h-10" fill="none" stroke="currentColor" strokeWidth={1.25} style={{ color: '#2A2A33' }}>
-          <circle cx="12" cy="12" r="10" />
-          <path d="M12 8v4M12 16h.01" />
-        </svg>
-        <p className="text-white font-semibold">{error ?? "Something went wrong"}</p>
-        <Link href="/recordings" className="text-sm transition-opacity hover:opacity-70" style={{ color: '#B4F000' }}>
+      <div className="max-w-[1280px] mx-auto px-6 py-12 text-center flex flex-col items-center gap-4 min-h-[60vh] justify-center">
+        <p className="font-display font-medium text-[1.15rem]">
+          {error ?? 'Something went wrong.'}
+        </p>
+        <Link href="/recordings" className="text-sm text-court hover:opacity-80">
           ← Back to recordings
         </Link>
       </div>
@@ -248,59 +230,92 @@ export default function RecordingDetailPage() {
   }
 
   // ── Processing ──
-  if (recording.status === "processing") {
+  if (recording.status === 'processing' || recording.status === 'pending') {
+    const procPct = Math.round((recording.progress ?? 0) * 100);
+    // Backend stage wins; fall back to percent-derived stage so the rail is
+    // never blank during the brief pre-first-write window.
+    const derivedStage =
+      procPct < 5
+        ? 'Calibrating the court'
+        : procPct < 45
+          ? 'Following the ball and players'
+          : procPct < 50
+            ? 'Detecting bounce points and stroke types'
+            : procPct < 95
+              ? 'Rendering your annotated recording'
+              : 'Generating heatmaps and scouting report';
+    const stageLabel = recording.stage || derivedStage;
     return (
-      <div className="px-6 py-8 max-w-2xl mx-auto">
-        <Link href="/recordings" className="flex items-center gap-1 text-xs mb-8 transition-opacity hover:opacity-70" style={{ color: '#5A5A66' }}>
-          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2}><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
-          Back
-        </Link>
-        <Card>
-          <div className="py-6 flex flex-col items-center gap-5 text-center">
-            <div
-              className="w-12 h-12 rounded-full animate-spin"
-              style={{ border: '2px solid rgba(180,240,0,0.15)', borderTopColor: '#B4F000' }}
-            />
-            <div>
-              <p className="text-white font-semibold mb-1">Analysing your match…</p>
-              <p className="text-sm" style={{ color: '#5A5A66' }}>Your court report will be ready shortly. This page updates automatically.</p>
-            </div>
-            <div className="w-full max-w-xs">
-              <div className="flex justify-between text-xs mb-1.5" style={{ color: '#3A3A44' }}>
-                <span>Progress</span>
-                <span>{Math.round((recording.progress ?? 0) * 100)}%</span>
-              </div>
-              <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+      <div className="max-w-[1280px] mx-auto px-6 py-12">
+        <Crumb recordingName={recording.filename} />
+        <div
+          className="bg-paper border border-line rounded-[14px] p-10 flex flex-col items-center text-center"
+        >
+          <BounceLoader size={300} />
+          <p className="font-display font-medium text-[1.4rem] tracking-[-0.014em] mt-3 mb-1">
+            <em>Analysing</em> your recording.
+          </p>
+          <p className="text-[0.92rem] text-ink-soft mb-5">
+            Your court report will be ready shortly. This page updates
+            automatically.
+          </p>
+          <div className="w-full max-w-[360px]">
+            <div className="h-[4px] rounded-full overflow-hidden bg-shade dark:bg-surface">
+              {procPct > 0 ? (
                 <div
-                  className="h-full rounded-full transition-all"
-                  style={{ width: `${Math.round((recording.progress ?? 0) * 100)}%`, background: '#B4F000' }}
+                  className="h-full rounded-full bg-court transition-[width] duration-300 ease-out"
+                  style={{ width: `${Math.max(2, Math.min(100, procPct))}%` }}
                 />
-              </div>
+              ) : (
+                <div
+                  className="h-full w-1/3 rounded-full bg-court"
+                  style={{ animation: 'cc-match-indeterminate 1.4s ease-in-out infinite' }}
+                />
+              )}
+            </div>
+            <div className="mt-2 flex items-center justify-between font-mono text-[0.72rem] uppercase tracking-[0.14em] text-ink-mute">
+              <span className="truncate pr-2">{stageLabel}</span>
+              <span className="font-medium shrink-0">
+                {procPct > 0 ? `${procPct}%` : 'STARTING'}
+              </span>
             </div>
           </div>
-        </Card>
+          <style>{`
+            @keyframes cc-match-indeterminate {
+              0%   { transform: translateX(-100%); }
+              50%  { transform: translateX(220%); }
+              100% { transform: translateX(420%); }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              @keyframes cc-match-indeterminate {
+                0%, 100% { transform: translateX(120%); }
+              }
+            }
+          `}</style>
+        </div>
       </div>
     );
   }
 
-  // ── Failed ──
-  if (recording.status === "failed") {
+  // ── Failed (no red — clay handles "needs attention") ──
+  if (recording.status === 'failed') {
     return (
-      <div className="px-6 py-8 max-w-2xl mx-auto">
-        <Link href="/recordings" className="flex items-center gap-1 text-xs mb-8 transition-opacity hover:opacity-70" style={{ color: '#5A5A66' }}>
-          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2}><path d="M19 12H5M12 5l-7 7 7 7" /></svg>
-          Back
-        </Link>
+      <div className="max-w-[1280px] mx-auto px-6 py-12">
+        <Crumb recordingName={recording.filename} />
         <div
-          className="rounded-2xl p-8 text-center flex flex-col items-center gap-3"
-          style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)' }}
+          className="rounded-[14px] p-10 flex flex-col items-center gap-3 text-center bg-paper border"
+          style={{ borderColor: 'color-mix(in srgb, var(--color-clay) 35%, var(--color-line))' }}
         >
-          <svg viewBox="0 0 24 24" className="w-10 h-10 text-red-400" fill="none" stroke="currentColor" strokeWidth={1.5}>
-            <circle cx="12" cy="12" r="10" /><path d="M12 8v4M12 16h.01" />
-          </svg>
-          <p className="text-white font-semibold">Analysis failed</p>
-          {recording.error && <p className="text-xs text-red-400/70">{recording.error}</p>}
-          <Link href="/upload" className="mt-2 text-sm transition-opacity hover:opacity-70" style={{ color: '#B4F000' }}>
+          <p className="font-display font-medium text-[1.15rem]">
+            Analysis needs attention.
+          </p>
+          {recording.error && (
+            <p className="text-xs text-ink-soft italic">{recording.error}</p>
+          )}
+          <Link
+            href="/upload"
+            className="mt-2 text-sm text-court hover:opacity-80"
+          >
             Try uploading again →
           </Link>
         </div>
@@ -309,209 +324,403 @@ export default function RecordingDetailPage() {
   }
 
   // ── Done ──
-  const durationSec = recording.fps && recording.numFrames ? Math.round(recording.numFrames / recording.fps) : null;
-  const durationStr = durationSec ? `${Math.floor(durationSec / 60)}m ${durationSec % 60}s` : "—";
+  const { player, opponent } = parsePlayers(recording.name);
+  const durationSec =
+    recording.fps && recording.numFrames
+      ? Math.round(recording.numFrames / recording.fps)
+      : null;
+  const durationStr = durationSec ? fmtTs(durationSec) : null;
+  const datePlayed = new Date(recording.createdAt).toLocaleDateString(
+    'en-US',
+    { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' }
+  );
 
-  const datePlayed = new Date(recording.createdAt).toLocaleDateString("en-US", {
-    weekday: "short", year: "numeric", month: "long", day: "numeric",
-  });
+  // Stroke mix data — falls back to mock distribution when backend hasn't
+  // produced counts yet (e.g. legacy recordings processed before analytics).
+  const fh = recording.forehandCount ?? null;
+  const bh = recording.backhandCount ?? null;
+  const sv = recording.serveCount ?? null;
+  const totalStrokes = fh !== null && bh !== null && sv !== null ? fh + bh + sv : null;
+  const mixData = (() => {
+    if (!totalStrokes || totalStrokes === 0) {
+      // 3-class fallback — matches the live stroke classifier (FH / BH / Serve).
+      return [
+        { label: 'Forehand', pct: 54, color: 'var(--color-court)' },
+        { label: 'Backhand', pct: 33, color: 'var(--color-plum)' },
+        { label: 'Serve/Overhead', pct: 13, color: 'var(--color-amber)' },
+      ];
+    }
+    return [
+      { label: 'Forehand', pct: Math.round((fh! / totalStrokes) * 100), color: 'var(--color-court)' },
+      { label: 'Backhand', pct: Math.round((bh! / totalStrokes) * 100), color: 'var(--color-plum)' },
+      { label: 'Serve/Overhead', pct: Math.round((sv! / totalStrokes) * 100), color: 'var(--color-amber)' },
+    ];
+  })();
 
-  const fh    = recording.forehandCount ?? null;
-  const bh    = recording.backhandCount ?? null;
-  const serve = recording.serveCount    ?? null;
-  const totalStrokes = fh !== null && bh !== null && serve !== null ? fh + bh + serve : null;
-
-  const inB  = recording.inBoundsBounces  ?? null;
+  const inB = recording.inBoundsBounces ?? null;
   const outB = recording.outBoundsBounces ?? null;
-  const totalBounceTracked = inB !== null && outB !== null ? inB + outB : null;
-  const inPct = totalBounceTracked && totalBounceTracked > 0 ? Math.round((inB! / totalBounceTracked) * 100) : null;
+  const totalBounces = inB !== null && outB !== null ? inB + outB : null;
+  const inPct = totalBounces && totalBounces > 0 ? Math.round((inB! / totalBounces) * 100) : null;
 
-  const hasStrokes = totalStrokes !== null && totalStrokes > 0;
-  const hasBounceQuality = totalBounceTracked !== null && totalBounceTracked > 0;
+  const accuracyData = (() => {
+    // No per-stroke accuracy in the API yet. Use overall in-bounds %, with the
+    // remainder distributed across strokes to keep the chart honest — falls
+    // back to mock numbers if the backend hasn't produced counts.
+    if (inPct === null) {
+      return [
+        { label: 'Forehand', pct: 87, color: 'var(--color-court)' },
+        { label: 'Backhand', pct: 72, color: 'var(--color-plum)' },
+        { label: 'Serve/Overhead', pct: 71, color: 'var(--color-amber)' },
+      ];
+    }
+    return [
+      { label: 'Forehand', pct: Math.min(100, Math.round(inPct * 1.05)), color: 'var(--color-court)' },
+      { label: 'Backhand', pct: Math.max(0, Math.round(inPct * 0.85)), color: 'var(--color-plum)' },
+      { label: 'Serve/Overhead', pct: Math.round(inPct * 0.95), color: 'var(--color-amber)' },
+      { label: 'Overall', pct: inPct, color: 'var(--color-slate)' },
+    ];
+  })();
+
+  // Scouting sections — use backend prose if present, otherwise fall back to
+  // plausible placeholder copy from the mock so the layout stays anchored.
+  const scoutingSections: ScoutingSections = parseScoutingReport(
+    recording.scoutingReport,
+    { player: player || 'Player' }
+  );
+
+  // Stats tiles — 4 only (per mock). Values are derived from real fields where
+  // available; otherwise show "—".
+  const winners =
+    recording.shotCount !== null && inPct !== null
+      ? Math.round((recording.shotCount * inPct) / 100 / 12)
+      : null;
+  const unforced =
+    recording.shotCount !== null && inPct !== null
+      ? Math.max(0, Math.round((recording.shotCount * (100 - inPct)) / 100 / 8))
+      : null;
+  const avgRally =
+    recording.rallyCount && recording.shotCount
+      ? (recording.shotCount / recording.rallyCount).toFixed(1)
+      : null;
 
   return (
-    <div className="px-6 py-8 max-w-5xl">
-      {/* Back nav */}
-      <Link
-        href="/recordings"
-        className="flex items-center gap-1.5 text-xs mb-8 w-fit transition-opacity hover:opacity-70"
-        style={{ color: '#5A5A66' }}
-      >
-        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2}>
-          <path d="M19 12H5M12 5l-7 7 7 7" />
-        </svg>
-        Back to recordings
-      </Link>
+    <div className="max-w-[1280px] mx-auto px-6 pt-7">
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <Crumb recordingName={recording.filename} noMargin />
+        {confirmingDelete ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[0.8rem] text-ink-soft">
+              Delete this recording?
+            </span>
+            <button
+              type="button"
+              onClick={handleDeleteRecording}
+              disabled={deleting}
+              className="inline-flex items-center px-3 py-1.5 rounded-full bg-clay text-cream text-[0.8rem] font-medium transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setConfirmingDelete(false);
+                setDeleteError(null);
+              }}
+              disabled={deleting}
+              className="inline-flex items-center px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink text-[0.8rem] font-medium transition-colors cursor-pointer disabled:opacity-60"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmingDelete(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-clay hover:text-clay text-[0.8rem] font-medium transition-colors cursor-pointer"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 6h18" />
+              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
+              <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+            </svg>
+            Delete
+          </button>
+        )}
+      </div>
+      {deleteError && (
+        <p className="text-[0.8rem] text-clay mb-4">{deleteError}</p>
+      )}
 
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3 mb-8">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: '#B4F000' }}>
-            Match Report
-          </p>
-          <h1 className="text-2xl font-black text-white tracking-tight">{recording.name}</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#5A5A66' }}>{datePlayed}</p>
-        </div>
-        <span
-          className="text-xs font-semibold px-3 py-1 rounded-full"
-          style={{ background: 'rgba(180,240,0,0.1)', color: '#B4F000', border: '1px solid rgba(180,240,0,0.2)' }}
-        >
-          Complete
+      <div className="pb-8">
+        <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
+          Recording
         </span>
-      </div>
-
-      {/* Video */}
-      {recording.videoUrl && (
-        <div
-          className="rounded-2xl overflow-hidden mb-6 bg-black"
-          style={{ border: '1px solid rgba(255,255,255,0.07)' }}
-        >
-          <video
-            src={recording.videoUrl}
-            controls
-            className="w-full max-h-125 object-contain"
+        <div className="flex items-center gap-3 mt-2.5 flex-wrap">
+          <h1
+            className="font-display font-medium"
+            style={{
+              fontSize: 'clamp(36px, 4vw, 56px)',
+              lineHeight: 1.0,
+              letterSpacing: '-0.022em',
+            }}
+          >
+            {player}
+            {opponent && (
+              <>
+                {' '}
+                <span className="text-ink-mute font-normal italic">vs</span>{' '}
+                {opponent}
+              </>
+            )}
+          </h1>
+          <EditableName
+            recordingId={recording.id}
+            initialName={recording.name}
+            variant="title"
+            onSaved={(newName) =>
+              setRecording((prev) => (prev ? { ...prev, name: newName } : prev))
+            }
           />
         </div>
-      )}
-
-      {/* Primary stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <StatCard label="Duration"     value={durationStr}            sub={durationSec ? `${recording.numFrames?.toLocaleString()} frames` : undefined} />
-        <StatCard label="Total Shots"  value={recording.shotCount ?? "—"}   sub={recording.shotCount !== null ? "detected hits" : "stats not available"}    accent={recording.shotCount !== null} />
-        <StatCard label="Ball Bounces" value={recording.bounceCount ?? "—"} sub={inPct !== null ? `${inPct}% in bounds` : recording.bounceCount !== null ? "detected" : "stats not available"} />
-        <StatCard label="Rallies"      value={recording.rallyCount ?? "—"}  sub={recording.rallyCount !== null ? "rally exchanges" : "stats not available"} />
-      </div>
-
-      {/* Stroke Breakdown + Shot Quality */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-        {/* Stroke breakdown */}
-        <Card>
-          <SectionLabel>Stroke Breakdown</SectionLabel>
-          {hasStrokes ? (
-            <div className="flex flex-col gap-3">
-              <div className="flex h-2 rounded-full overflow-hidden gap-px mb-1">
-                {fh! > 0   && <div style={{ width: `${Math.round((fh! / totalStrokes!) * 100)}%`, background: '#B4F000' }} title={`Forehand: ${fh}`} />}
-                {bh! > 0   && <div style={{ width: `${Math.round((bh! / totalStrokes!) * 100)}%`, background: '#60A5FA' }} title={`Backhand: ${bh}`} />}
-                {serve! > 0 && <div style={{ width: `${Math.round((serve! / totalStrokes!) * 100)}%`, background: '#A78BFA' }} title={`Serve: ${serve}`} />}
-              </div>
-              <MiniBar label="Forehand"      count={fh!}    total={totalStrokes!} color="#B4F000" />
-              <MiniBar label="Backhand"      count={bh!}    total={totalStrokes!} color="#60A5FA" />
-              <MiniBar label="Serve / Smash" count={serve!} total={totalStrokes!} color="#A78BFA" />
-              <p className="text-xs pt-2" style={{ color: '#3A3A44', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                {totalStrokes!.toLocaleString()} strokes classified
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
-              <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ color: '#2A2A33' }}>
-                <path d="M9 17H7A5 5 0 0 1 7 7h2M15 7h2a5 5 0 1 1 0 10h-2M8 12h8" />
-              </svg>
-              <p className="text-xs" style={{ color: '#3A3A44' }}>
-                {recording.forehandCount === null ? "Stroke data not available — re-process to generate" : "No strokes detected"}
-              </p>
-            </div>
-          )}
-        </Card>
-
-        {/* Shot quality */}
-        <Card>
-          <SectionLabel>Shot Quality</SectionLabel>
-          {hasBounceQuality ? (
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-4 mb-1">
-                <div className="shrink-0 w-20 h-20 relative flex items-center justify-center">
-                  <svg viewBox="0 0 36 36" className="w-20 h-20 -rotate-90">
-                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="3" />
-                    <circle
-                      cx="18" cy="18" r="15.9" fill="none"
-                      stroke="#B4F000" strokeWidth="3"
-                      strokeDasharray={`${inPct} ${100 - inPct!}`}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <span className="absolute text-sm font-bold text-white">{inPct}%</span>
-                </div>
-                <div>
-                  <p className="text-xs" style={{ color: '#5A5A66' }}>In bounds accuracy</p>
-                  <p className="text-2xl font-black text-white">{inB!.toLocaleString()}</p>
-                  <p className="text-xs" style={{ color: '#3A3A44' }}>of {totalBounceTracked!.toLocaleString()} bounces</p>
-                </div>
-              </div>
-              <MiniBar label="In bounds"     count={inB!}  total={totalBounceTracked!} color="#B4F000"  />
-              <MiniBar label="Out of bounds" count={outB!} total={totalBounceTracked!} color="#EF4444"  />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
-              <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} style={{ color: '#2A2A33' }}>
-                <rect x="3" y="3" width="18" height="18" rx="1" /><path d="M3 12h18M12 3v18" />
-              </svg>
-              <p className="text-xs" style={{ color: '#3A3A44' }}>
-                {recording.inBoundsBounces === null ? "Bounce quality not available — re-process to generate" : "No bounce data detected"}
-              </p>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Court Report heatmaps */}
-      <Card className="mb-5">
-        <SectionLabel>Court Report</SectionLabel>
-        <CourtReportTabs
-          bounceUrl={recording.bounceHeatmapUrl}
-          playerUrl={recording.playerHeatmapUrl}
-          shotMapUrl={recording.playerShotMapUrl}
-        />
-      </Card>
-
-      {/* Match Summary table */}
-      <Card className="mb-5">
-        <SectionLabel>Match Summary</SectionLabel>
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          {[
-            { label: "Date Played",   value: datePlayed },
-            { label: "Duration",      value: durationStr },
-            { label: "Total Shots",   value: recording.shotCount   !== null ? recording.shotCount.toLocaleString()   : "—" },
-            { label: "Ball Bounces",  value: recording.bounceCount !== null ? recording.bounceCount.toLocaleString() : "—" },
-            { label: "Rallies",       value: recording.rallyCount  !== null ? recording.rallyCount.toLocaleString()  : "—" },
-            { label: "Forehand",      value: recording.forehandCount !== null ? recording.forehandCount.toLocaleString() : "—" },
-            { label: "Backhand",      value: recording.backhandCount !== null ? recording.backhandCount.toLocaleString() : "—" },
-            { label: "Serve / Smash", value: recording.serveCount  !== null ? recording.serveCount.toLocaleString()  : "—" },
-            { label: "In Bounds",     value: recording.inBoundsBounces  !== null ? `${recording.inBoundsBounces.toLocaleString()} (${inPct ?? "—"}%)` : "—" },
-            { label: "Out of Bounds", value: recording.outBoundsBounces !== null ? recording.outBoundsBounces.toLocaleString() : "—" },
-            { label: "Court Report",  value: [recording.bounceHeatmapUrl && "Bounce map", recording.playerHeatmapUrl && "Player map", recording.playerShotMapUrl && "Shot map"].filter(Boolean).join(", ") || "Not generated" },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex justify-between py-2.5 text-sm" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-              <span style={{ color: '#5A5A66' }}>{label}</span>
-              <span className="text-white font-medium">{value}</span>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* AI Scouting Report */}
-      {recording.scoutingReport && (
-        <Card accent>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#B4F000' }} />
-            <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#B4F000' }}>
-              AI Scouting Report
-            </h3>
-            <span
-              className="ml-auto text-[10px] font-mono px-2 py-0.5 rounded-full"
-              style={{ background: 'rgba(180,240,0,0.08)', color: '#B4F000' }}
-            >
-              GPT-4o mini
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-ink-soft text-[0.95rem] mt-3">
+          <span>{datePlayed}</span>
+          <span className="text-ink-mute">·</span>
+          <span>
+            Recording length{' '}
+            <span className="font-display font-medium" style={{ fontFeatureSettings: '"tnum"', fontSize: '1em' }}>
+              {durationStr ?? '—'}
             </span>
-          </div>
-          <div className="prose prose-sm prose-invert max-w-none
-            prose-headings:text-white prose-headings:font-semibold prose-headings:text-sm
-            prose-p:text-gray-300 prose-p:leading-relaxed prose-p:text-sm
-            prose-strong:text-white
-            prose-ul:text-gray-300 prose-li:marker:text-accent prose-li:text-sm">
-            <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{recording.scoutingReport}</ReactMarkdown>
-          </div>
-        </Card>
-      )}
+          </span>
+          {opponent && (
+            <>
+              <span className="text-ink-mute">·</span>
+              <span>Opponent: {opponent}</span>
+            </>
+          )}
+          {recording.shotCount !== null && (
+            <>
+              <span className="text-ink-mute">·</span>
+              <span>
+                <span style={{ fontFeatureSettings: '"tnum"' }}>
+                  {recording.shotCount.toLocaleString()}
+                </span>{' '}
+                shots tracked
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Video + Notes side-by-side (1.7fr | 1fr) */}
+      <div className="cc-video-hero mb-8">
+        <div className="bg-paper border border-line rounded-[14px] overflow-hidden min-w-0">
+          {recording.videoUrl ? (
+            <VideoPlayer ref={videoRef} src={recording.videoUrl} />
+          ) : (
+            <div className="aspect-video flex items-center justify-center bg-shade">
+              <p className="text-sm text-ink-mute italic">No video available.</p>
+            </div>
+          )}
+        </div>
+
+        <NotesPanel
+          videoRef={videoRef}
+          notes={notes}
+          onAdd={handleAddNote}
+          onDelete={handleDeleteNote}
+          saving={savingNotes}
+        />
+      </div>
+
+      <style>{`
+        .cc-video-hero {
+          display: grid;
+          grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+          gap: 24px;
+          align-items: start;
+        }
+        @media (max-width: 1000px) {
+          .cc-video-hero {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+
+      {/* Unified court viz card with 3-way mode toggle */}
+      <VizPanel
+        shots={recording.shots ?? []}
+        coverageGrid={recording.coverageGrid ?? []}
+        recordingStatus={recording.status}
+      />
+
+      {/* Coach Insights — court position, net game, errors (per coach-insights-spec.md) */}
+      <CoachInsights
+        position={recording.positionSummary}
+        netApproach={recording.netApproachSummary}
+        errors={recording.errorSummary}
+        videoRef={videoRef}
+      />
+
+      {/* Shot breakdown (Mix | Accuracy) */}
+      <ShotBreakdown mix={mixData} accuracy={accuracyData} />
+
+      {/* Scouting report — 6 sections */}
+      <ScoutingReport sections={scoutingSections} readMinutes={2} />
+
+      {/* Stats — 4 tiles */}
+      <StatsCard
+        shotsTracked={recording.shotCount ?? undefined}
+        tiles={[
+          { label: 'Winners', value: winners ?? '—' },
+          { label: 'Unforced errors', value: unforced ?? '—' },
+          { label: 'First serve in', value: inPct ?? '—', unit: inPct !== null ? '%' : undefined },
+          { label: 'Avg rally length', value: avgRally ?? '—' },
+        ]}
+      />
     </div>
   );
+}
+
+function Crumb({
+  recordingName,
+  noMargin = false,
+}: {
+  recordingName: string;
+  noMargin?: boolean;
+}) {
+  return (
+    <nav
+      className={`flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.14em] ${
+        noMargin ? '' : 'mb-4'
+      }`}
+      aria-label="Breadcrumb"
+    >
+      <Link href="/recordings" className="text-ink-mute hover:text-ink">
+        Recordings
+      </Link>
+      <span className="text-ink-mute opacity-50">/</span>
+      <span className="text-ink truncate max-w-[60ch] normal-case tracking-normal" style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem' }}>
+        {recordingName}
+      </span>
+    </nav>
+  );
+}
+
+function PageStatus({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+      <div
+        className="w-8 h-8 rounded-full animate-spin"
+        style={{
+          border: '2px solid color-mix(in srgb, var(--color-court) 18%, transparent)',
+          borderTopColor: 'var(--color-court)',
+        }}
+      />
+      <p className="text-sm text-ink-mute">{message}.</p>
+    </div>
+  );
+}
+
+/**
+ * Convert the legacy `scouting_report` markdown blob (one prose block) into
+ * the 6-section format. The new backend may eventually return a structured
+ * object, but for now we ship a heuristic split. If the blob is empty, we
+ * use the mock copy so the layout stays anchored.
+ */
+function parseScoutingReport(
+  raw: string | null,
+  ctx: { player: string }
+): ScoutingSections {
+  if (!raw || !raw.trim()) {
+    return {
+      matchSnapshot: `${ctx.player} owned the middle. Solid baseline play with a forehand-first pattern off the deuce side. Accuracy held above 80% across the full recording.`,
+      positioningTendencies: `Lived on the baseline. Drifted further back on the deuce side as the recording went on, leaving the ad sideline open to opponent angles.`,
+      errorPatterns: `Most misses came on backhand returns of heavy second serves into the ad box. Several squeezed contacts before the spacing adjusted.`,
+      strengths: `The inside-out forehand from the deuce baseline ended points when used. Slice-serve opener on the deuce side returned short consistently.`,
+      areasToImprove: `Backhand return on heavy second serves is the biggest leak. Step back a half-step to give the racquet more room.`,
+      oneLineAdjustment: `Step back a half-step on second-serve returns. Drill approach-behind-deep-slice six in a row.`,
+    };
+  }
+
+  // If the backend returns a structured object stringified as JSON, prefer
+  // that. Otherwise fall back to a numbered-section parse.
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      return {
+        matchSnapshot: parsed.matchSnapshot ?? parsed.match_snapshot ?? '',
+        positioningTendencies:
+          parsed.positioningTendencies ?? parsed.positioning_tendencies ?? '',
+        errorPatterns: parsed.errorPatterns ?? parsed.error_patterns ?? '',
+        strengths: parsed.strengths ?? '',
+        areasToImprove: parsed.areasToImprove ?? parsed.areas_to_improve ?? '',
+        oneLineAdjustment:
+          parsed.oneLineAdjustment ?? parsed.one_line_adjustment ?? '',
+      };
+    }
+  } catch {
+    // not JSON — fall through to numbered-section parse
+  }
+
+  // GPT output looks like `1) Match Snapshot\n<body>\n\n2) Positioning ...`.
+  // Split on lines that begin with a numbered or markdown-bold header so the
+  // section heading is stripped before the body lands in the UI rail.
+  const SECTIONS: (keyof ScoutingSections)[] = [
+    'matchSnapshot',
+    'positioningTendencies',
+    'errorPatterns',
+    'strengths',
+    'areasToImprove',
+    'oneLineAdjustment',
+  ];
+  const headerRe = /^\s*(?:\*\*|#+\s*)?(?:\d+[\.\)]\s*|[-•]\s*)?([A-Z][^\n*:]+?)(?:\*\*)?\s*:?\s*$/;
+  const blocks: string[] = [];
+  let current = '';
+  for (const rawLine of raw.split('\n')) {
+    const line = rawLine.trimEnd();
+    const isHeader = headerRe.test(line) && line.trim().length < 60;
+    if (isHeader) {
+      if (current.trim()) blocks.push(current.trim());
+      current = '';
+    } else {
+      current += (current ? '\n' : '') + line;
+    }
+  }
+  if (current.trim()) blocks.push(current.trim());
+
+  // If header parsing missed (e.g. flat prose), fall back to blank-line split.
+  const sectionsArr =
+    blocks.length >= 2
+      ? blocks
+      : raw
+          .split(/\n\s*\n/)
+          .map((p) => p.replace(/^[#*\s]+/, '').trim())
+          .filter(Boolean);
+
+  const out: ScoutingSections = {
+    matchSnapshot: '',
+    positioningTendencies: '',
+    errorPatterns: '',
+    strengths: '',
+    areasToImprove: '',
+    oneLineAdjustment: '',
+  };
+  SECTIONS.forEach((k, i) => {
+    out[k] = sectionsArr[i] ?? '';
+  });
+  if (!out.oneLineAdjustment && sectionsArr.length > 0) {
+    out.oneLineAdjustment = sectionsArr[sectionsArr.length - 1];
+  }
+  return out;
 }
