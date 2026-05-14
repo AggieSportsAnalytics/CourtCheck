@@ -62,6 +62,30 @@ export async function POST(req: Request) {
       return Response.json({ error: "Too many requests" }, { status: 429 });
     }
 
+    // Pre-write a processing-state heartbeat BEFORE the Modal webhook fires.
+    // Without this the row stays status='pending', progress=0, stage=null for
+    // the whole 15-90s Modal cold-start + download + import window, and the
+    // UI shows "Calibrating the court · STARTING" the entire time because it
+    // falls back to a percent-derived stage label.
+    try {
+      await supabaseAdmin
+        .from("matches")
+        .update({
+          status: "processing",
+          progress: 0.005,
+          processing_stage: "Queueing compute",
+        })
+        .eq("id", match_id);
+    } catch (e) {
+      // Defensive — if processing_stage column hasn't been migrated yet, retry
+      // without it so the trigger still works on partial deploys.
+      console.warn("trigger-process pre-write failed, retrying without stage", e);
+      await supabaseAdmin
+        .from("matches")
+        .update({ status: "processing", progress: 0.005 })
+        .eq("id", match_id);
+    }
+
     // Call Modal function to process video
     const res = await fetch(
       process.env.MODAL_FUNCTION_URL!,
@@ -81,9 +105,15 @@ export async function POST(req: Request) {
     if (!res.ok) {
       const errorText = await res.text();
       console.error("Modal function error", errorText);
+      // Revert the optimistic processing state so the user sees the actual
+      // failure instead of "Queueing compute" forever.
+      await supabaseAdmin
+        .from("matches")
+        .update({ status: "failed", error: "Failed to start compute" })
+        .eq("id", match_id);
       return Response.json({ error: "processing failed" }, { status: 500 });
     }
-    
+
     return Response.json({ status: "ok" });
   } catch (e) {
     console.error(e);

@@ -6,12 +6,12 @@ import { useVizReveal } from './useVizReveal';
 
 /**
  * Spacing viz: each shot is drawn as player→ball line, colored by extension
- * quality (ideal=court, squeezed=clay, long=amber). Ball endpoint is lime to
- * carry the "lime = the ball" semantic from the brand laws.
+ * quality (ideal=court, squeezed=clay, jammed=plum, long=amber). Ball endpoint
+ * is lime to carry the "lime = the ball" semantic from the brand laws.
  *
  * Ported from visuals.html buildSpacing(). Bottom-half view (player's side).
  */
-export type SpacingQuality = 'ideal' | 'squeezed' | 'long';
+export type SpacingQuality = 'jammed' | 'squeezed' | 'ideal' | 'long';
 
 export type SpacingShot = {
   stroke: StrokeKey;
@@ -23,8 +23,9 @@ export type SpacingShot = {
 };
 
 const QUALITY_COLOR: Record<SpacingQuality, string> = {
-  ideal: 'var(--color-court)',
+  jammed: 'var(--color-plum)',
   squeezed: 'var(--color-clay)',
+  ideal: 'var(--color-court)',
   long: 'var(--color-amber)',
 };
 
@@ -35,7 +36,7 @@ export const SAMPLE_SPACING: SpacingShot[] = [
   { stroke: 'forehand', px: 20, py: 75, bx: 23, by: 73, q: 'ideal' },
   { stroke: 'forehand', px: 21, py: 71, bx: 25, by: 69, q: 'ideal' },
   { stroke: 'forehand', px: 18, py: 76, bx: 19, by: 75, q: 'squeezed' },
-  { stroke: 'forehand', px: 22, py: 72, bx: 23, by: 71, q: 'squeezed' },
+  { stroke: 'forehand', px: 22, py: 72, bx: 22.4, by: 71.7, q: 'jammed' },
   { stroke: 'forehand', px: 16, py: 74, bx: 25, by: 71, q: 'long' },
   { stroke: 'forehand', px: 20, py: 75, bx: 23, by: 72, q: 'ideal' },
   { stroke: 'forehand', px: 19, py: 73, bx: 22, by: 70, q: 'ideal' },
@@ -44,7 +45,7 @@ export const SAMPLE_SPACING: SpacingShot[] = [
   { stroke: 'backhand', px: 6, py: 75, bx: 7, by: 75, q: 'squeezed' },
   { stroke: 'backhand', px: 7, py: 72, bx: 7, by: 71, q: 'squeezed' },
   { stroke: 'backhand', px: 4, py: 74, bx: 7, by: 72, q: 'ideal' },
-  { stroke: 'backhand', px: 5, py: 73, bx: 6, by: 73, q: 'squeezed' },
+  { stroke: 'backhand', px: 5, py: 73, bx: 5.4, by: 73.2, q: 'jammed' },
   { stroke: 'backhand', px: 8, py: 71, bx: 11, by: 68, q: 'ideal' },
   { stroke: 'backhand', px: 3, py: 75, bx: 9, by: 72, q: 'long' },
   // Serves (player at baseline)

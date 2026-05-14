@@ -609,10 +609,13 @@ def build_coverage_grid(
     span_x = max(1.0, right_x - left_x)
     span_y = max(1.0, bottom_y - top_y)
 
-    # Grid lives in SVG coords: x in [1, 26] (cellW = 25/cols),
-    # y in [39, 77] (cellH = 38/rows). Same as Coverage.tsx.
+    # Grid lives in SVG coords: x in [1, 26], y in [39, 85]. Mirrors
+    # Coverage.tsx (halfH=46, ROWS=12, yOffset=39). Extending y beyond the
+    # near baseline (y=78) by ~7 court units captures the typical 1-5 ft
+    # behind-baseline play that earlier clamped every position into row 11
+    # and made the heatmap look uniform.
     x0, x1 = 1.0, 26.0
-    y0, y1 = 39.0, 77.0
+    y0, y1 = 39.0, 85.0
     cell_w = (x1 - x0) / cols
     cell_h = (y1 - y0) / rows
 
@@ -1238,6 +1241,11 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         device = config.device
 
         supabase = None
+        # Near-player handedness. Defaults to 'right' if no player_id is
+        # bound to this match, the player has no handedness set, or we're in
+        # local_mode without DB access. Used inside the swing-classification
+        # loop to mirror lefty pose sequences before TCN inference.
+        near_player_handedness: str = "right"
         if not local_mode:
             supabase = get_supabase()
             # Heartbeat write — happens BEFORE any model loading so the
@@ -1245,23 +1253,60 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             # moment Modal enters run_pipeline. Was previously delayed until
             # `update_progress(0.01, "Loading models")` AFTER ~10s of model
             # imports / weight loads, so users saw STARTING for 30-60s.
+            # Heartbeat lands AFTER /api/trigger-process and app.py's stage
+            # writes already bumped progress to ~0.012. Use 0.018 here so the
+            # bar moves forward (not backward) and the user sees handoff into
+            # the actual pipeline.
             try:
                 supabase.table("matches").update({
                     "status": "processing",
-                    "progress": 0.002,
+                    "progress": 0.018,
                     "processing_stage": "Starting pipeline",
                 }).eq("id", match_id).execute()
-                print(f"[Heartbeat] Wrote status=processing progress=0.002 to {match_id[:8]}", flush=True)
+                print(f"[Heartbeat] Wrote status=processing progress=0.018 to {match_id[:8]}", flush=True)
             except Exception as e:
                 # If processing_stage column missing, retry without it.
                 try:
                     supabase.table("matches").update({
                         "status": "processing",
-                        "progress": 0.002,
+                        "progress": 0.018,
                     }).eq("id", match_id).execute()
-                    print(f"[Heartbeat] Wrote status=processing progress=0.002 (no stage col)", flush=True)
+                    print(f"[Heartbeat] Wrote status=processing progress=0.018 (no stage col)", flush=True)
                 except Exception as e2:
                     print(f"[Heartbeat] FAILED: {e2}", flush=True)
+
+            # Resolve near-player handedness from matches.player_id ->
+            # players.handedness. Failure paths (no player_id, missing
+            # column, no row) all fall back to 'right' so the pipeline
+            # keeps its prior behavior when the migration hasn't been
+            # applied or the upload had no player binding.
+            try:
+                match_resp = (
+                    supabase.table("matches")
+                    .select("player_id")
+                    .eq("id", match_id)
+                    .single()
+                    .execute()
+                )
+                player_id = (match_resp.data or {}).get("player_id") if match_resp else None
+                if player_id:
+                    player_resp = (
+                        supabase.table("players")
+                        .select("handedness")
+                        .eq("id", player_id)
+                        .single()
+                        .execute()
+                    )
+                    h = (player_resp.data or {}).get("handedness") if player_resp else None
+                    if h in ("left", "right"):
+                        near_player_handedness = h
+                print(
+                    f"[Handedness] near player = {near_player_handedness}"
+                    + (f" (player_id={str(player_id)[:8]})" if player_id else " (no player binding)"),
+                    flush=True,
+                )
+            except Exception as e:
+                print(f"[Handedness] lookup failed, defaulting to right: {e}", flush=True)
 
         def update_progress(value: float, stage: "str | None" = None):
             pct = round(float(value) * 100, 1)
@@ -1289,7 +1334,10 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             else:
                 print(f"Progress: {pct}%{label}", flush=True)
 
-        update_progress(0.01, "Loading models")
+        # 0.022 stays monotonic above the 0.018 heartbeat and above app.py's
+        # earlier "Loading models" write (0.012). Stage label stays the same
+        # so the UI doesn't flicker between identical labels.
+        update_progress(0.022, "Loading models")
 
         # ---------- Initialize models ----------
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -1539,11 +1587,19 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             # Populated for the 30 frames after each swing peak so Pass 2 can draw it.
             frame_stroke_labels: dict[int, dict[int, str]] = {}
             for event in swing_events:
+                # Only the near player (positive track_id) is bound to a
+                # roster player_id and therefore has a known handedness.
+                # Far player (synthetic negative IDs) keeps the default
+                # 'right' until we model opponent handedness too.
+                event_handedness = (
+                    near_player_handedness if int(event["track_id"]) > 0 else "right"
+                )
                 seq = extract_pose_sequence(
                     pose_keypoints_per_frame,
                     track_id=event["track_id"],
                     window_start=event["window_start"],
                     window_end=event["window_end"],
+                    handedness=event_handedness,
                 )
                 _probs, label = pose_stroke_classifier.predict(seq)
                 event["label"] = label
@@ -1582,7 +1638,9 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             last_H_ref = calibrated_H_ref
             last_kps = calibrated_keypoints  # use saved keypoints to draw court lines
 
-        # Pre-compute static minimap background once — court reference never changes
+        # Pre-compute static minimap background once — court reference never changes.
+        # Reverted to the original deep navy/brown tone after the clay/brown
+        # variant felt off against the live video frame. (BGR (52, 36, 18).)
         _minimap_raw = court_ref.build_court_reference()
         _minimap_raw = cv2.dilate(_minimap_raw, np.ones((10, 10), np.uint8))
         minimap_bg = np.full((*_minimap_raw.shape, 3), (52, 36, 18), dtype=np.uint8)
@@ -1598,7 +1656,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
 
             output = frame.copy()
             output = draw_ball_trace(output, ball_track, frame_idx,
-                                     trace_length=config.trace_length,
+                                     trace_length=config.trace_length_main,
                                      base_color=config.ball_trace_color)
             output = draw_court_keypoints_and_lines(output, kps)
 
@@ -1626,7 +1684,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             minimap = draw_minimap_ball_and_bounces(
                 minimap=minimap, homography_inv=H_ref, ball_track=ball_track,
                 frame_idx=frame_idx, bounces=bounces_all,
-                trace_length=config.trace_length,
+                trace_length=config.trace_length_minimap,
                 trace_color=config.ball_trace_color,
                 trace_min_alpha=config.ball_trace_min_alpha,
                 frame_stroke_labels=frame_stroke_labels,

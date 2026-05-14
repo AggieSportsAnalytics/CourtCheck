@@ -76,6 +76,22 @@ export async function GET(
       return NextResponse.json({ error: "Recording not found" }, { status: 404 });
     }
 
+    // Pull the near player's handedness so the UI can surface it as a badge.
+    // Defaults to 'right' (no badge shown frontside) if the player isn't bound
+    // or the handedness column hasn't been migrated yet.
+    let playerHandedness: 'right' | 'left' | null = null;
+    if (data.player_id) {
+      const handednessRes = await supabaseAdmin
+        .from("players")
+        .select("handedness")
+        .eq("id", data.player_id)
+        .single();
+      const h = (handednessRes.data as { handedness?: string } | null)?.handedness;
+      if (h === 'left' || h === 'right') {
+        playerHandedness = h;
+      }
+    }
+
     let videoUrl = null;
     let bounceHeatmapUrl = null;
     let playerHeatmapUrl = null;
@@ -127,6 +143,7 @@ export async function GET(
         outBoundsBounces: data.out_bounds_bounces ?? null,
         scoutingReport: data.scouting_report ?? null,
         playerId: data.player_id ?? null,
+        playerHandedness,
         keypoints: data.keypoints ?? [],
         notes: data.notes ?? [],
         shots: Array.isArray(data.shots) ? data.shots : [],

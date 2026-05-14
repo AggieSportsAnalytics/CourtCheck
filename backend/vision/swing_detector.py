@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from backend.training.features import hip_center_normalize
+from backend.training.features import hip_center_normalize, mirror_pose_for_lefty
 
 
 WRIST_LEFT_IDX = 9
@@ -126,9 +126,18 @@ def extract_pose_sequence(
     window_start: int,
     window_end: int,
     target_len: int = 45,
+    *,
+    handedness: str = "right",
 ) -> np.ndarray:
     """
     Extract a fixed-length pose keypoint sequence for one player in a window.
+
+    Args:
+        handedness: 'right' (default) or 'left'. Lefty sequences are mirrored
+            (x-negate + L/R keypoint swap) AFTER hip-center normalization so
+            the classifier sees the canonical right-handed orientation it was
+            trained on. Caller is responsible for routing the right handedness
+            in (typically from matches.player_id -> players.handedness).
 
     Returns:
         Float32 array of shape (target_len, 34) — 17 keypoints × (x, y).
@@ -180,7 +189,13 @@ def extract_pose_sequence(
 
     # Hip-center + torso-height scale normalization — must match normalize_keypoints()
     # in features.py exactly so inference uses the same distribution as training.
-    return hip_center_normalize(resampled)
+    normalized = hip_center_normalize(resampled)
+
+    # For left-handed players, mirror the sequence so the classifier sees the
+    # canonical right-handed orientation it was trained on. No-op for righties.
+    if handedness == "left":
+        return mirror_pose_for_lefty(normalized)
+    return normalized
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────

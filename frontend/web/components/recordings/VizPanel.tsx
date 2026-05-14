@@ -6,6 +6,7 @@ import Spacing, { SAMPLE_SPACING, spacingCounts, type SpacingShot } from '../viz
 import Coverage from '../viz/Coverage';
 import Legend from '../viz/Legend';
 import { StrokeKey } from '../viz/CourtSVG';
+import { PositionTile, type PositionSummary } from './CoachInsights';
 
 type VizMode = 'shotMap' | 'spacing' | 'coverage';
 
@@ -28,6 +29,10 @@ type Props = {
   shots?: ApiShot[];
   /** 12x8 occupancy grid normalized to peak=1, from the pipeline. */
   coverageGrid?: number[][];
+  /** 4-zone court-position summary. Rendered as a sub-tile in the Coverage
+   *  mode's right rail so coaches see "where she stood" + "how often she
+   *  stood at the baseline" side-by-side. */
+  positionSummary?: PositionSummary | null;
   /** Recording status — drives the Coverage empty state vs sample fallback. */
   recordingStatus?: string;
 };
@@ -60,17 +65,25 @@ const HEAD: Record<VizMode, { eyebrow: string; title: string; sub: string; halfL
 };
 
 /** Project API shots onto the top-half (opponent's side) court for ShotMap.
- *  Player 1 hit -> bounce on top (y in 0..39).
- *  Player 2 hit -> bounce on bottom (y in 39..78); mirror to top to render.
- *  Unknown-stroke bounces are kept and rendered with a neutral color so coaches
- *  still see ALL detected bounces. */
+ *
+ * Mirror by **bounce location**, not by who hit. Previously the code mirrored
+ * only `s.player === 2` bounces — which assumed P1 always hits to opponent's
+ * side. In practice that's not always true: contact-frame refinement can
+ * attribute a bounce on the near half to a P1 swing event, and the pipeline
+ * also emits bounces with `stroke='unknown'` that don't have a paired swing.
+ * Those bounces ended up with y in [39, 78], failed the `y > 45` filter, and
+ * disappeared from the shotmap even though they were visible on the minimap.
+ *
+ * Mirror anything past the net so every detected bounce shows on the
+ * opponent-half view, regardless of who hit. The shot map is the canonical
+ * "every bounce" surface. */
 function buildShotMapDots(shots: ApiShot[]): ShotDot[] {
   const dots: ShotDot[] = [];
   for (const s of shots) {
     if (s.court_x == null || s.court_y == null) continue;
     let y = s.court_y;
-    if (s.player === 2) {
-      // Bounce is on player-1 side; mirror to top half for unified opponent view
+    if (y > 39) {
+      // Near-half bounce — mirror to top half so it shows up on this view.
       y = 78 - y;
     }
     // Allow a few units past the top baseline (OOB long) and a few units past
@@ -111,13 +124,19 @@ function buildSpacingShots(shots: ApiShot[]): SpacingShot[] {
     }
     if (py < 39 || by < 39) continue; // contact must be on player half
     const d = Math.hypot(bx - px, by - py);
-    const q: SpacingShot['q'] = d < 1.5 ? 'squeezed' : d < 3.5 ? 'ideal' : 'long';
+    // 4-bin per coach-insights spec. 1 court unit ≈ 1 ft.
+    //   jammed:    < 1 ft   — ball is on top of the player, no swing room
+    //   squeezed:  1–2 ft   — close, but room to extend
+    //   ideal:     2–3.5 ft — proper extension
+    //   long:      ≥ 3.5 ft — reaching, lost balance
+    const q: SpacingShot['q'] =
+      d < 1.0 ? 'jammed' : d < 2.0 ? 'squeezed' : d < 3.5 ? 'ideal' : 'long';
     out.push({ stroke: s.stroke as StrokeKey, px, py, bx, by, q });
   }
   return out;
 }
 
-export default function VizPanel({ shots = [], coverageGrid, recordingStatus }: Props) {
+export default function VizPanel({ shots = [], coverageGrid, positionSummary, recordingStatus }: Props) {
   const [mode, setMode] = useState<VizMode>('shotMap');
   const [shotFilter, setShotFilter] = useState<StrokeKey | null>(null);
   const [spacingFilter, setSpacingFilter] = useState<StrokeKey | null>(null);
@@ -191,10 +210,11 @@ export default function VizPanel({ shots = [], coverageGrid, recordingStatus }: 
   // survived filtering and the map fell back to sample data, the insight kept
   // showing "0 / 0 / 0" while the map + chips showed mock numbers.
   const spacingInsight = useMemo(() => {
-    const ideal = spacingShots.filter((s) => s.q === 'ideal').length;
+    const jammed = spacingShots.filter((s) => s.q === 'jammed').length;
     const squeezed = spacingShots.filter((s) => s.q === 'squeezed').length;
+    const ideal = spacingShots.filter((s) => s.q === 'ideal').length;
     const long = spacingShots.filter((s) => s.q === 'long').length;
-    return { ideal, squeezed, long };
+    return { jammed, squeezed, ideal, long };
   }, [spacingShots]);
 
   return (
@@ -343,15 +363,16 @@ export default function VizPanel({ shots = [], coverageGrid, recordingStatus }: 
                   <>
                     <strong>{spacingInsight.ideal}</strong> shots at ideal
                     extension. <strong>{spacingInsight.squeezed}</strong>{' '}
-                    squeezed (too close to the ball).{' '}
-                    <strong>{spacingInsight.long}</strong> reaching (too far).
+                    squeezed,{' '}
+                    <strong>{spacingInsight.jammed}</strong> jammed (ball on
+                    top), <strong>{spacingInsight.long}</strong> reaching.
                   </>
                 ) : (
                   <>
                     <strong>23</strong> shots at ideal extension.{' '}
-                    <strong>8</strong> squeezed (too close to the ball).{' '}
-                    <strong>4</strong> reaching (too far). Step back a half-step
-                    on returns to clean up the squeezed shots.
+                    <strong>8</strong> squeezed, <strong>2</strong> jammed
+                    (ball on top), <strong>4</strong> reaching. Step back a
+                    half-step on returns to clean up the squeezed shots.
                   </>
                 )}
               </CoachingInsight>
@@ -364,6 +385,9 @@ export default function VizPanel({ shots = [], coverageGrid, recordingStatus }: 
                 Density of where she stood over the recording. Brighter zones =
                 more time spent at that position.
               </div>
+              {positionSummary && positionSummary.n_frames > 0 && (
+                <PositionTile data={positionSummary} />
+              )}
               <CoachingInsight>
                 {coverageInsight ? (
                   <>
@@ -442,8 +466,9 @@ function QualityLegend() {
       className="flex flex-wrap gap-x-6 gap-y-2.5 pt-3.5 text-[0.82rem] text-ink-soft"
       style={{ borderTop: '1px solid var(--color-line-soft)' }}
     >
-      <QualityKey color="var(--color-clay)" label="Squeezed" width={14} />
-      <QualityKey color="var(--color-court)" label="Ideal" width={26} />
+      <QualityKey color="var(--color-plum)" label="Jammed (< 1 ft)" width={10} />
+      <QualityKey color="var(--color-clay)" label="Squeezed" width={16} />
+      <QualityKey color="var(--color-court)" label="Ideal" width={28} />
       <QualityKey color="var(--color-amber)" label="Long (reaching)" width={42} />
     </div>
   );

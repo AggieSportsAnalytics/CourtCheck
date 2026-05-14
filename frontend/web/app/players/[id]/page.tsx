@@ -16,7 +16,10 @@ interface ApiPlayer {
   year: string | null
   position: string | null
   photo_url: string | null
+  handedness?: 'right' | 'left' | null
 }
+
+type Handedness = 'right' | 'left'
 
 interface ApiRecording {
   id: string
@@ -250,6 +253,13 @@ export default function PlayerDetailPage() {
               </span>
             ))}
           </div>
+          <HandednessControl
+            playerId={player.id}
+            value={(player.handedness as Handedness | undefined) ?? 'right'}
+            onChange={(next) =>
+              setPlayer((prev) => (prev ? { ...prev, handedness: next } : prev))
+            }
+          />
         </div>
 
         <div className="flex flex-wrap gap-2.5">
@@ -496,6 +506,86 @@ function RecentTrendBars({ recordings }: { recordings: ApiRecording[] }) {
           </Link>
         )
       })}
+    </div>
+  )
+}
+
+/**
+ * Right/Left segmented control. Optimistic update + PATCH /api/players/[id].
+ * Why this matters: the stroke classifier was trained on right-handed canonical
+ * poses. For lefties the pipeline mirrors x-axis + swaps L/R keypoints in
+ * extract_pose_sequence so the model sees a righty-equivalent pose. Without
+ * this flag a lefty's forehands silently get mislabeled as backhands.
+ */
+function HandednessControl({
+  playerId,
+  value,
+  onChange,
+}: {
+  playerId: string
+  value: Handedness
+  onChange: (next: Handedness) => void
+}) {
+  const [saving, setSaving] = useState<Handedness | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const update = async (next: Handedness) => {
+    if (next === value) return
+    setSaving(next)
+    setError(null)
+    onChange(next) // optimistic
+    try {
+      const res = await fetch(`/api/players/${playerId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ handedness: next }),
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setError(body?.error || 'Failed to save')
+        onChange(value) // rollback
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save')
+      onChange(value) // rollback
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute">
+        Handedness
+      </span>
+      <div
+        role="radiogroup"
+        aria-label="Player handedness"
+        className="inline-flex gap-0.5 rounded-full border border-line bg-paper p-0.5"
+      >
+        {(['right', 'left'] as Handedness[]).map((opt) => {
+          const active = value === opt
+          const isSaving = saving === opt
+          return (
+            <button
+              key={opt}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              disabled={isSaving}
+              onClick={() => update(opt)}
+              className={`rounded-full px-3.5 py-1 text-[0.82rem] font-medium transition-colors duration-150 ${
+                active
+                  ? 'bg-ink text-cream dark:bg-court-deep'
+                  : 'text-ink-soft hover:text-ink'
+              } ${isSaving ? 'opacity-60' : ''}`}
+            >
+              {opt === 'right' ? 'Right-handed' : 'Left-handed'}
+            </button>
+          )
+        })}
+      </div>
+      {error && <span className="text-[0.78rem] text-clay">{error}</span>}
     </div>
   )
 }

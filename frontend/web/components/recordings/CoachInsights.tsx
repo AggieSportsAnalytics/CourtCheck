@@ -1,6 +1,29 @@
 'use client';
 
-import { RefObject } from 'react';
+import { RefObject, useEffect, useState } from 'react';
+
+/**
+ * One-shot entrance animation gate. Returns false on first render, then flips
+ * to true after two animation frames so the CSS `width` transitions on the
+ * bar fills actually fire (without this the bars render directly at their
+ * target width and never animate).
+ */
+function useEntranceReveal(dep?: unknown): boolean {
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    setShown(false);
+    const raf1 = requestAnimationFrame(() => {
+      const raf2 = requestAnimationFrame(() => setShown(true));
+      (window as Window & { __cc_raf2?: number }).__cc_raf2 = raf2;
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      const w = window as Window & { __cc_raf2?: number };
+      if (w.__cc_raf2 !== undefined) cancelAnimationFrame(w.__cc_raf2);
+    };
+  }, [dep]);
+  return shown;
+}
 
 /**
  * Coach Insights — three metrics surfaced per `coach-insights-spec.md`:
@@ -53,14 +76,16 @@ export type ErrorSummary = {
 };
 
 type Props = {
-  position: PositionSummary | null;
   netApproach: NetApproachSummary | null;
   errors: ErrorSummary | null;
   videoRef: RefObject<HTMLVideoElement | null>;
 };
 
-export default function CoachInsights({ position, netApproach, errors, videoRef }: Props) {
-  const hasAny = Boolean(position || netApproach || errors);
+export default function CoachInsights({ netApproach, errors, videoRef }: Props) {
+  // Court Position now lives inside the Coverage tab in VizPanel (a "where she
+  // stood" pair with the heatmap), so this panel surfaces just the two
+  // actionable timestamps coaches click into: errors and net game.
+  const hasAny = Boolean(netApproach || errors);
   if (!hasAny) return null;
 
   return (
@@ -76,21 +101,20 @@ export default function CoachInsights({ position, netApproach, errors, videoRef 
           What stood out.
         </h3>
         <div className="text-ink-soft text-[0.95rem] mt-1">
-          Position, net game, errors. Tap a timestamp to jump.
+          Errors and net game. Tap a timestamp to jump.
         </div>
       </div>
 
       <div className="cc-coach-grid mt-5">
-        <PositionTile data={position} />
-        <NetApproachTile data={netApproach} videoRef={videoRef} />
         <ErrorTile data={errors} videoRef={videoRef} />
+        <NetApproachTile data={netApproach} videoRef={videoRef} />
       </div>
 
       <style>{`
         .cc-coach-grid {
           display: grid;
           gap: 24px;
-          grid-template-columns: 1.1fr 1fr 1fr;
+          grid-template-columns: 1fr 1fr;
         }
         @media (max-width: 980px) {
           .cc-coach-grid { grid-template-columns: 1fr; gap: 28px; }
@@ -113,7 +137,10 @@ function TileHead({ eyebrow, headline }: { eyebrow: string; headline: string }) 
   );
 }
 
-function PositionTile({ data }: { data: PositionSummary | null }) {
+export function PositionTile({ data }: { data: PositionSummary | null }) {
+  // useEntranceReveal MUST be called before any early return so it runs on
+  // every render path (React rules of hooks).
+  const shown = useEntranceReveal(data?.n_frames ?? 0);
   if (!data || data.n_frames === 0) {
     return (
       <div className="cc-coach-tile">
@@ -125,7 +152,7 @@ function PositionTile({ data }: { data: PositionSummary | null }) {
   const zones: { label: string; pct: number; color: string }[] = [
     { label: 'Inside baseline', pct: data.inside_pct, color: 'var(--color-court)' },
     { label: 'On baseline', pct: data.on_pct, color: 'var(--color-court-light, var(--color-court))' },
-    { label: '5–10 ft behind', pct: data.behind_5_10_pct, color: 'var(--color-amber)' },
+    { label: '1–10 ft behind', pct: data.behind_5_10_pct, color: 'var(--color-amber)' },
     { label: '10+ ft behind', pct: data.behind_10_plus_pct, color: 'var(--color-clay)' },
   ];
   const headline = (() => {
@@ -136,7 +163,7 @@ function PositionTile({ data }: { data: PositionSummary | null }) {
     <div className="cc-coach-tile">
       <TileHead eyebrow="Court position" headline={headline} />
       <div className="space-y-1.5">
-        {zones.map((z) => (
+        {zones.map((z, i) => (
           <div
             key={z.label}
             className="grid items-center"
@@ -147,9 +174,11 @@ function PositionTile({ data }: { data: PositionSummary | null }) {
               <div
                 className="h-full rounded-full"
                 style={{
-                  width: `${Math.min(100, Math.max(0, z.pct))}%`,
+                  width: shown ? `${Math.min(100, Math.max(0, z.pct))}%` : '0%',
                   background: z.color,
-                  transition: 'width 600ms var(--ease-out)',
+                  // 100ms-per-row stagger keeps the entrance lively without
+                  // feeling like a queue.
+                  transition: `width 720ms cubic-bezier(0.165, 0.84, 0.44, 1) ${i * 100}ms`,
                 }}
               />
             </div>
@@ -213,6 +242,8 @@ function ErrorTile({
   data: ErrorSummary | null;
   videoRef: RefObject<HTMLVideoElement | null>;
 }) {
+  // Hook before any early-return so it runs on every render.
+  const shown = useEntranceReveal(data?.total ?? 0);
   if (!data || data.total === 0) {
     return (
       <div className="cc-coach-tile">
@@ -233,7 +264,7 @@ function ErrorTile({
         headline={`${data.total} OOB · ${data.long} long, ${data.wide} wide, ${data.net_err} net.`}
       />
       <div className="space-y-1.5 mb-3">
-        {rows.map((r) => (
+        {rows.map((r, i) => (
           <div
             key={r.label}
             className="grid items-center"
@@ -244,9 +275,9 @@ function ErrorTile({
               <div
                 className="h-full rounded-full"
                 style={{
-                  width: `${(r.n / total) * 100}%`,
+                  width: shown ? `${(r.n / total) * 100}%` : '0%',
                   background: r.color,
-                  transition: 'width 600ms var(--ease-out)',
+                  transition: `width 720ms cubic-bezier(0.165, 0.84, 0.44, 1) ${i * 100}ms`,
                 }}
               />
             </div>
@@ -320,41 +351,8 @@ function TimestampList({
           </button>
         );
       })}
-      <style>{`
-        .cc-coach-tile {
-          border: 1px solid var(--color-line);
-          border-radius: 12px;
-          padding: 18px 18px 16px;
-          background: color-mix(in srgb, var(--color-court) 4%, var(--color-paper));
-          min-width: 0;
-        }
-        .cc-ts-chip {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 8px 4px 7px;
-          border-radius: 100px;
-          border: 1px solid var(--color-line);
-          background: var(--color-paper);
-          color: var(--color-ink-soft);
-          cursor: pointer;
-          transition: border-color var(--duration-base) var(--ease-out),
-            background var(--duration-base) var(--ease-out),
-            color var(--duration-base) var(--ease-out);
-        }
-        .cc-ts-chip:hover {
-          border-color: var(--color-ink);
-          color: var(--color-ink);
-        }
-        .cc-ts-win {
-          border-color: color-mix(in srgb, var(--color-court) 30%, var(--color-line));
-          color: var(--color-court);
-        }
-        .cc-ts-loss {
-          border-color: color-mix(in srgb, var(--color-clay) 30%, var(--color-line));
-          color: var(--color-clay);
-        }
-      `}</style>
+      {/* .cc-coach-tile + .cc-ts-chip rules live in globals.css so PositionTile
+          can be reused outside this card (Coverage rail in VizPanel). */}
     </div>
   );
 }

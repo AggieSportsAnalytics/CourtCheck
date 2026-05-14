@@ -72,6 +72,28 @@ async def process_video(request: Request):
         os.environ["SUPABASE_SERVICE_ROLE_KEY"],
     )
 
+    def _stage(stage: str, progress: float) -> None:
+        """Write an early-stage breadcrumb to Supabase so the UI shows what's
+        happening during the 15-90s window between the trigger-process webhook
+        and run_pipeline's heartbeat. Without this the page sat on
+        'Calibrating the court · STARTING' (derived stage from progress=0)
+        for the entire Modal cold-start + download + import phase.
+        Defensive on column-missing so an un-migrated environment still
+        runs to completion."""
+        payload: dict = {"progress": round(float(progress), 3), "processing_stage": stage}
+        try:
+            supabase.table("matches").update(payload).eq("id", match_id).execute()
+            print(f"[Stage] {stage} ({progress:.3f})", flush=True)
+        except Exception as e:
+            payload.pop("processing_stage", None)
+            try:
+                supabase.table("matches").update(payload).eq("id", match_id).execute()
+                print(f"[Stage] {stage} ({progress:.3f}) — stage col missing", flush=True)
+            except Exception as e2:
+                print(f"[Stage] {stage} write failed: {e2}", flush=True)
+
+    _stage("Downloading recording", 0.008)
+
     # Download video — preserve original filename so _resolve_camera_id can detect court number.
     # Supabase storage occasionally returns 504 Gateway Timeout under load; retry with a
     # fresh signed URL on each attempt (the URL itself is fine, but a fresh one is cheap insurance).
@@ -115,6 +137,8 @@ async def process_video(request: Request):
         # Should be unreachable — loop either breaks on success or raises on final attempt.
         if last_exc is not None:
             raise last_exc
+
+    _stage("Loading models", 0.012)
 
     from backend.pipeline.run import run_pipeline
     result = run_pipeline(video_path, match_id)

@@ -30,10 +30,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data, error } = await supabaseAdmin
+    // Pre-migration safety: try with handedness, retry without if the column
+    // hasn't been added yet so existing environments stay responsive.
+    let { data, error } = await supabaseAdmin
       .from('players')
-      .select('id, name, position, year, photo_url, created_at')
+      .select('id, name, position, year, photo_url, handedness, created_at')
       .order('name', { ascending: true });
+    if (error && typeof error.message === 'string' && error.message.includes('does not exist')) {
+      const retry = await supabaseAdmin
+        .from('players')
+        .select('id, name, position, year, photo_url, created_at')
+        .order('name', { ascending: true });
+      data = retry.data as typeof data;
+      error = retry.error;
+    }
 
     if (error) {
       console.error('Players fetch error', error);
@@ -59,15 +69,20 @@ export async function POST(req: Request) {
     if (!name) {
       return NextResponse.json({ error: 'name is required' }, { status: 400 });
     }
+    const handedness =
+      body.handedness === 'left' ? 'left' : body.handedness === 'right' ? 'right' : null;
+
+    const insertRow: Record<string, unknown> = {
+      name,
+      position: body.position ?? null,
+      year: body.year ?? null,
+      photo_url: body.photo_url ?? null,
+    };
+    if (handedness) insertRow.handedness = handedness;
 
     const { data, error } = await supabaseAdmin
       .from('players')
-      .insert([{
-        name,
-        position: body.position ?? null,
-        year: body.year ?? null,
-        photo_url: body.photo_url ?? null,
-      }])
+      .insert([insertRow])
       .select()
       .single();
 

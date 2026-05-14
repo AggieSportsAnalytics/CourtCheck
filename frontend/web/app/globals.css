@@ -350,6 +350,44 @@
     opacity: 0.1 !important;
   }
 
+  /* Coach Insights tile + timestamp chip — hoisted from CoachInsights.tsx so
+     PositionTile can be reused inside other surfaces (e.g. the Coverage rail
+     in VizPanel). */
+  .cc-coach-tile {
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    padding: 18px 18px 16px;
+    background: color-mix(in srgb, var(--color-court) 4%, var(--color-paper));
+    min-width: 0;
+  }
+  .cc-ts-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px 4px 7px;
+    border-radius: 100px;
+    border: 1px solid var(--color-line);
+    background: var(--color-paper);
+    color: var(--color-ink-soft);
+    cursor: pointer;
+    transition:
+      border-color var(--duration-base) var(--ease-out),
+      background var(--duration-base) var(--ease-out),
+      color var(--duration-base) var(--ease-out);
+  }
+  .cc-ts-chip:hover {
+    border-color: var(--color-ink);
+    color: var(--color-ink);
+  }
+  .cc-ts-win {
+    border-color: color-mix(in srgb, var(--color-court) 30%, var(--color-line));
+    color: var(--color-court);
+  }
+  .cc-ts-loss {
+    border-color: color-mix(in srgb, var(--color-clay) 30%, var(--color-line));
+    color: var(--color-clay);
+  }
+
   /* Brand-mark hover-video container */
   .brand-mark {
     position: relative;

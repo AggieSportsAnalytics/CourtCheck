@@ -64,6 +64,9 @@ type Recording = {
   outBoundsBounces: number | null;
   scoutingReport: string | null;
   playerId: string | null;
+  /** 'left' if the near player is left-handed; null if unset/unknown. Drives
+   *  the "Left-handed" badge so coaches can sanity-check FH/BH labeling. */
+  playerHandedness: 'right' | 'left' | null;
   keypoints: unknown[];
   notes: TimedNote[];
   shots: ApiShot[];
@@ -493,7 +496,20 @@ export default function RecordingDetailPage() {
             }
           />
         </div>
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-ink-soft text-[0.95rem] mt-3">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-ink-soft text-[0.95rem] mt-3 items-center">
+          {recording.playerHandedness === 'left' && (
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[0.72rem] font-mono uppercase tracking-[0.12em]"
+              style={{
+                borderColor: 'color-mix(in srgb, var(--color-clay) 35%, var(--color-line))',
+                color: 'var(--color-clay)',
+                background: 'color-mix(in srgb, var(--color-clay) 6%, var(--color-paper))',
+              }}
+              title="Stroke classifier mirrors lefty pose sequences"
+            >
+              Left-handed
+            </span>
+          )}
           <span>{datePlayed}</span>
           <span className="text-ink-mute">·</span>
           <span>
@@ -557,19 +573,20 @@ export default function RecordingDetailPage() {
         }
       `}</style>
 
+      {/* Coach Insights — errors + net game (court position lives inside the
+          Coverage tab of VizPanel below, where it pairs with the heatmap). */}
+      <CoachInsights
+        netApproach={recording.netApproachSummary}
+        errors={recording.errorSummary}
+        videoRef={videoRef}
+      />
+
       {/* Unified court viz card with 3-way mode toggle */}
       <VizPanel
         shots={recording.shots ?? []}
         coverageGrid={recording.coverageGrid ?? []}
+        positionSummary={recording.positionSummary}
         recordingStatus={recording.status}
-      />
-
-      {/* Coach Insights — court position, net game, errors (per coach-insights-spec.md) */}
-      <CoachInsights
-        position={recording.positionSummary}
-        netApproach={recording.netApproachSummary}
-        errors={recording.errorSummary}
-        videoRef={videoRef}
       />
 
       {/* Shot breakdown (Mix | Accuracy) */}
@@ -619,14 +636,8 @@ function Crumb({
 
 function PageStatus({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-      <div
-        className="w-8 h-8 rounded-full animate-spin"
-        style={{
-          border: '2px solid color-mix(in srgb, var(--color-court) 18%, transparent)',
-          borderTopColor: 'var(--color-court)',
-        }}
-      />
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-2">
+      <BounceLoader size={240} />
       <p className="text-sm text-ink-mute">{message}.</p>
     </div>
   );

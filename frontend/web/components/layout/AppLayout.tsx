@@ -3,6 +3,7 @@
 import { ReactNode, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from './Sidebar'
+import BounceLoader from '@/components/upload/BounceLoader'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -26,11 +27,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-cream">
         <div className="text-center">
-          <div
-            className="animate-spin rounded-full h-10 w-10 mx-auto mb-4"
-            style={{ border: '2px solid color-mix(in srgb, var(--color-court) 18%, transparent)', borderTopColor: 'var(--color-court)' }}
-          />
-          <p className="text-sm text-ink-mute">Loading.</p>
+          <BounceLoader size={260} />
+          <p className="mt-2 text-sm text-ink-mute">Loading.</p>
         </div>
       </div>
     )

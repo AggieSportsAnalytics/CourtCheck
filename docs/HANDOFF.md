@@ -1,8 +1,82 @@
 # CourtCheck — Session Handoff
 
-*Last updated: 2026-05-12 (final pre-port audit complete — mocks port-ready)*
+*Last updated: 2026-05-14 (port live, Coach Insights shipped, polling chain fixed end-to-end)*
 
-> Hand-off for the next Claude Code session working on CourtCheck. Brand is locked. The mocks have been audited and cleaned for the React port. Tokens.css and all brand-drop markdown docs are in sync with the canonical mock palette.
+> Hand-off for the next Claude Code session working on CourtCheck. The React port is live. Recordings flow end-to-end (upload → Modal → Supabase → dashboard playback). Coach Insights spec items 1-3 are deployed. May 15 case competition is the hard deadline.
+
+## 🎯 Where we are as of 2026-05-14
+
+**Port is live, Coach Insights spec is mostly shipped, the multi-round "progress not updating" bug is finally found and fixed.** Commit `37a54e0` on main pushed to Vercel.
+
+### What shipped this session
+
+1. **Sequential + fallback swing→bounce pairing** in `build_shots`. Replaced the 1.5s sliding-window heuristic that orphaned long groundstrokes and lobs. Each swing claims its sequential bounce; orphan bounces fall back to nearest swing within 2.5s. Boosted classified rate from 8/13 → 12/13 on the test clip.
+2. **Bounce ball-fallback scan ±5 frames** for occluded contact moments — was silently dropping bounces where the tracker briefly lost the ball through racquet contact. Test clip went from 5/13 → 13/13 dots on the shot map.
+3. **Chest-anchor for spacing** (60% down the player bbox vs. feet) — cancels 2D-homography ball-height bias. Most shots now bucket as squeezed/ideal instead of every shot tagged "reaching."
+4. **Contact-frame refinement** — ±6 frame window around `peak_frame` + ≤7-court-unit reasonableness check + uses refined frame for BOTH ball and player coords.
+5. **Coach Insights spec items 1-3 — all shipped:**
+   - `build_position_summary` — 4-zone court-position breakdown (Coach Jackson's #1 ask)
+   - `build_net_approach_summary` — service-line crossing detector + heuristic outcome
+   - `build_error_summary` — direction-only (long / wide / net)
+   - `CoachInsights` UI tile renders all three with clickable timestamp chips that seek the video
+6. **Coverage grid fix** — was dropping behind-baseline player positions entirely. Now clamps to deepest row. Heatmap actually shows distribution.
+7. **Processing stage piping** (Modal → DB → API → UI):
+   - New `processing_stage TEXT` column. Backend writes named stages.
+   - Heartbeat write at `run_pipeline` entry (before model loading) so UI leaves STARTING within ~1s.
+   - `PYTHONUNBUFFERED=1` in Modal Image + `flush=True` on every progress print — print lines now actually reach Modal logs.
+   - `progress_update_frequency` 5 → 40 — progress bar moves smoothly.
+8. **Polling chain — the 5-round bug** finally found and fixed:
+   - **Root cause:** all frontend fixes from the prior rounds were sitting uncommitted. Vercel was serving the old polling code with an abort-race bug that killed every fetch slower than 1.5s.
+   - **Code fixes (now pushed):** removed the abort race in `pollStatus`; replaced with "skip tick if previous in-flight"; `force-dynamic` on `/api/status` + `/api/recordings/[id]`; `cache: 'no-store'` on client fetches.
+   - **Diagnostic:** `[Poll]` console.log on every status response with timing.
+9. **Video player rewrite** — replaced native `<video controls>` (browser's "Download / Playback speed / PiP" right-click menu was leaking through). Custom forwardRef'd player: brand-tinted seek bar, glass speed menu, PiP, fullscreen, keyboard shortcuts, `controlsList="nodownload"`, context menu disabled.
+10. **EditableName** — pencil button next to H1 on detail page + per-row on recordings list. PATCH /api/recordings/[id] + state syncs in place.
+11. **Viz layer fixes** — filter chip dimming (`.shot-dot.dim` CSS rule was missing), shot map OOB X markers, extended viewBox (31×43), `useVizReveal` rewritten as CSS-class toggle (was racing React reconcile), `ShotBars` rewrite (was racing IntersectionObserver). All four viz primitives now render reliably.
+12. **Brand bounce colors** on minimap match the dashboard palette (court / plum / amber).
+13. **Ball trail visibility** — `trace_length` 10 → 45 frames, min-alpha floor 0.3, head dot 3px → 5px.
+14. **Scouting report parser** — handles numbered headers (`1) ...`), markdown-bold headers (`**...**`), `#` headers. Was glomming heading text into section bodies.
+15. **Sample-data indicator** fires for any viz mode where the real array is empty, not just when shots are zero. Insight numbers always read from the same source as the legend + map.
+16. **Upload page compact mode** — header + features section shrink while processing so flow fits in one viewport.
+17. **Storage auto-cleanup** — raw uploads auto-deleted after successful processing. Backfilled with one-shot scripts: 48 legacy raws + 86 zombie rows purged. 134 storage objects reclaimed.
+
+### Migrations applied this session
+
+```sql
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS shots JSONB DEFAULT '[]'::jsonb;
+CREATE INDEX IF NOT EXISTS matches_shots_gin_idx ON public.matches USING GIN (shots);
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS coverage_grid JSONB DEFAULT '[]'::jsonb;
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS processing_stage TEXT;
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS position_summary JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS net_approach_summary JSONB DEFAULT '{}'::jsonb;
+ALTER TABLE public.matches ADD COLUMN IF NOT EXISTS error_summary JSONB DEFAULT '{}'::jsonb;
+```
+
+API routes have defensive try-without-optional-columns fallbacks so an un-migrated environment doesn't 404 mid-rollout.
+
+### Status
+
+- [x] All backend pipeline fixes deployed to Modal
+- [x] All frontend fixes committed (`37a54e0`) + pushed; Vercel rebuild in progress
+- [x] All migrations applied to Supabase
+- [x] Storage backfilled (134 reclaimed objects, 86 zombie rows removed)
+- [ ] **May 15 case competition** — pilot prep on real Coach Jackson footage
+- [ ] **Spacing 4-bucket** (add "jammed" < 2 ft as 4th bin) — trivial when wanted
+- [ ] **Per-event clip extraction** for Net Game / Errors timestamps — currently seeks to a frame; coach review would benefit from auto-playing 3-5s windows
+
+### Where to start next session
+
+1. **Pilot prep for May 15 case competition.** Single match end-to-end on real Coach Jackson footage. Verify pipeline timing + visuals on full-length clip.
+2. **Spacing 4-bin** — five-line change in `VizPanel.buildSpacingShots` to add a `jammed` (< 2 ft) bucket.
+3. **Court Position "show me" links** — currently no clickable timestamps for the Position tile; pick representative frames per zone.
+4. **Per-event clip extraction** for the Net Game / Errors timestamps — auto-play 3-5s window instead of jumping to a frame.
+
+### Reference
+
+`docs/HANDOFF_2026-05-14.md` has the full turn-by-turn log of this session.
+
+`projects/CourtCheck/coach-insights-spec.md` (in JarvisEA) is the canonical spec for the Coach Insights page. 4 of 5 sections shipped. Spacing 4-bin and FH/BH error overlay are the remaining gaps; both are unblocked.
+
+---
 
 ## 🎯 Port-ready as of 2026-05-12
 

@@ -41,6 +41,33 @@ export async function GET() {
       return NextResponse.json({ error: "Failed to fetch recordings" }, { status: 500 });
     }
 
+    // Pull player names for any matches with a bound player_id. One query
+    // instead of N+1 — collect unique IDs, fetch once, build a lookup map.
+    // The recordings list filters/displays by REAL player name (not parsed
+    // off the recording title), so the page needs both fields.
+    const playerIds = Array.from(
+      new Set(
+        (data || [])
+          .map((m) => m.player_id)
+          .filter((x): x is string => typeof x === 'string' && x.length > 0),
+      ),
+    );
+    const playerMap: Record<string, string> = {};
+    if (playerIds.length > 0) {
+      const { data: playerRows, error: playerErr } = await supabaseAdmin
+        .from("players")
+        .select("id, name")
+        .in("id", playerIds);
+      if (playerErr) {
+        // Non-fatal — fall back to no player names; UI will show "—".
+        console.warn("recordings: player join failed", playerErr);
+      } else {
+        for (const p of (playerRows || []) as { id: string; name: string }[]) {
+          playerMap[p.id] = p.name;
+        }
+      }
+    }
+
     // Generate signed URLs for completed matches
     const recordings = await Promise.all(
       (data || []).map(async (match) => {
@@ -76,6 +103,7 @@ export async function GET() {
           hasBounceHeatmap: !!match.bounce_heatmap_path,
           hasPlayerHeatmap: !!match.player_heatmap_path,
           player_id: match.player_id ?? null,
+          playerName: match.player_id ? (playerMap[match.player_id] ?? null) : null,
         };
       })
     );

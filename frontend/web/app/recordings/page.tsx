@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import EditableName from '@/components/recordings/EditableName';
+import BounceLoader from '@/components/upload/BounceLoader';
 
 /**
  * Recordings list. Ported from docs/brand-drop/mocks/matches-list.html.
@@ -23,8 +24,14 @@ interface Recording {
   id: string;
   status: 'pending' | 'processing' | 'done' | 'failed';
   createdAt: string;
+  /** User-facing title (e.g. "test5-player", "StMarys Court2 4950 clip"). */
   name: string;
   filename: string;
+  /** Real player name from the players table when player_id is bound,
+   *  null otherwise. The list filters + displays by THIS, not by parsing
+   *  the title — earlier the chips read the title as the player and ended
+   *  up filtering on filenames like "test5-player". */
+  playerName: string | null;
 }
 
 type RawRecording = {
@@ -33,6 +40,7 @@ type RawRecording = {
   createdAt: string;
   name: string;
   filename: string;
+  playerName: string | null;
 };
 
 const AVATAR_COLORS = [
@@ -51,16 +59,13 @@ function hashColor(seed: string): string {
 }
 
 /**
- * Parse a recording display string into player and (optional) opponent.
- * Recognized separators: " vs ", " vs. ", "/", "—".
+ * Tidy a raw recording title for display — strips the file extension and
+ * collapses underscores. Used when the upload didn't supply an explicit title
+ * so the filename is the title (e.g. "StMarys_Court2_4950_clip.mp4" →
+ * "StMarys Court2 4950 clip").
  */
-function parsePlayers(name: string): { player: string; opponent: string | null } {
-  const cleaned = name.replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' ').trim();
-  const match = cleaned.match(/^(.*?)(?:\s+vs\.?\s+|\s*\/\s*|\s*—\s*)(.+)$/i);
-  if (match) {
-    return { player: match[1].trim(), opponent: match[2].trim() };
-  }
-  return { player: cleaned, opponent: null };
+function cleanTitle(name: string): string {
+  return name.replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' ').trim();
 }
 
 function initials(s: string): string {
@@ -122,6 +127,7 @@ export default function RecordingsPage() {
             createdAt: r.createdAt,
             name: r.name,
             filename: r.filename,
+            playerName: r.playerName ?? null,
           }))
         );
       })
@@ -129,22 +135,23 @@ export default function RecordingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Build chips from the unique player names parsed off the recordings
+  // Filter chips from REAL bound player names (matches.player_id → players.name).
+  // Recordings without a player binding don't contribute a chip — the title
+  // isn't a player, so showing "test5-player" or "new insights" as a chip
+  // was misleading.
   const uniquePlayers = useMemo(() => {
     const seen = new Set<string>();
     recordings.forEach((r) => {
-      const { player } = parsePlayers(r.name);
-      if (player) seen.add(player);
+      if (r.playerName) seen.add(r.playerName);
     });
-    return Array.from(seen).slice(0, 6);
+    return Array.from(seen).sort().slice(0, 8);
   }, [recordings]);
 
   const filtered = useMemo(() => {
     return recordings.filter((r) => {
-      const { player, opponent } = parsePlayers(r.name);
-      if (playerFilter && player !== playerFilter) return false;
+      if (playerFilter && r.playerName !== playerFilter) return false;
       if (query.trim()) {
-        const haystack = `${player} ${opponent ?? ''} ${r.filename}`.toLowerCase();
+        const haystack = `${cleanTitle(r.name)} ${r.playerName ?? ''} ${r.filename}`.toLowerCase();
         if (!haystack.includes(query.trim().toLowerCase())) return false;
       }
       return true;
@@ -153,14 +160,8 @@ export default function RecordingsPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
-        <div
-          className="w-8 h-8 rounded-full animate-spin"
-          style={{
-            border: '2px solid color-mix(in srgb, var(--color-court) 18%, transparent)',
-            borderTopColor: 'var(--color-court)',
-          }}
-        />
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-2">
+        <BounceLoader size={240} />
         <p className="text-sm text-ink-mute">Loading recordings.</p>
       </div>
     );
@@ -199,7 +200,7 @@ export default function RecordingsPage() {
             {recordings.length === 1 ? 'recording' : 'recordings'}
             {' · '}
             <span className="font-display" style={{ fontFeatureSettings: '"tnum"' }}>
-              {new Set(recordings.map((r) => parsePlayers(r.name).player)).size}
+              {new Set(recordings.map((r) => r.playerName).filter(Boolean)).size}
             </span>{' '}
             players
           </p>
@@ -277,10 +278,11 @@ export default function RecordingsPage() {
         <div className="bg-paper border border-line rounded-[14px] overflow-hidden mb-9">
           <div
             className="grid items-center px-6 py-3.5 bg-shade dark:bg-surface font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute gap-4"
-            style={{ gridTemplateColumns: '110px 1fr 80px 36px', borderBottom: '1px solid var(--color-line-soft)' }}
+            style={{ gridTemplateColumns: '110px 1fr 160px 80px 36px', borderBottom: '1px solid var(--color-line-soft)' }}
           >
             <span>Date</span>
-            <span>Player vs Opponent</span>
+            <span>Title</span>
+            <span>Player</span>
             <span />
             <span />
           </div>
@@ -291,7 +293,6 @@ export default function RecordingsPage() {
             </div>
           ) : (
             filtered.map((rec, i) => {
-              const { player, opponent } = parsePlayers(rec.name);
               const isLast = i === filtered.length - 1;
               const isConfirming = confirmDelete === rec.id;
               const isDeleting = deletingId === rec.id;
@@ -342,6 +343,7 @@ export default function RecordingsPage() {
                 );
               }
 
+              const titleSeed = rec.playerName ?? cleanTitle(rec.name);
               return (
                 <div
                   key={rec.id}
@@ -356,7 +358,7 @@ export default function RecordingsPage() {
                   }}
                   className="cc-match-row grid items-center px-6 py-4 gap-4 cursor-pointer"
                   style={{
-                    gridTemplateColumns: '110px 1fr 80px 36px',
+                    gridTemplateColumns: '110px 1fr 160px 80px 36px',
                     borderBottom: isLast ? 'none' : '1px solid var(--color-line-soft)',
                   }}
                 >
@@ -366,23 +368,19 @@ export default function RecordingsPage() {
                   >
                     {fmtDate(rec.createdAt)}
                   </span>
+                  {/* Title column — actual recording title (rec.name), no
+                      "player vs opponent" parsing. The avatar is keyed off the
+                      real player when bound, otherwise the title text. */}
                   <div className="flex items-center gap-3 min-w-0">
                     <div
                       className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-cream font-display font-medium text-[0.85rem]"
-                      style={{ background: hashColor(player) }}
+                      style={{ background: hashColor(titleSeed) }}
                     >
-                      {initials(player) || '·'}
+                      {initials(titleSeed) || '·'}
                     </div>
                     <div className="flex flex-col min-w-0 gap-px">
                       <span className="font-display font-medium text-[1.05rem] tracking-tight truncate">
-                        {player}
-                        {opponent && (
-                          <>
-                            {' '}
-                            <span className="text-ink-mute font-normal italic">vs</span>{' '}
-                            {opponent}
-                          </>
-                        )}
+                        {cleanTitle(rec.name)}
                       </span>
                       {rec.status !== 'done' && (
                         <span className="text-[0.78rem] text-ink-mute">
@@ -391,6 +389,10 @@ export default function RecordingsPage() {
                       )}
                     </div>
                   </div>
+                  {/* Player column — real bound player name or em-dash. */}
+                  <span className="font-display text-[0.95rem] text-ink-soft truncate">
+                    {rec.playerName ?? <span className="text-ink-mute">—</span>}
+                  </span>
                   <div className="justify-self-end flex items-center gap-1.5">
                     <EditableName
                       recordingId={rec.id}

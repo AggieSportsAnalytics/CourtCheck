@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import BounceLoader from '@/components/upload/BounceLoader';
 
 interface TennisStats {
   totalShots: number;
@@ -111,10 +112,7 @@ export default function OverallStatsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div
-          className="w-8 h-8 rounded-full animate-spin"
-          style={{ border: '2px solid rgba(180,240,0,0.15)', borderTopColor: '#B4F000' }}
-        />
+        <BounceLoader size={240} />
       </div>
     );
   }

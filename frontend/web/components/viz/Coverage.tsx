@@ -52,7 +52,11 @@ export default function Coverage({ grid = SAMPLE_COVERAGE }: Props) {
     [rawId]
   );
 
-  const halfH = 38;
+  // Grid covers y=39 (net) to y=85 (~7 court units past the baseline).
+  // Backend mirrors this in build_coverage_grid. Without the extra behind-
+  // baseline rows, every behind-baseline position clamped to the last row and
+  // the heatmap read as a single hot stripe even when the player moved.
+  const halfH = 46;
   const halfW = 25;
   const cellH = halfH / ROWS;
   const cellW = halfW / COLS;

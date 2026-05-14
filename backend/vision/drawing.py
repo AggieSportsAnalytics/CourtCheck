@@ -161,21 +161,33 @@ def draw_stroke_labels(frame, player_dict, frame_stroke_labels, frame_idx):
         rx1, ry1 = x1, y1 - th - pad * 2 - 28
         rx2, ry2 = x1 + tw + pad * 2, y1 - 28
         cv2.rectangle(frame, (rx1, ry1), (rx2, ry2), color, -1)
-        cv2.putText(frame, label, (rx1 + pad, ry2 - pad), font, scale, (0, 0, 0), thickness, cv2.LINE_AA)
+        # White text on the colored pill — the brand stroke colors are
+        # mid-saturated, so black text against them was muddy/unreadable.
+        cv2.putText(frame, label, (rx1 + pad, ry2 - pad), font, scale, (255, 255, 255), thickness, cv2.LINE_AA)
 
     return frame
 
 
-# Per-player colors (BGR) — up to 4 tracked players
+# Per-player colors (BGR), pinned to the CourtCheck brand palette so the video
+# annotations match the dashboard. P1 reads as the "primary player" in court
+# green; P2 (and the far-player synthetic IDs) reads as the secondary identity
+# in clay. Brighter dark-mode brand variants are used so the labels pop against
+# the green court surface and white court lines.
+#
+# Source: docs/brand-drop/tokens.css dark-mode swatches.
+#   --color-court (dark)        #6FA88B -> RGB(111,168,139) -> BGR(139,168,111)
+#   --color-clay  (dark)        #E07A52 -> RGB(224,122, 82) -> BGR( 82,122,224)
+#   --color-court-light         #9FC6B0 -> RGB(159,198,176) -> BGR(176,198,159)
+#   --color-plum  (dark)        #B584A6 -> RGB(181,132,166) -> BGR(166,132,181)
 _PLAYER_COLORS = [
-    (255, 180,  40),   # player 1 — amber
-    ( 80, 200, 255),   # player 2 — sky blue
-    (100, 255, 120),   # player 3 — mint
-    (200,  80, 255),   # player 4 — violet
+    (139, 168, 111),   # player 1 — brand court green
+    ( 82, 122, 224),   # player 2 — brand clay
+    (176, 198, 159),   # player 3 — court-light (rare; doubles fallback)
+    (166, 132, 181),   # player 4 — plum (rare; doubles fallback)
 ]
 
 
-_FAR_PLAYER_COLOR = (180, 105, 255)  # hot pink (BGR)
+_FAR_PLAYER_COLOR = (82, 122, 224)  # brand clay (P2)
 
 
 def _player_color(track_id: int):
@@ -221,7 +233,9 @@ def draw_player_bboxes(frame, player_dict, color=None):
         cv2.rectangle(overlay, (lx1, ly1), (lx2, ly2), c, -1)
         cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
 
-        cv2.putText(frame, label, (lx1 + pad, ly2 - pad), font, scale, (0, 0, 0), thickness, cv2.LINE_AA)
+        # White text on the brand-tinted pill — black was muddy on court green
+        # and clay backgrounds. Matches the stroke-label pill style above.
+        cv2.putText(frame, label, (lx1 + pad, ly2 - pad), font, scale, (255, 255, 255), thickness, cv2.LINE_AA)
 
     return frame
 
@@ -232,13 +246,17 @@ def draw_player_bboxes(frame, player_dict, color=None):
 
 STROKE_COLORS_BGR: dict[str, tuple[int, int, int]] = {
     # Match the brand colors used in the shot-map dashboard tile so the minimap
-    # and the courtmap legend agree. Source: frontend/web/app/globals.css
-    #   --color-court  #2E5341 -> RGB(46,83,65)   -> BGR(65,83,46)
-    #   --color-plum   #7B4E6E -> RGB(123,78,110) -> BGR(110,78,123)
-    #   --color-amber  #C8923A -> RGB(200,146,58) -> BGR(58,146,200)
-    "Forehand":       (65, 83, 46),     # court green
-    "Backhand":       (110, 78, 123),   # plum
-    "Serve/Overhead": (58, 146, 200),   # amber
+    # and the courtmap legend agree. The light-mode hexes were too desaturated
+    # on a video frame — adjacent strokes looked like "kind of dark green"
+    # vs "kind of dark mauve". Use the dark-mode brand variants which are
+    # noticeably brighter while staying on the brand axis.
+    # Source: docs/brand-drop/tokens.css dark-mode swatches.
+    #   --color-court (dark) #6FA88B -> RGB(111,168,139) -> BGR(139,168,111)
+    #   --color-plum  (dark) #B584A6 -> RGB(181,132,166) -> BGR(166,132,181)
+    #   --color-amber (dark) #DDB166 -> RGB(221,177,102) -> BGR(102,177,221)
+    "Forehand":       (139, 168, 111),  # bright court green
+    "Backhand":       (166, 132, 181),  # bright plum
+    "Serve/Overhead": (102, 177, 221),  # bright amber
     # Slice currently isn't emitted by the live classifier but the swatch is
     # kept in case it's re-enabled — match the brand-mute tone.
     "Slice":          (138, 138, 138),  # ink-mute grey
@@ -283,10 +301,12 @@ def draw_minimap_ball_and_bounces(
 
     # ---- 1. Ball trace ----
     start_idx = max(0, frame_idx - trace_length + 1)
-    # Bigger head dot than tail dot so the live ball position pops on the
-    # minimap. Tail uses the smaller radius.
-    HEAD_RADIUS = 5
-    TAIL_RADIUS = 3
+    # Trail is drawn on the full-size court reference, then resized down to
+    # ~166x350 for compositing. The pre-resize radii used to be 5/3, which
+    # shrunk to ~1.5px and disappeared. Bumped so the trail survives the
+    # downscale and reads clearly on the dark minimap.
+    HEAD_RADIUS = 14
+    TAIL_RADIUS = 9
 
     for idx in range(start_idx, frame_idx + 1):
         if (

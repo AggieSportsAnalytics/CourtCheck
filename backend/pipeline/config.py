@@ -110,24 +110,29 @@ class PipelineConfig:
     enable_stroke_recognition: bool = True
 
     # ========== Visualization ==========
-    # Ball trace settings
-    # Frames of comet tail behind the live ball. ~1.5s at 30fps. Was 10 (a
-    # ~0.3s glimpse), bumped so the minimap actually shows the recent
-    # trajectory and coaches can read the shot shape, not just the position.
-    trace_length: int = 45
+    # Ball trace settings — separate lengths for the two surfaces.
+    # MAIN VIDEO: short comet so the live ball doesn't smear across the screen.
+    # MINIMAP: long comet (~1.5s @ 30fps) so the small minimap actually shows
+    # the recent trajectory at a glance, which is the whole point of the
+    # minimap. Was unified at 45 frames; that worked for the minimap but made
+    # the main video unreadable so we split the param.
+    trace_length_main: int = 10
+    trace_length_minimap: int = 45
     ball_trace_color: Tuple[int, int, int] = (5, 250, 210)  # BGR: tennis ball neon yellow-green
     # Floor opacity for the oldest dot in the trail. Below this the alpha
-    # falloff at trace_length=45 would render the far end of the tail
-    # invisible. Higher = more uniformly visible trail.
-    ball_trace_min_alpha: float = 0.3
+    # falloff at trace_length=45 would render the far end of the minimap tail
+    # invisible. Bumped 0.3 -> 0.55 so the whole comet stays legible against
+    # the dark minimap surface.
+    ball_trace_min_alpha: float = 0.55
 
     # Minimap settings
     minimap_width: int = 166
     minimap_height: int = 350
 
 
-    # Player bbox color
-    player_bbox_color: Tuple[int, int, int] = (0, 0, 255)  # BGR: Red
+    # Player bbox color override — leave None to use per-player theme colors
+    # (brand court / clay) from backend.vision.drawing._player_color.
+    player_bbox_color: Optional[Tuple[int, int, int]] = None
 
     # ========== Progress Tracking ==========
     # Number of progress updates to send per per-frame loop pass (more = finer

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
 import { useVideoUpload } from '@/hooks';
@@ -85,6 +85,20 @@ export default function UploadPage() {
 
   const uploadPct = Math.round(uploadProgress * 100);
   const procPct = Math.round(progress * 100);
+
+  // Diagnostic: log every time the processing-state inputs change so we can
+  // tell from devtools whether Modal -> Supabase -> /api/status -> hook is
+  // actually flowing. Look for `[Upload]` lines; procPct should rise + stage
+  // should change every few seconds while the recording is processing.
+  const lastLogRef = useRef<string>('');
+  useEffect(() => {
+    if (status !== 'processing' && status !== 'pending') return;
+    const key = `${status}|${procPct}|${stage ?? 'null'}`;
+    if (key === lastLogRef.current) return;
+    lastLogRef.current = key;
+    // eslint-disable-next-line no-console
+    console.log(`[Upload] status=${status} progress=${procPct}% stage=${stage ?? 'null'}`);
+  }, [status, procPct, stage]);
 
   // Processing phase headline — italics on the verb, clay via the global em rule.
   // The backend-reported `stage` is authoritative when present; the percent
@@ -199,16 +213,20 @@ export default function UploadPage() {
         </form>
       )}
 
-      {/* Upload card — single container, swaps panes by state */}
+      {/* Upload card — single container, swaps panes by state.
+          min-height keeps the idle/uploading/processing/done panes at parity
+          height-wise so the layout doesn't jump as the state machine
+          progresses (idle dropzone was visibly taller than processing). */}
       <div
         {...(pane === 'idle' ? getRootProps() : {})}
-        className={`overflow-hidden rounded-[14px] border bg-paper transition-colors duration-200 ${
+        className={`overflow-hidden rounded-[14px] border bg-paper transition-colors duration-200 flex flex-col justify-center ${
           pane === 'idle'
             ? `border-dashed ${isDragActive ? 'border-court bg-[color-mix(in_srgb,var(--color-court)_4%,var(--color-paper))]' : 'border-line'}`
             : pane === 'failed'
               ? 'border-clay'
               : 'border-line'
         }`}
+        style={{ minHeight: 520 }}
         data-state={pane}
       >
         {pane === 'idle' && <input {...getInputProps()} aria-label="Recording file input" />}
@@ -255,8 +273,8 @@ export default function UploadPage() {
         )}
 
         {pane === 'uploading' && (
-          <div className="px-8 py-14 text-center">
-            <BounceLoader size={380} />
+          <div className="px-8 py-10 text-center">
+            <BounceLoader size={320} />
             <p className="mb-4 font-mono text-[0.72rem] uppercase tracking-[0.14em] text-ink-mute">
               Uploading
             </p>
@@ -294,8 +312,8 @@ export default function UploadPage() {
         )}
 
         {pane === 'processing' && (
-          <div className="px-8 py-6 text-center">
-            <BounceLoader size={300} />
+          <div className="px-8 py-10 text-center">
+            <BounceLoader size={320} />
             <h3
               className="mt-3 mb-2 min-h-[1.5em] font-display text-[1.4rem] font-medium tracking-[-0.014em] transition-opacity duration-200"
               style={{ fontVariationSettings: '"opsz" 72' }}
