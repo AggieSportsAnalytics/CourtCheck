@@ -39,7 +39,7 @@ export async function GET(
 
     const { id } = await params;
 
-    const FULL_COLS = "id, name, status, progress, processing_stage, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, player_shot_map_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, scouting_report, player_id, keypoints, notes, shots, coverage_grid, position_summary, net_approach_summary, error_summary";
+    const FULL_COLS = "id, name, status, progress, processing_stage, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, player_shot_map_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, scouting_report, player_id, keypoints, notes, shots, coverage_grid, position_summary, net_approach_summary, error_summary, rallies, rally_summary";
     // Pre-migration safety: if a column the API references hasn't been added to
     // matches yet, Postgres returns "column does not exist" and the whole row
     // 404s. Retry once without the optional columns so existing recordings
@@ -51,6 +51,8 @@ export async function GET(
       "position_summary",
       "net_approach_summary",
       "error_summary",
+      "rallies",
+      "rally_summary",
     ];
     let { data, error } = await supabaseAdmin
       .from("matches")
@@ -155,6 +157,8 @@ export async function GET(
         positionSummary: data.position_summary && typeof data.position_summary === "object" ? data.position_summary : null,
         netApproachSummary: data.net_approach_summary && typeof data.net_approach_summary === "object" ? data.net_approach_summary : null,
         errorSummary: data.error_summary && typeof data.error_summary === "object" ? data.error_summary : null,
+        rallies: Array.isArray(data.rallies) ? data.rallies : [],
+        rallySummary: data.rally_summary && typeof data.rally_summary === "object" ? data.rally_summary : null,
       },
     });
   } catch (e) {
