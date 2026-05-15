@@ -45,7 +45,6 @@ export default function DemoToggle() {
       aria-checked={on}
       aria-label="Toggle demo mode"
       onClick={toggle}
-      title={on ? 'Demo mode ON — click to show live data' : 'Demo mode OFF — click for demo data'}
       style={{
         position: 'fixed',
         left: 14,
@@ -53,17 +52,12 @@ export default function DemoToggle() {
         zIndex: 90,
         display: 'flex',
         alignItems: 'center',
-        gap: 8,
-        padding: '6px 10px 6px 8px',
+        padding: 5,
         borderRadius: 999,
         border: '1px solid var(--color-line)',
         background: 'var(--color-paper)',
-        color: 'var(--color-ink-soft)',
-        font: '500 0.7rem/1 var(--font-mono, ui-monospace, monospace)',
-        letterSpacing: '0.08em',
-        textTransform: 'uppercase',
         boxShadow: 'var(--shadow-card)',
-        opacity: on ? 0.92 : 0.45,
+        opacity: on ? 0.6 : 0.18,
         transition: 'opacity 160ms ease, background 160ms ease',
         cursor: 'pointer',
       }}
@@ -71,7 +65,7 @@ export default function DemoToggle() {
         e.currentTarget.style.opacity = '1';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.opacity = on ? '0.92' : '0.45';
+        e.currentTarget.style.opacity = on ? '0.6' : '0.18';
       }}
     >
       <span
@@ -99,7 +93,6 @@ export default function DemoToggle() {
           }}
         />
       </span>
-      Demo
     </button>
   );
 }
