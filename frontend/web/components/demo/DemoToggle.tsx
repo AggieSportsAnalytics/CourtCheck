@@ -47,7 +47,7 @@ export default function DemoToggle() {
       onClick={toggle}
       style={{
         position: 'fixed',
-        left: 14,
+        right: 14,
         bottom: 14,
         zIndex: 90,
         display: 'flex',

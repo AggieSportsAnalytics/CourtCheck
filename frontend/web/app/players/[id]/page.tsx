@@ -9,6 +9,7 @@ import { StrokeBars, type StrokeRow } from '@/components/players/StrokeBars'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Display } from '@/components/ui/display'
 import { Button } from '@/components/ui/button'
+import { isDemoMode, DEMO_PLAYERS, DEMO_RECORDINGS } from '@/lib/demo/demoData'
 
 interface ApiPlayer {
   id: string
@@ -77,6 +78,24 @@ export default function PlayerDetailPage() {
 
   useEffect(() => {
     if (!id) return
+
+    // Demo mode: a demo-* player resolves from the fabricated roster +
+    // recordings so the player screen shows a full stat read with no network.
+    if (
+      isDemoMode(typeof window !== 'undefined' ? window.location.search : null) &&
+      id.startsWith('demo-')
+    ) {
+      const dp = DEMO_PLAYERS.find((p) => p.id === id) ?? null
+      setPlayer(dp as ApiPlayer | null)
+      const mine = DEMO_RECORDINGS.filter((r) => r.player_id === id).sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )
+      setRecordings(mine as unknown as ApiRecording[])
+      setLoading(false)
+      return
+    }
+
     let cancelled = false
     Promise.all([
       fetch('/api/players').then((r) =>

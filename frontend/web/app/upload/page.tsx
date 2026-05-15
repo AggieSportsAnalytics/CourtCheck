@@ -26,6 +26,9 @@ export default function UploadPage() {
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [recordingTitle, setRecordingTitle] = useState('');
   const [matchDate, setMatchDate] = useState('');
+  // Selected-but-not-yet-uploaded file. Picking a file no longer auto-uploads;
+  // the user reviews the metadata and presses the confirm button.
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const upload = useVideoUpload(undefined, selectedPlayerId);
   const {
@@ -52,15 +55,25 @@ export default function UploadPage() {
       .catch(() => {});
   }, []);
 
-  // Dropzone — only active in the idle state
-  const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      const file = acceptedFiles[0];
-      if (!file) return;
-      void handleFile(file, { name: recordingTitle, matchDate });
-    },
-    [handleFile, recordingTitle, matchDate],
-  );
+  // Dropzone — only active in the idle state. Selecting a file now just
+  // stages it; the upload starts when the user confirms.
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (!file) return;
+    setPendingFile(file);
+  }, []);
+
+  const confirmUpload = useCallback(() => {
+    if (!pendingFile) return;
+    void handleFile(pendingFile, { name: recordingTitle, matchDate });
+  }, [pendingFile, handleFile, recordingTitle, matchDate]);
+
+  // Clear the staged file alongside the hook reset so "Upload another" /
+  // "Try again" returns to a clean idle state.
+  const handleReset = useCallback(() => {
+    setPendingFile(null);
+    reset();
+  }, [reset]);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
@@ -85,6 +98,10 @@ export default function UploadPage() {
 
   const uploadPct = Math.round(uploadProgress * 100);
   const procPct = Math.round(progress * 100);
+
+  // Metadata stays visible the whole way through; it just locks once the
+  // upload/processing has started so the recording's labels can't drift.
+  const fieldsLocked = pane !== 'idle' && pane !== 'failed';
 
   // Diagnostic: log every time the processing-state inputs change so we can
   // tell from devtools whether Modal -> Supabase -> /api/status -> hook is
@@ -186,9 +203,12 @@ export default function UploadPage() {
         )}
       </div>
 
-      {/* Optional metadata — only visible in idle/failed states */}
-      {(pane === 'idle' || pane === 'failed') && (
-        <form className="mb-7 grid gap-4" onSubmit={(e) => e.preventDefault()}>
+      {/* Metadata — always visible; locked once upload/processing starts so
+          the recording's labels stay fixed to what was submitted. */}
+      <form
+        className={`mb-7 grid gap-4 transition-opacity duration-200 ${fieldsLocked ? 'opacity-60' : ''}`}
+        onSubmit={(e) => e.preventDefault()}
+      >
           <div className="grid gap-1.5">
             <label
               htmlFor="player"
@@ -200,7 +220,8 @@ export default function UploadPage() {
               id="player"
               value={selectedPlayerId ?? ''}
               onChange={(e) => setSelectedPlayerId(e.target.value || null)}
-              className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none transition-colors duration-150 focus:border-ink focus:bg-surface"
+              disabled={fieldsLocked}
+              className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none transition-colors duration-150 focus:border-ink focus:bg-surface disabled:cursor-not-allowed"
             >
               <option value="">Unknown / not assigned</option>
               {players.map((p) => (
@@ -224,8 +245,9 @@ export default function UploadPage() {
                 type="text"
                 value={recordingTitle}
                 onChange={(e) => setRecordingTitle(e.target.value)}
+                disabled={fieldsLocked}
                 placeholder="e.g. Lin vs Stanford · Set 1"
-                className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none transition-colors duration-150 placeholder:text-ink-mute focus:border-ink focus:bg-surface"
+                className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none transition-colors duration-150 placeholder:text-ink-mute focus:border-ink focus:bg-surface disabled:cursor-not-allowed"
               />
             </div>
             <div className="grid gap-1.5">
@@ -240,12 +262,12 @@ export default function UploadPage() {
                 type="date"
                 value={matchDate}
                 onChange={(e) => setMatchDate(e.target.value)}
-                className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none transition-colors duration-150 focus:border-ink focus:bg-surface"
+                disabled={fieldsLocked}
+                className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none transition-colors duration-150 focus:border-ink focus:bg-surface disabled:cursor-not-allowed"
               />
             </div>
           </div>
         </form>
-      )}
 
       {/* Upload card — single container, swaps panes by state.
           min-height keeps the idle/uploading/processing/done panes at parity
@@ -265,7 +287,62 @@ export default function UploadPage() {
       >
         {pane === 'idle' && <input {...getInputProps()} aria-label="Recording file input" />}
 
-        {pane === 'idle' && (
+        {pane === 'idle' && pendingFile && (
+          <div className="px-6 py-8 text-center">
+            <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-xl bg-shade text-court dark:bg-surface dark:text-court-light">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="size-5"
+              >
+                <path d="M9 17V7l8 5-8 5z" />
+                <circle cx="12" cy="12" r="10" />
+              </svg>
+            </div>
+            <p className="font-mono text-[0.68rem] uppercase tracking-[0.14em] text-ink-mute">
+              Ready to analyze
+            </p>
+            <h3
+              className="mx-auto mt-1.5 mb-1 max-w-[34ch] truncate font-display text-[1.2rem] font-medium tracking-[-0.012em]"
+              style={{ fontVariationSettings: '"opsz" 60' }}
+              title={pendingFile.name}
+            >
+              {pendingFile.name}
+            </h3>
+            <p className="mb-5 text-[0.82rem] text-ink-soft">
+              {formatMB(pendingFile.size)} MB · confirm the details above, then start.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  confirmUpload();
+                }}
+                className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[0.95rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px dark:bg-court-deep"
+              >
+                Upload &amp; analyze
+                <span aria-hidden>→</span>
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  open();
+                }}
+                className="inline-flex items-center gap-2.5 rounded-full border border-line bg-paper px-[22px] py-3 text-[0.95rem] font-medium text-ink transition-colors duration-200 ease-out hover:border-ink"
+              >
+                Choose a different file
+              </button>
+            </div>
+          </div>
+        )}
+
+        {pane === 'idle' && !pendingFile && (
           <div className="px-6 py-8 text-center">
             <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-xl bg-shade text-court dark:bg-surface dark:text-court-light">
               <svg
@@ -422,7 +499,7 @@ export default function UploadPage() {
               </button>
               <button
                 type="button"
-                onClick={reset}
+                onClick={handleReset}
                 className="inline-flex items-center gap-2.5 rounded-full border border-line bg-paper px-[22px] py-3 text-[0.95rem] font-medium text-ink transition-colors duration-200 ease-out hover:border-ink"
               >
                 Upload another
@@ -459,7 +536,7 @@ export default function UploadPage() {
             </p>
             <button
               type="button"
-              onClick={reset}
+              onClick={handleReset}
               className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[0.95rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px dark:bg-court-deep"
             >
               Try again

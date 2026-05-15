@@ -77,6 +77,10 @@ export type DemoRecording = {
   inBoundsBounces: number;
   outBoundsBounces: number;
   shotCount: number;
+  bounceCount: number;
+  rallyCount: number;
+  fps: number;
+  numFrames: number;
   player_id: string | null;
 };
 
@@ -88,11 +92,18 @@ export const DEMO_PLAYERS: DemoPlayer[] = [
   { id: 'demo-p3', name: 'Aspen Park', position: 'Singles 3', year: 'Sophomore', photo_url: null, created_at: daysAgo(110) },
   { id: 'demo-p4', name: 'Daniela Cruz', position: 'Singles 4', year: 'Senior', photo_url: null, created_at: daysAgo(108) },
   { id: 'demo-p5', name: 'Sophie Whitman', position: 'Singles 5', year: 'Freshman', photo_url: null, created_at: daysAgo(96) },
-  { id: 'demo-p6', name: 'Khalil Anders', position: 'Doubles', year: 'Junior', photo_url: null, created_at: daysAgo(92) },
-  { id: 'demo-p7', name: 'Renata Oyelaran', position: 'Singles 6', year: 'Sophomore', photo_url: null, created_at: daysAgo(80) },
+  { id: 'demo-p6', name: 'Renata Oyelaran', position: 'Singles 6', year: 'Sophomore', photo_url: null, created_at: daysAgo(92) },
+  { id: 'demo-p7', name: 'Priya Sharma', position: 'Doubles A', year: 'Junior', photo_url: null, created_at: daysAgo(86) },
+  { id: 'demo-p8', name: 'Camille Boucher', position: 'Doubles B', year: 'Senior', photo_url: null, created_at: daysAgo(80) },
+  { id: 'demo-p9', name: 'Hana Watanabe', position: 'Reserve', year: 'Freshman', photo_url: null, created_at: daysAgo(64) },
 ];
 
 const OPPONENTS = ['Stanford', 'Cal', 'USC', 'UCLA', 'Pepperdine', 'Saint Mary’s', 'Fresno State', 'Pacific'];
+
+const REC_FPS = 30;
+// 52 min per recording. 18 recordings -> 18 * 52 = 936 min = 15.6 hours.
+const REC_SECONDS = 52 * 60;
+const REC_FRAMES = REC_SECONDS * REC_FPS;
 
 function rec(
   i: number,
@@ -107,6 +118,7 @@ function rec(
   const p = DEMO_PLAYERS[playerIdx];
   const opp = OPPONENTS[i % OPPONENTS.length];
   const last = p.name.split(' ')[1] ?? p.name;
+  const shots = fh + bh + sv;
   return {
     id: `demo-rec-${i}`,
     status: 'done',
@@ -118,30 +130,39 @@ function rec(
     serveCount: sv,
     inBoundsBounces: inB,
     outBoundsBounces: outB,
-    shotCount: fh + bh + sv,
+    shotCount: shots,
+    bounceCount: inB + outB,
+    rallyCount: Math.round(shots / 4.3),
+    fps: REC_FPS,
+    numFrames: REC_FRAMES,
     player_id: p.id,
   };
 }
 
-// ~14 recordings spread across the last ~6 weeks, varied per player.
+// 18 recordings (2 per player across the 9-player roster), spread across the
+// last ~7 weeks. 18 * 52 min = 15.6 hours recorded.
 export const DEMO_RECORDINGS: DemoRecording[] = [
   rec(1, 0, 2, 38, 21, 9, 54, 14),
   rec(2, 1, 4, 31, 27, 7, 49, 16),
   rec(3, 2, 5, 44, 18, 11, 61, 12),
-  rec(4, 0, 9, 35, 24, 8, 52, 15),
-  rec(5, 3, 11, 29, 30, 6, 47, 18),
-  rec(6, 4, 13, 41, 16, 12, 58, 11),
-  rec(7, 1, 16, 33, 25, 9, 50, 17),
-  rec(8, 5, 19, 26, 22, 5, 41, 13),
-  rec(9, 2, 22, 47, 20, 13, 65, 10),
-  rec(10, 6, 24, 30, 19, 7, 44, 14),
-  rec(11, 0, 27, 39, 23, 10, 56, 13),
-  rec(12, 3, 31, 28, 31, 6, 46, 19),
-  rec(13, 4, 35, 43, 17, 12, 60, 12),
-  rec(14, 1, 40, 34, 26, 8, 51, 16),
+  rec(4, 3, 7, 35, 24, 8, 52, 15),
+  rec(5, 4, 9, 29, 30, 6, 47, 18),
+  rec(6, 5, 11, 41, 16, 12, 58, 11),
+  rec(7, 6, 13, 33, 25, 9, 50, 17),
+  rec(8, 7, 15, 26, 22, 5, 41, 13),
+  rec(9, 8, 17, 30, 19, 7, 44, 14),
+  rec(10, 0, 20, 42, 19, 11, 60, 11),
+  rec(11, 1, 23, 36, 28, 8, 55, 15),
+  rec(12, 2, 26, 47, 20, 13, 65, 10),
+  rec(13, 3, 29, 31, 26, 7, 48, 17),
+  rec(14, 4, 32, 28, 31, 6, 46, 19),
+  rec(15, 5, 35, 43, 17, 12, 60, 12),
+  rec(16, 6, 38, 34, 24, 9, 53, 15),
+  rec(17, 7, 42, 25, 21, 5, 40, 13),
+  rec(18, 8, 46, 32, 18, 8, 45, 14),
 ];
 
-const totalSeconds = DEMO_RECORDINGS.length * 11 * 60 + 480; // ~11 min avg
+const totalSeconds = DEMO_RECORDINGS.reduce((s, r) => s + r.numFrames / r.fps, 0);
 
 export type DemoSummary = {
   totals: { total: number; done: number; processing: number; failed: number };
@@ -178,16 +199,18 @@ const agg = DEMO_RECORDINGS.reduce(
     inB: a.inB + r.inBoundsBounces,
     outB: a.outB + r.outBoundsBounces,
     shots: a.shots + r.shotCount,
+    bounces: a.bounces + r.bounceCount,
+    rallies: a.rallies + r.rallyCount,
   }),
-  { fh: 0, bh: 0, sv: 0, inB: 0, outB: 0, shots: 0 },
+  { fh: 0, bh: 0, sv: 0, inB: 0, outB: 0, shots: 0, bounces: 0, rallies: 0 },
 );
 
 export const DEMO_SUMMARY: DemoSummary = {
   totals: { total: DEMO_RECORDINGS.length, done: DEMO_RECORDINGS.length, processing: 0, failed: 0 },
   tennisStats: {
-    totalBounces: agg.inB + agg.outB,
+    totalBounces: agg.bounces,
     totalShots: agg.shots,
-    totalRallies: 218,
+    totalRallies: agg.rallies,
     totalForehands: agg.fh,
     totalBackhands: agg.bh,
     totalServes: agg.sv,
@@ -201,7 +224,7 @@ export const DEMO_SUMMARY: DemoSummary = {
   games: DEMO_RECORDINGS.map((r) => ({
     id: r.id,
     createdAt: r.createdAt,
-    durationSeconds: 11 * 60,
+    durationSeconds: REC_SECONDS,
     shotCount: r.shotCount,
     forehandCount: r.forehandCount,
     backhandCount: r.backhandCount,
