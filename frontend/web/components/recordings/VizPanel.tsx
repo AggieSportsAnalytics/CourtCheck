@@ -7,6 +7,8 @@ import Coverage from '../viz/Coverage';
 import Legend from '../viz/Legend';
 import { StrokeKey, STROKE_COLOR_BY_KEY } from '../viz/CourtSVG';
 import { PositionTile, type PositionSummary } from './CoachInsights';
+import CountUp from '../viz/CountUp';
+import { useEntranceReveal } from '../viz/useEntranceReveal';
 
 type VizMode = 'shotMap' | 'spacing' | 'coverage';
 
@@ -808,6 +810,8 @@ function StrokeBarsMini({
     | null;
   overallText: string | null;
 }) {
+  // Hook before any early-return so it runs on every render path.
+  const shown = useEntranceReveal(byStroke);
   if (!byStroke || overallText === null) {
     return (
       <div
@@ -827,7 +831,7 @@ function StrokeBarsMini({
 
   return (
     <div
-      className="rounded-lg"
+      className="cc-strokebars rounded-lg"
       style={{
         padding: '12px 14px',
         background: 'color-mix(in srgb, var(--color-court) 6%, transparent)',
@@ -865,7 +869,7 @@ function StrokeBarsMini({
                   <div
                     className="h-full rounded-full"
                     style={{
-                      width: `${value}%`,
+                      width: shown ? `${value}%` : '0%',
                       background: color,
                       transition: 'width 720ms cubic-bezier(0.165, 0.84, 0.44, 1)',
                     }}
@@ -876,7 +880,11 @@ function StrokeBarsMini({
                 className="text-right text-[0.78rem] font-display font-medium text-ink"
                 style={{ fontFeatureSettings: '"tnum"' }}
               >
-                {value !== null ? `${value}%` : '—'}
+                {value !== null ? (
+                  <CountUp value={value} play={shown} suffix="%" />
+                ) : (
+                  '—'
+                )}
                 <span className="text-ink-mute font-normal text-[0.7rem] ml-1">
                   ({row.n})
                 </span>

@@ -1,29 +1,8 @@
 'use client';
 
-import { RefObject, useEffect, useState } from 'react';
-
-/**
- * One-shot entrance animation gate. Returns false on first render, then flips
- * to true after two animation frames so the CSS `width` transitions on the
- * bar fills actually fire (without this the bars render directly at their
- * target width and never animate).
- */
-function useEntranceReveal(dep?: unknown): boolean {
-  const [shown, setShown] = useState(false);
-  useEffect(() => {
-    setShown(false);
-    const raf1 = requestAnimationFrame(() => {
-      const raf2 = requestAnimationFrame(() => setShown(true));
-      (window as Window & { __cc_raf2?: number }).__cc_raf2 = raf2;
-    });
-    return () => {
-      cancelAnimationFrame(raf1);
-      const w = window as Window & { __cc_raf2?: number };
-      if (w.__cc_raf2 !== undefined) cancelAnimationFrame(w.__cc_raf2);
-    };
-  }, [dep]);
-  return shown;
-}
+import { RefObject } from 'react';
+import { useEntranceReveal } from '../viz/useEntranceReveal';
+import CountUp from '../viz/CountUp';
 
 /**
  * Coach Insights — three metrics surfaced per `coach-insights-spec.md`:
@@ -194,7 +173,7 @@ export function PositionTile({ data }: { data: PositionSummary | null }) {
               className="text-right text-[0.82rem] font-display font-medium text-ink"
               style={{ fontFeatureSettings: '"tnum"' }}
             >
-              {Math.round(z.pct)}%
+              <CountUp value={z.pct} play={shown} suffix="%" />
             </span>
           </div>
         ))}
@@ -301,7 +280,7 @@ function ErrorTile({
               className="text-right text-[0.82rem] font-display font-medium text-ink"
               style={{ fontFeatureSettings: '"tnum"' }}
             >
-              {r.n}
+              <CountUp value={r.n} play={shown} />
             </span>
           </div>
         ))}

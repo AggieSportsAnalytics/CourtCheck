@@ -23,10 +23,10 @@ import { useEffect, useRef } from 'react';
  */
 export function useVizReveal<T extends SVGElement>(
   selector: string,
-  options: { staggerMs?: number; depKey?: unknown } = {},
+  options: { staggerMs?: number; durationMs?: number; depKey?: unknown } = {},
 ) {
   const ref = useRef<T | null>(null);
-  const { staggerMs = 30, depKey } = options;
+  const { staggerMs = 30, durationMs = 480, depKey } = options;
 
   useEffect(() => {
     const node = ref.current;
@@ -74,7 +74,7 @@ export function useVizReveal<T extends SVGElement>(
         const anim = el.animate(
           [{ opacity: 0 }, { opacity: target }],
           {
-            duration: 480,
+            duration: durationMs,
             delay: i * staggerMs,
             easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
             fill: 'forwards',
@@ -111,7 +111,7 @@ export function useVizReveal<T extends SVGElement>(
       anims.forEach((a) => a.cancel());
       targets.forEach((el) => el.style.removeProperty('opacity'));
     };
-  }, [selector, staggerMs, depKey]);
+  }, [selector, staggerMs, durationMs, depKey]);
 
   return {
     ref,

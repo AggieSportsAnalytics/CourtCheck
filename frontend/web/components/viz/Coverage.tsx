@@ -63,7 +63,8 @@ export default function Coverage({ grid = SAMPLE_COVERAGE }: Props) {
   const yOffset = 39;
 
   const { ref: svgRef, style: revealStyle } = useVizReveal<SVGSVGElement>('.heatmap-zone', {
-    staggerMs: 8,
+    staggerMs: 4,
+    durationMs: 320,
     depKey: grid.length,
   });
 

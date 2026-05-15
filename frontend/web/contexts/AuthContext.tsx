@@ -27,9 +27,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       setLoading(false);
 
-      if (event === 'SIGNED_IN' && pathname?.startsWith('/auth')) {
-        // Only redirect to home if user is on an auth page (actual login/signup)
-        // Avoids redirecting when Supabase re-fires SIGNED_IN on tab switch/token refresh
+      if (
+        event === 'SIGNED_IN' &&
+        (pathname?.startsWith('/auth') || pathname?.startsWith('/landing'))
+      ) {
+        // Redirect to the dashboard when the sign-in actually happened on an
+        // auth OR landing page. Scoping to those paths avoids bouncing the
+        // user when Supabase re-fires SIGNED_IN on tab switch / token refresh
+        // while they're mid-task elsewhere in the app.
         router.push('/');
       } else if (event === 'SIGNED_OUT') {
         router.push('/landing');

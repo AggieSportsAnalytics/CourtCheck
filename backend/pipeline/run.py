@@ -1273,10 +1273,27 @@ def compute_spatial_stats(
     return {"bounces": bounce_stats, "player": player_stats}
 
 
-def generate_scouting_report(stats: dict, fps: float, num_frames: int, spatial_stats: "dict | None" = None) -> "str | None":
-    """Call GPT-4o-mini to generate a markdown scouting report from match stats."""
+def generate_scouting_report(
+    stats: dict,
+    fps: float,
+    num_frames: int,
+    position_summary: "dict | None" = None,
+    net_approach_summary: "dict | None" = None,
+    error_summary: "dict | None" = None,
+    rally_summary: "dict | None" = None,
+    shots: "list | None" = None,
+) -> "str | None":
+    """Call GPT-4o-mini to generate a grounded scouting report.
+
+    Grounded in the real coach-insight calculators (position / net / error /
+    rally summaries + per-shot records) instead of coarse bounce-zone blobs,
+    so the model cites actual numbers rather than inventing them. Every stat
+    is passed explicitly; the model is instructed to omit any sentence whose
+    stat is N/A.
+    """
     try:
         import openai
+
         duration_sec = round(num_frames / fps) if fps else 0
         duration_str = f"{duration_sec // 60}m {duration_sec % 60}s"
 
@@ -1284,56 +1301,98 @@ def generate_scouting_report(stats: dict, fps: float, num_frames: int, spatial_s
         out_b = stats.get("out_bounds_bounces", 0) or 0
         total_b = in_b + out_b
         acc = f"{round(in_b / total_b * 100)}%" if total_b > 0 else "N/A"
+        handedness = stats.get("handedness", "right")
+
+        fh = stats.get("forehand_count", 0)
+        bh = stats.get("backhand_count", 0)
+        srv = stats.get("serve_count", 0)
+        total_strokes = fh + bh + srv
+
+        # Per-stroke error rate + far-court placement, derived from P1 shots[].
+        per_oob = {"forehand": 0, "backhand": 0, "serve": 0, "unknown": 0}
+        per_total = {"forehand": 0, "backhand": 0, "serve": 0, "unknown": 0}
+        far_left = far_right = 0
+        if shots:
+            for s in shots:
+                if s.get("player") != 1:
+                    continue
+                key = s.get("stroke", "unknown")
+                per_total[key] = per_total.get(key, 0) + 1
+                if not s.get("in", True):
+                    per_oob[key] = per_oob.get(key, 0) + 1
+                if s.get("court_y", 99) < 39 and s.get("in"):
+                    if s.get("court_x", 13.5) < 13.5:
+                        far_left += 1
+                    else:
+                        far_right += 1
+
+        def err_rate(key: str) -> str:
+            t = per_total.get(key, 0)
+            return f"{round(per_oob.get(key, 0) / t * 100)}%" if t else "N/A"
+
+        rs = rally_summary or {}
+        rs_total = rs.get("total", 0) or 0
+        total_rallies = rs_total if rs_total > 0 else stats.get("rally_count", 0)
+        avg_length = rs.get("avg_length", "N/A") if rs_total > 0 else "N/A"
+        p1_win_rate = rs.get("p1_win_rate", "N/A") if rs_total > 0 else "N/A"
+        win_rate_str = f"{p1_win_rate}%" if p1_win_rate != "N/A" else "N/A"
+        end_reasons = rs.get("end_reasons", {}) if rs_total > 0 else {}
+
+        ps = position_summary or {}
+        na = net_approach_summary or {}
+        es = error_summary or {}
 
         prompt = (
-            "You are a Division I tennis performance analyst.\n"
-            "The player being analyzed is the player closer to the camera "
-            "(bottom side of player movement map, top side of bounce map).\n\n"
-            "Write a clear, data-driven match report under 250 words.\n"
+            "You are a Division I tennis performance analyst reviewing a single "
+            "match clip.\n"
+            "The player analyzed is the one closer to the camera (near side, "
+            "P1).\n"
+            f"Player handedness: {handedness}.\n\n"
+            "Write a concise, data-driven match report under 280 words.\n"
             "Use direct second-person language ('You...').\n"
-            "Do NOT mention AI, models, or assumptions.\n"
-            "Only use the numbers provided.\n\n"
-            "Structure your response EXACTLY with these sections:\n"
+            "Do NOT mention AI, models, cameras, or homography.\n"
+            "Use ONLY the numbers provided — do not invent statistics.\n"
+            "If a stat is N/A, omit the sentence that would cite it.\n\n"
+            "Structure your response EXACTLY with these six sections:\n"
             "1) Match Snapshot\n"
             "2) Positioning Tendencies\n"
             "3) Error Patterns\n"
             "4) Strengths\n"
             "5) Areas to Improve\n"
             "6) One-Line Coaching Adjustment\n\n"
-            "Be specific and quantitative. Avoid generic advice.\n\n"
-            "Match Statistics:\n"
-            f"- Duration: {duration_str}\n"
-            f"- Total shots: {stats.get('shot_count', 0)}\n"
-            f"- Rallies: {stats.get('rally_count', 0)}\n"
-            f"- Total bounces: {stats.get('bounce_count', 0)} "
-            f"(In-bounds: {in_b}, Out-of-bounds: {out_b})\n"
-            f"- In-bounds accuracy: {acc}\n"
-            f"- Forehands: {stats.get('forehand_count', 0)}\n"
-            f"- Backhands: {stats.get('backhand_count', 0)}\n"
-            f"- Serves/Smashes: {stats.get('serve_count', 0)}\n"
+            "=== MATCH DATA ===\n"
+            f"Duration: {duration_str}\n"
+            f"Total rallies: {total_rallies} | Avg rally length: {avg_length} "
+            f"shots | P1 rally win rate: {win_rate_str}\n"
+            f"Rally end reasons: {end_reasons}\n\n"
+            f"Strokes (near player): Forehand {fh}, Backhand {bh}, Serve {srv} "
+            f"(total {total_strokes})\n"
+            f"Overall shot accuracy (bounces in vs out): {acc} "
+            f"({in_b} in / {out_b} out of {total_b} bounces)\n"
+            f"Error breakdown — total P1 errors: {es.get('total', 0)} "
+            f"(long: {es.get('long', 0)}, wide: {es.get('wide', 0)}, "
+            f"net: {es.get('net_err', 0)}, "
+            f"missed returns: {es.get('missed_return', 0)})\n"
+            f"Error rate by stroke: forehand {err_rate('forehand')}, "
+            f"backhand {err_rate('backhand')}, serve {err_rate('serve')}\n"
+            f"Far-court placement (P1 in-bounds shots): left {far_left}, "
+            f"right {far_right}\n\n"
+            "=== POSITIONING (near player, % of frames) ===\n"
+            f"Inside baseline: {ps.get('inside_pct', 'N/A')}% | "
+            f"On baseline: {ps.get('on_pct', 'N/A')}% | "
+            f"1-10 ft behind: {ps.get('behind_5_10_pct', 'N/A')}% | "
+            f"10+ ft behind: {ps.get('behind_10_plus_pct', 'N/A')}%\n\n"
+            "=== NET GAME ===\n"
+            f"Net approaches: {na.get('approaches', 0)} | "
+            f"Win rate on approaches: {na.get('win_pct', 0)}%\n"
         )
-
-        if spatial_stats:
-            bs = spatial_stats.get("bounces", {})
-            ps = spatial_stats.get("player", {})
-            prompt += "\nCourt zone analysis (in-bounds bounces only):\n"
-            prompt += f"- Near half (player's side): {bs.get('near_pct', 0)}% of bounces\n"
-            prompt += f"- Far half (opponent's side): {bs.get('far_pct', 0)}% of bounces\n"
-            prompt += f"- Left side: {bs.get('left_pct', 0)}%, Right side: {bs.get('right_pct', 0)}%\n"
-            prompt += f"- Deep near (behind service line, near half): {bs.get('deep_near_pct', 0)}% of near bounces\n"
-            prompt += f"- Alley bounces (outside singles): {bs.get('alley_pct', 0)}%\n"
-            if ps.get("samples", 0) > 0:
-                prompt += "\nPlayer positioning (near half):\n"
-                prompt += f"- Time on near half: {ps.get('near_pct', 0)}% of sampled frames\n"
-                prompt += f"- Left side of court: {ps.get('near_left_pct', 0)}%, Right side: {ps.get('near_right_pct', 0)}%\n"
-                prompt += f"- Deep (behind service line): {ps.get('near_deep_pct', 0)}%, Forward: {ps.get('near_forward_pct', 0)}%\n"
 
         client = openai.OpenAI()
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=500,
-            temperature=0.7,
+            max_tokens=550,
+            temperature=0.5,
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -1968,15 +2027,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             f"P1 wins {rally_summary['p1_wins']}/{decisive}"
         )
 
-        # ---------- Spatial zone stats (for scouting report) ----------
-        spatial_stats = compute_spatial_stats(
-            bounces=bounces_all,
-            ball_track=ball_track,
-            homography_matrices=homography_matrices,
-            player_detections=player_detections,
-            court_ref=court_ref,
-        )
-
         # Merge stroke counts: prefer pose-based counts when swing events were detected
         if len(swing_events) > 0:
             final_forehand = pose_stroke_counts.get("Forehand", 0)
@@ -1999,10 +2049,15 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 "forehand_count": final_forehand,
                 "backhand_count": final_backhand,
                 "serve_count": final_serve,
+                "handedness": near_player_handedness,
             },
             fps=fps,
             num_frames=total_frames,
-            spatial_stats=spatial_stats,
+            position_summary=position_summary,
+            net_approach_summary=net_approach_summary,
+            error_summary=error_summary,
+            rally_summary=rally_summary,
+            shots=shots_data,
         )
 
         # ---------- Heatmap generation ----------

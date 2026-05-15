@@ -42,22 +42,20 @@ type Props = {
   fps: number | null;
 };
 
-const STROKE_LETTER: Record<RallyShot['stroke'], string> = {
-  serve: 'S',
-  forehand: 'F',
-  backhand: 'B',
-  unknown: '·',
-};
-
-function strokeSequence(shots: RallyShot[]): string {
-  if (shots.length === 0) return '—';
-  return shots.map((s) => STROKE_LETTER[s.stroke]).join('-');
-}
-
 function outcomeLabel(rally: Rally): { text: string; tone: 'win' | 'loss' | 'neutral' } {
   if (rally.winner === 1) return { text: 'You won', tone: 'win' };
   if (rally.winner === 2) return { text: 'Opponent won', tone: 'loss' };
-  return { text: 'Unknown', tone: 'neutral' };
+  // winner is null when the rally end couldn't be classified (clipped rally,
+  // no swing before the last bounce, projection gap). The Errors tile is an
+  // independent codepath (build_error_summary) so it can still count an error
+  // on a bounce whose rally we couldn't resolve — surface "—" here rather than
+  // a jarring "Unknown" that reads as a bug next to that count.
+  return { text: '—', tone: 'neutral' };
+}
+
+function reasonLabel(endReason: string): string {
+  if (!endReason || endReason === 'unknown') return '—';
+  return endReason.replace(/_/g, ' ');
 }
 
 function fmtTs(sec: number): string {
@@ -110,7 +108,6 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
               <th className="text-left py-2 pr-3 font-normal">#</th>
               <th className="text-left py-2 pr-3 font-normal">Server</th>
               <th className="text-left py-2 pr-3 font-normal">Length</th>
-              <th className="text-left py-2 pr-3 font-normal">Pattern</th>
               <th className="text-left py-2 pr-3 font-normal">Outcome</th>
               <th className="text-left py-2 pr-3 font-normal">Reason</th>
               <th className="text-left py-2 font-normal">Time</th>
@@ -135,9 +132,6 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
                     {r.server === 1 ? 'You' : r.server === 2 ? 'Opp' : '—'}
                   </td>
                   <td className="py-2 pr-3 font-display tabular-nums">{r.shot_count}</td>
-                  <td className="py-2 pr-3 font-mono text-ink-soft">
-                    {strokeSequence(r.shots)}
-                  </td>
                   <td className="py-2 pr-3">
                     <span
                       className={
@@ -152,7 +146,7 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
                     </span>
                   </td>
                   <td className="py-2 pr-3 text-ink-soft text-[0.82rem]">
-                    {r.end_reason.replace(/_/g, ' ')}
+                    {reasonLabel(r.end_reason)}
                   </td>
                   <td className="py-2">
                     <button

@@ -7,6 +7,7 @@ import WatchList, { WatchItem } from '@/components/dashboard/WatchList';
 import PlayerCard, { PlayerCardData, PlayerMetric } from '@/components/dashboard/PlayerCard';
 import EmptyState from '@/components/dashboard/EmptyState';
 import { useAuth } from '@/contexts/AuthContext';
+import { isDemoMode, DEMO_PLAYERS, DEMO_RECORDINGS, DEMO_SUMMARY } from '@/lib/demo/demoData';
 
 // === API response types (mirror /api routes) ===
 
@@ -54,6 +55,7 @@ type RecordingsResponse = {
     status: string;
     createdAt: string;
     name: string;
+    filename: string;
     forehandCount: number | null;
     backhandCount: number | null;
     serveCount: number | null;
@@ -119,6 +121,21 @@ export default function DashboardPage() {
 
     async function load() {
       setLoading(true);
+
+      // Demo mode (?demo=1): render a season's worth of fabricated data so the
+      // screen recording looks lived-in. No network, no Supabase.
+      if (isDemoMode(typeof window !== 'undefined' ? window.location.search : null)) {
+        if (cancelled) return;
+        setSummary(DEMO_SUMMARY as SummaryResponse);
+        setPlayersRes({ players: DEMO_PLAYERS } as PlayersResponse);
+        setRecordingsRes({
+          recordings: DEMO_RECORDINGS as RecordingsResponse['recordings'],
+        });
+        setAllFailed(false);
+        setLoading(false);
+        return;
+      }
+
       const results = await Promise.allSettled([
         fetch('/api/dashboard/summary').then((r) => (r.ok ? r.json() : Promise.reject(r))),
         fetch('/api/players').then((r) => (r.ok ? r.json() : Promise.reject(r))),

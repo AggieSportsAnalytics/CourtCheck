@@ -264,6 +264,12 @@ STROKE_COLORS_BGR: dict[str, tuple[int, int, int]] = {
 #   #F0D74E -> RGB(240, 215, 78) -> BGR(78, 215, 240)
 _STROKE_BOUNCE_DEFAULT = (78, 215, 240)
 
+# Near-side bounces are P2's shots. We don't classify P2's strokes, so we
+# can't color by stroke — but yellow read as a meaningful (mislabeled)
+# signal. Attribute them to P2 instead: clay, matching the P2 player color
+# (#B05B36 -> BGR(54, 91, 176)). "P2 hit this; stroke unknown."
+_NEAR_SIDE_BOUNCE_COLOR = (54, 91, 176)
+
 
 def draw_minimap_ball_and_bounces(
     minimap,
@@ -361,13 +367,13 @@ def draw_minimap_ball_and_bounces(
         # clipped to nothing — same effective behavior as before.
         # Bottom half of the minimap is the near (P1) side. A bounce
         # there means P2 hit it — and we don't classify P2's strokes
-        # yet — so leave it stroke-neutral instead of mislabeling it
-        # with whatever swing happened to be active that frame.
+        # yet — so color it as P2 (clay) instead of mislabeling it with
+        # whatever swing happened to be active that frame.
         on_near_side = my > minimap.shape[0] // 2
 
         dot_color = bounce_color
         if on_near_side:
-            dot_color = _STROKE_BOUNCE_DEFAULT
+            dot_color = _NEAR_SIDE_BOUNCE_COLOR
         elif frame_stroke_labels is not None:
             labels_at_bounce = frame_stroke_labels.get(bounce_idx, {})
             if labels_at_bounce:

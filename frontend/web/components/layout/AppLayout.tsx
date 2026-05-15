@@ -4,6 +4,7 @@ import { ReactNode, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from './Sidebar'
 import BounceLoader from '@/components/upload/BounceLoader'
+import DemoToggle from '@/components/demo/DemoToggle'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -53,6 +54,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         onSignOut={signOut}
       />
       <main className="min-h-screen">{children}</main>
+      <DemoToggle />
     </>
   )
 }

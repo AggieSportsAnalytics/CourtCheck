@@ -320,6 +320,26 @@
     border: 1px solid var(--color-line);
     overflow: hidden;
     position: relative;
+    transition:
+      transform var(--duration-base) var(--ease-out),
+      box-shadow var(--duration-base) var(--ease-out),
+      border-color var(--duration-base) var(--ease-out);
+  }
+  .cc-court-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--color-ink-mute);
+  }
+
+  /* Stroke-mix / accuracy mini bar-chart cards in the viz side rail. */
+  .cc-strokebars {
+    transition:
+      transform var(--duration-quick) var(--ease-out),
+      box-shadow var(--duration-quick) var(--ease-out);
+  }
+  .cc-strokebars:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-hover);
   }
 
   /* Court overlay primitives — CSS owns the transition + pre-reveal hide,

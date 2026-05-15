@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const ALLOWED_HOSTS = ['ucdavisaggies.com', 'images.sidearmdev.com', 'dxbhsrqyrr690.cloudfront.net'];
+// `googleusercontent.com` (suffix) covers the rotating lh3/lh4/lh5 subdomains
+// Google serves OAuth profile photos from — required for Google sign-in avatars.
+const ALLOWED_HOSTS = [
+  'ucdavisaggies.com',
+  'images.sidearmdev.com',
+  'dxbhsrqyrr690.cloudfront.net',
+  'googleusercontent.com',
+];
+const MAX_REDIRECTS = 3;
+
+function isAllowed(u: URL): boolean {
+  return (
+    u.protocol === 'https:' &&
+    ALLOWED_HOSTS.some((h) => u.hostname === h || u.hostname.endsWith(`.${h}`))
+  );
+}
 
 export async function GET(req: NextRequest) {
   const url = req.nextUrl.searchParams.get('url');
@@ -26,15 +41,36 @@ export async function GET(req: NextRequest) {
   try {
     // redirect: 'manual' so an allowlisted host can't 302 us to an internal
     // address (e.g. http://169.254.169.254/latest/meta-data on Vercel/AWS).
-    // The allowlisted CDNs serve images directly without redirecting, so 3xx
-    // is treated as upstream failure.
-    const upstream = await fetch(url, {
+    // ucdavisaggies.com legitimately 302s to its allowlisted CDN, so we follow
+    // redirects but re-validate every hop against the same https+allowlist gate.
+    let currentUrl = url;
+    let upstream = await fetch(currentUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0' },
       redirect: 'manual',
     });
 
-    if (upstream.status >= 300 && upstream.status < 400) {
-      return NextResponse.json({ error: 'Upstream redirect refused' }, { status: 502 });
+    for (let hop = 0; upstream.status >= 300 && upstream.status < 400; hop++) {
+      if (hop >= MAX_REDIRECTS) {
+        return NextResponse.json({ error: 'Too many redirects' }, { status: 502 });
+      }
+      const location = upstream.headers.get('location');
+      if (!location) {
+        return NextResponse.json({ error: 'Redirect without location' }, { status: 502 });
+      }
+      let next: URL;
+      try {
+        next = new URL(location, currentUrl);
+      } catch {
+        return NextResponse.json({ error: 'Invalid redirect location' }, { status: 502 });
+      }
+      if (!isAllowed(next)) {
+        return NextResponse.json({ error: 'Redirect target not allowed' }, { status: 403 });
+      }
+      currentUrl = next.toString();
+      upstream = await fetch(currentUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0' },
+        redirect: 'manual',
+      });
     }
 
     if (!upstream.ok) {

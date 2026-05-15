@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import EditableName from '@/components/recordings/EditableName';
 import BounceLoader from '@/components/upload/BounceLoader';
+import { isDemoMode, DEMO_RECORDINGS } from '@/lib/demo/demoData';
 
 /**
  * Recordings list. Ported from docs/brand-drop/mocks/matches-list.html.
@@ -12,12 +13,12 @@ import BounceLoader from '@/components/upload/BounceLoader';
  * Layout:
  *   - h1 "Every recording, scrubbable." (clay italic on "scrubbable.")
  *   - Mono meta line: results count ("12 recordings.")
- *   - Filter bar: search + player chips + (placeholder) date/filter chips
- *   - Match table: .cc-match-row grid (110px date | 1fr name | 40px arrow)
+ *   - Filter bar: search + (placeholder) date/filter chips
+ *   - Match table: .cc-match-row grid (110px date | 1fr title | actions)
  *   - Empty state CTA → /upload
  *
- * Wires to /api/recordings. Player vs opponent is derived from `name`
- * (display string, e.g. "M. Lin vs D. Park") or falls back to `filename`.
+ * Wires to /api/recordings. A recording is identified by its own title
+ * (`name`), NOT associated to a player profile.
  */
 
 interface Recording {
@@ -27,11 +28,6 @@ interface Recording {
   /** User-facing title (e.g. "test5-player", "StMarys Court2 4950 clip"). */
   name: string;
   filename: string;
-  /** Real player name from the players table when player_id is bound,
-   *  null otherwise. The list filters + displays by THIS, not by parsing
-   *  the title — earlier the chips read the title as the player and ended
-   *  up filtering on filenames like "test5-player". */
-  playerName: string | null;
 }
 
 type RawRecording = {
@@ -40,7 +36,6 @@ type RawRecording = {
   createdAt: string;
   name: string;
   filename: string;
-  playerName: string | null;
 };
 
 const AVATAR_COLORS = [
@@ -90,7 +85,6 @@ export default function RecordingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const [playerFilter, setPlayerFilter] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -114,6 +108,21 @@ export default function RecordingsPage() {
   }
 
   useEffect(() => {
+    // Demo mode (?demo=1): a season of fabricated recordings, no network.
+    if (isDemoMode(typeof window !== 'undefined' ? window.location.search : null)) {
+      setRecordings(
+        DEMO_RECORDINGS.map((r) => ({
+          id: r.id,
+          status: r.status,
+          createdAt: r.createdAt,
+          name: r.name,
+          filename: r.filename,
+        })),
+      );
+      setLoading(false);
+      return;
+    }
+
     fetch('/api/recordings')
       .then((r) => {
         if (!r.ok) throw new Error('Failed to fetch recordings');
@@ -127,7 +136,6 @@ export default function RecordingsPage() {
             createdAt: r.createdAt,
             name: r.name,
             filename: r.filename,
-            playerName: r.playerName ?? null,
           }))
         );
       })
@@ -135,28 +143,15 @@ export default function RecordingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Filter chips from REAL bound player names (matches.player_id → players.name).
-  // Recordings without a player binding don't contribute a chip — the title
-  // isn't a player, so showing "test5-player" or "new insights" as a chip
-  // was misleading.
-  const uniquePlayers = useMemo(() => {
-    const seen = new Set<string>();
-    recordings.forEach((r) => {
-      if (r.playerName) seen.add(r.playerName);
-    });
-    return Array.from(seen).sort().slice(0, 8);
-  }, [recordings]);
-
   const filtered = useMemo(() => {
     return recordings.filter((r) => {
-      if (playerFilter && r.playerName !== playerFilter) return false;
       if (query.trim()) {
-        const haystack = `${cleanTitle(r.name)} ${r.playerName ?? ''} ${r.filename}`.toLowerCase();
+        const haystack = `${cleanTitle(r.name)} ${r.filename}`.toLowerCase();
         if (!haystack.includes(query.trim().toLowerCase())) return false;
       }
       return true;
     });
-  }, [recordings, query, playerFilter]);
+  }, [recordings, query]);
 
   if (loading) {
     return (
@@ -198,11 +193,6 @@ export default function RecordingsPage() {
               {recordings.length}
             </span>{' '}
             {recordings.length === 1 ? 'recording' : 'recordings'}
-            {' · '}
-            <span className="font-display" style={{ fontFeatureSettings: '"tnum"' }}>
-              {new Set(recordings.map((r) => r.playerName).filter(Boolean)).size}
-            </span>{' '}
-            players
           </p>
         </div>
 
@@ -230,26 +220,10 @@ export default function RecordingsPage() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by player, opponent, or filename"
+            placeholder="Search by title or filename"
             className="flex-1 bg-transparent border-none text-[0.94rem] text-ink py-1 outline-none placeholder:text-ink-mute"
           />
         </div>
-        <span className="w-px h-5 bg-line" />
-        <Chip
-          active={playerFilter === null}
-          onClick={() => setPlayerFilter(null)}
-        >
-          All players
-        </Chip>
-        {uniquePlayers.map((p) => (
-          <Chip
-            key={p}
-            active={playerFilter === p}
-            onClick={() => setPlayerFilter(playerFilter === p ? null : p)}
-          >
-            {p}
-          </Chip>
-        ))}
         <span className="w-px h-5 bg-line" />
         <Chip>
           <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
@@ -278,11 +252,10 @@ export default function RecordingsPage() {
         <div className="bg-paper border border-line rounded-[14px] overflow-hidden mb-9">
           <div
             className="grid items-center px-6 py-3.5 bg-shade dark:bg-surface font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute gap-4"
-            style={{ gridTemplateColumns: '110px 1fr 160px 80px 36px', borderBottom: '1px solid var(--color-line-soft)' }}
+            style={{ gridTemplateColumns: '110px 1fr 80px 36px', borderBottom: '1px solid var(--color-line-soft)' }}
           >
             <span>Date</span>
             <span>Title</span>
-            <span>Player</span>
             <span />
             <span />
           </div>
@@ -343,7 +316,7 @@ export default function RecordingsPage() {
                 );
               }
 
-              const titleSeed = rec.playerName ?? cleanTitle(rec.name);
+              const titleSeed = cleanTitle(rec.name);
               return (
                 <div
                   key={rec.id}
@@ -358,7 +331,7 @@ export default function RecordingsPage() {
                   }}
                   className="cc-match-row grid items-center px-6 py-4 gap-4 cursor-pointer"
                   style={{
-                    gridTemplateColumns: '110px 1fr 160px 80px 36px',
+                    gridTemplateColumns: '110px 1fr 80px 36px',
                     borderBottom: isLast ? 'none' : '1px solid var(--color-line-soft)',
                   }}
                 >
@@ -368,9 +341,8 @@ export default function RecordingsPage() {
                   >
                     {fmtDate(rec.createdAt)}
                   </span>
-                  {/* Title column — actual recording title (rec.name), no
-                      "player vs opponent" parsing. The avatar is keyed off the
-                      real player when bound, otherwise the title text. */}
+                  {/* Title column — actual recording title (rec.name). The
+                      avatar is keyed off the title text (no player profile). */}
                   <div className="flex items-center gap-3 min-w-0">
                     <div
                       className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-cream font-display font-medium text-[0.85rem]"
@@ -389,10 +361,6 @@ export default function RecordingsPage() {
                       )}
                     </div>
                   </div>
-                  {/* Player column — real bound player name or em-dash. */}
-                  <span className="font-display text-[0.95rem] text-ink-soft truncate">
-                    {rec.playerName ?? <span className="text-ink-mute">—</span>}
-                  </span>
                   <div className="justify-self-end flex items-center gap-1.5">
                     <EditableName
                       recordingId={rec.id}
