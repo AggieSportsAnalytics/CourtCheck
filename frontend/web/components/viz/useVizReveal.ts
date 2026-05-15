@@ -3,57 +3,119 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Mount/data-change reveal for SVG viz primitives. Returns a ref to attach
- * to the wrapping SVG.
+ * Scroll-triggered reveal for SVG viz primitives. Returns a ref to attach
+ * to the wrapping SVG (className kept for backwards compat).
  *
- * Implementation: toggles a `cc-viz-prereveal` class on the SVG root. CSS
- * rules in globals.css force any `.shot-dot`, `.heatmap-zone`, `.spacing-line`,
- * or `.spacing-endpoint` inside a `.cc-viz-prereveal` parent to opacity 0.
- * On mount AND on `depKey` change, the class is applied, then removed after
- * two animation frames so the CSS opacity transition (480ms) fires.
+ * Implementation: per-child Web Animations API (WAAPI) with
+ * target-aware end values. On scroll-into-viewport, every child matching
+ * `selector` inside the wrapper animates from opacity 0 to ITS OWN target
+ * opacity (read from the SVG `opacity` attribute, default 1). This
+ * preserves per-cell intensity on heatmap-zone (where each cell has
+ * `opacity={0.04 + intensity * 0.66}`) — animating to a fixed `1` and
+ * holding via `fill: 'forwards'` would lock every cell at full opacity
+ * and flatten the gradient.
  *
- * The IO-based variant was tried but unreliable: when the SVG is already in
- * view at observe time, IO fires before the prereveal opacity-0 state gets
- * its own paint frame, and the browser collapses both into one paint —
- * skipping the transition entirely. Mount-trigger is rock-solid because the
- * raf double-buffer guarantees a separate paint for the hidden state.
+ * After the animation finishes, we remove the inline override AND cancel
+ * the animation effect so the SVG attribute opacity wins again — future
+ * class toggles (`.dim`, selection, etc.) work normally.
  *
- * The original "viz only animated above the fold" complaint is moot because
- * viz tiles re-mount with a new depKey when data arrives — by then the user
- * has scrolled, and the animation plays into their viewport.
- *
- * No imperative `el.style.opacity = ...` — React owns the DOM, CSS owns the
- * transition.
+ * Honors prefers-reduced-motion (skips the animation).
  */
 export function useVizReveal<T extends SVGElement>(
-  _selector: string,
+  selector: string,
   options: { staggerMs?: number; depKey?: unknown } = {},
 ) {
   const ref = useRef<T | null>(null);
-  const { depKey } = options;
+  const { staggerMs = 30, depKey } = options;
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
     if (typeof window === 'undefined') return;
 
-    node.classList.add('cc-viz-prereveal');
-    // Two animation frames so the class commit lands as a separate paint from
-    // the removal — without this the browser collapses both into one paint
-    // and skips the transition.
-    let raf2Id: number | null = null;
-    const raf1Id = requestAnimationFrame(() => {
-      raf2Id = requestAnimationFrame(() => {
-        node.classList.remove('cc-viz-prereveal');
-      });
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    if (reduceMotion) {
+      console.log('[viz-reveal] reduced-motion ON — skipping animation');
+      return;
+    }
+
+    const targets = Array.from(node.querySelectorAll<SVGElement>(selector));
+    if (!targets.length) {
+      console.log(`[viz-reveal] no children matched "${selector}" inside`, node);
+      return;
+    }
+
+    // Read each child's TARGET opacity from the SVG `opacity` attribute
+    // (heatmap cells have per-intensity values; shot-dot has no attr → 1).
+    const targetOpacities = targets.map((el) => {
+      const attr = el.getAttribute('opacity');
+      return attr ? parseFloat(attr) : 1;
     });
 
-    return () => {
-      cancelAnimationFrame(raf1Id);
-      if (raf2Id !== null) cancelAnimationFrame(raf2Id);
-      node.classList.remove('cc-viz-prereveal');
-    };
-  }, [depKey]);
+    // Pre-hide via inline style (overrides SVG attribute) so children
+    // don't flash at full opacity before the IO callback fires.
+    targets.forEach((el) => {
+      el.style.opacity = '0';
+    });
+    console.log(
+      `[viz-reveal] hidden ${targets.length} "${selector}" children, awaiting scroll-in`,
+    );
 
-  return ref;
+    let triggered = false;
+    const anims: Animation[] = [];
+    const reveal = () => {
+      if (triggered) return;
+      triggered = true;
+      console.log(`[viz-reveal] revealing ${targets.length} "${selector}" children`);
+      targets.forEach((el, i) => {
+        const target = targetOpacities[i];
+        const anim = el.animate(
+          [{ opacity: 0 }, { opacity: target }],
+          {
+            duration: 480,
+            delay: i * staggerMs,
+            easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
+            fill: 'forwards',
+          },
+        );
+        anims.push(anim);
+        anim.onfinish = () => {
+          // Remove inline override → SVG attribute (target) wins.
+          el.style.removeProperty('opacity');
+          // Cancel the WAAPI effect so future opacity changes (.dim, etc.)
+          // aren't blocked by the held fill:'forwards' value.
+          anim.cancel();
+        };
+      });
+    };
+
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            console.log(`[viz-reveal] intersect → revealing "${selector}"`);
+            obs.disconnect();
+            requestAnimationFrame(reveal);
+            return;
+          }
+        }
+      },
+      { threshold: 0, rootMargin: '0px' },
+    );
+    obs.observe(node);
+
+    return () => {
+      obs.disconnect();
+      anims.forEach((a) => a.cancel());
+      targets.forEach((el) => el.style.removeProperty('opacity'));
+    };
+  }, [selector, staggerMs, depKey]);
+
+  return {
+    ref,
+    style: undefined as React.CSSProperties | undefined,
+    className: '',
+  };
 }

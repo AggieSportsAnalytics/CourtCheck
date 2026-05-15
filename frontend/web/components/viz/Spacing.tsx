@@ -84,13 +84,13 @@ export default function Spacing({ shots, activeFilter }: Props) {
     [rawId]
   );
 
-  const svgRef = useVizReveal<SVGSVGElement>(
+  const { ref: svgRef, style: revealStyle } = useVizReveal<SVGSVGElement>(
     '.spacing-line, .spacing-endpoint',
     { staggerMs: 25, depKey: shots.length },
   );
 
   return (
-    <CourtSVG ref={svgRef} half="bottom" shadowId={shadowId} extendBehind={SPACING_EXTEND_BEHIND}>
+    <CourtSVG ref={svgRef} style={revealStyle} half="bottom" shadowId={shadowId} extendBehind={SPACING_EXTEND_BEHIND}>
       {shots.map((s, i) => {
         const color = QUALITY_COLOR[s.q];
         const dim = activeFilter !== null && activeFilter !== s.stroke;

@@ -168,26 +168,20 @@ def draw_stroke_labels(frame, player_dict, frame_stroke_labels, frame_idx):
     return frame
 
 
-# Per-player colors (BGR), pinned to the CourtCheck brand palette so the video
-# annotations match the dashboard. P1 reads as the "primary player" in court
-# green; P2 (and the far-player synthetic IDs) reads as the secondary identity
-# in clay. Brighter dark-mode brand variants are used so the labels pop against
-# the green court surface and white court lines.
-#
-# Source: docs/brand-drop/tokens.css dark-mode swatches.
-#   --color-court (dark)        #6FA88B -> RGB(111,168,139) -> BGR(139,168,111)
-#   --color-clay  (dark)        #E07A52 -> RGB(224,122, 82) -> BGR( 82,122,224)
-#   --color-court-light         #9FC6B0 -> RGB(159,198,176) -> BGR(176,198,159)
-#   --color-plum  (dark)        #B584A6 -> RGB(181,132,166) -> BGR(166,132,181)
+# Per-player colors (BGR). Cobalt + clay home/away pair — both outside the
+# brand stroke axis (court green / plum / amber), so the bbox color can never
+# be confused with whatever stroke pill sits on top of it.
+#   P1 = #2A6FB0 cobalt → BGR(176, 111, 42)
+#   P2 = #B05B36 clay   → BGR( 54,  91, 176)
 _PLAYER_COLORS = [
-    (139, 168, 111),   # player 1 — brand court green
-    ( 82, 122, 224),   # player 2 — brand clay
-    (176, 198, 159),   # player 3 — court-light (rare; doubles fallback)
-    (166, 132, 181),   # player 4 — plum (rare; doubles fallback)
+    (176, 111,  42),   # player 1 — cobalt
+    ( 54,  91, 176),   # player 2 — clay
+    (200, 210, 220),   # player 3 — cool grey (rare; doubles fallback)
+    ( 90,  90, 105),   # player 4 — slate    (rare; doubles fallback)
 ]
 
 
-_FAR_PLAYER_COLOR = (82, 122, 224)  # brand clay (P2)
+_FAR_PLAYER_COLOR = (54, 91, 176)  # clay (matches P2)
 
 
 def _player_color(track_id: int):
@@ -212,15 +206,16 @@ def draw_player_bboxes(frame, player_dict, color=None):
         x1, y1, x2, y2 = map(int, bbox)
         c = color if color is not None else _player_color(track_id)
 
-        # Thin box with anti-aliasing
-        cv2.rectangle(frame, (x1, y1), (x2, y2), c, 1, cv2.LINE_AA)
+        # Slightly thicker stroke so the neutral bboxes still pop against
+        # the green court at a glance.
+        cv2.rectangle(frame, (x1, y1), (x2, y2), c, 2, cv2.LINE_AA)
 
-        # Small pill label at top-left corner of box
-        # Negative IDs are the canonical far player — show as P2
+        # Pill label at top-left corner of box. Larger than the original
+        # 0.5/pad=4 — coaches were squinting at "P1"/"P2" on 720p replays.
         label = "P2" if track_id < 0 else f"P{track_id}"
-        font, scale, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1
+        font, scale, thickness = cv2.FONT_HERSHEY_SIMPLEX, 0.85, 2
         (tw, th), _ = cv2.getTextSize(label, font, scale, thickness)
-        pad = 4
+        pad = 7
         lx1, ly1 = x1, y1 - th - pad * 2
         lx2, ly2 = x1 + tw + pad * 2, y1
 
@@ -231,11 +226,12 @@ def draw_player_bboxes(frame, player_dict, color=None):
         # Semi-transparent pill background
         overlay = frame.copy()
         cv2.rectangle(overlay, (lx1, ly1), (lx2, ly2), c, -1)
-        cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
+        cv2.addWeighted(overlay, 0.78, frame, 0.22, 0, frame)
 
-        # White text on the brand-tinted pill — black was muddy on court green
-        # and clay backgrounds. Matches the stroke-label pill style above.
-        cv2.putText(frame, label, (lx1 + pad, ly2 - pad), font, scale, (255, 255, 255), thickness, cv2.LINE_AA)
+        # Pick text contrast based on pill luminance: dark text on the
+        # light P1 pill, white text on the dark P2 pill.
+        text_color = (20, 20, 20) if (c[0] + c[1] + c[2]) > 384 else (245, 245, 245)
+        cv2.putText(frame, label, (lx1 + pad, ly2 - pad), font, scale, text_color, thickness, cv2.LINE_AA)
 
     return frame
 
@@ -261,9 +257,12 @@ STROKE_COLORS_BGR: dict[str, tuple[int, int, int]] = {
     # kept in case it's re-enabled — match the brand-mute tone.
     "Slice":          (138, 138, 138),  # ink-mute grey
 }
-# Neutral bounce color for bounces with no classified stroke — matches the
-# frontend "Unclassified" chip swatch (ink-mute on paper). BGR.
-_STROKE_BOUNCE_DEFAULT = (160, 160, 160)
+# Neutral bounce color for bounces with no classified stroke (and for all
+# near-side bounces, since we don't yet attribute P2's strokes). Used to be
+# ink-mute (160) which faded into the lifted minimap bg — now a brand
+# tennis-ball yellow so even unclassified bounces read clearly. BGR.
+#   #F0D74E -> RGB(240, 215, 78) -> BGR(78, 215, 240)
+_STROKE_BOUNCE_DEFAULT = (78, 215, 240)
 
 
 def draw_minimap_ball_and_bounces(
@@ -354,16 +353,34 @@ def draw_minimap_ball_and_bounces(
 
         mx, my = int(mapped[0, 0, 0]), int(mapped[0, 0, 1])
 
-        if 0 <= mx < minimap.shape[1] and 0 <= my < minimap.shape[0]:
-            dot_color = bounce_color
-            if frame_stroke_labels is not None:
-                labels_at_bounce = frame_stroke_labels.get(bounce_idx, {})
-                if labels_at_bounce:
-                    label = next(iter(labels_at_bounce.values()))
-                    dot_color = STROKE_COLORS_BGR.get(label, _STROKE_BOUNCE_DEFAULT)
+        # Drop the bounds check — cv2.circle clips off-canvas pixels
+        # automatically, so a bounce that landed just past the baseline
+        # (where the SVG shot map renders it via extendBehind=4) shows
+        # as a partial disk at the canvas edge instead of vanishing.
+        # Plausibility-implausible coords (way beyond the court) get
+        # clipped to nothing — same effective behavior as before.
+        # Bottom half of the minimap is the near (P1) side. A bounce
+        # there means P2 hit it — and we don't classify P2's strokes
+        # yet — so leave it stroke-neutral instead of mislabeling it
+        # with whatever swing happened to be active that frame.
+        on_near_side = my > minimap.shape[0] // 2
 
-            cv2.circle(minimap, (mx, my), 40, dot_color, -1)
-            cv2.circle(minimap, (mx, my), 40, (255, 255, 255), 3)
+        dot_color = bounce_color
+        if on_near_side:
+            dot_color = _STROKE_BOUNCE_DEFAULT
+        elif frame_stroke_labels is not None:
+            labels_at_bounce = frame_stroke_labels.get(bounce_idx, {})
+            if labels_at_bounce:
+                label = next(iter(labels_at_bounce.values()))
+                dot_color = STROKE_COLORS_BGR.get(label, _STROKE_BOUNCE_DEFAULT)
+
+        # Punch up the bounce so it reads at minimap scale. Big colored
+        # fill + thick white outline (not a separate white disc) so the
+        # color is unambiguously the dot, with a crisp edge against the
+        # court surface. After the ~3.4× downscale to 350px tall this
+        # renders as a ~14px dot with a ~2.5px white outline.
+        cv2.circle(minimap, (mx, my), 90, dot_color, -1)             # colored fill
+        cv2.circle(minimap, (mx, my), 90, (255, 255, 255), 18)       # crisp outline
 
     return minimap
 

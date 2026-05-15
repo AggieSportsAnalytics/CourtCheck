@@ -279,14 +279,14 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(function Vide
             className="absolute top-0 left-0 h-full rounded-full pointer-events-none"
             style={{
               width: `${progressPercent}%`,
-              background: 'var(--color-court)',
+              background: 'rgba(255, 255, 255, 0.95)',
             }}
           />
           <div
             className="absolute top-1/2 -translate-y-1/2 w-3 h-3 rounded-full opacity-0 group-hover/seek:opacity-100 transition-opacity pointer-events-none"
             style={{
               left: `calc(${progressPercent}% - 6px)`,
-              background: 'var(--color-court)',
+              background: 'rgba(255, 255, 255, 0.95)',
               boxShadow: '0 0 0 2px color-mix(in srgb, white 90%, transparent)',
             }}
           />
@@ -330,7 +330,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(function Vide
               onChange={handleVolumeChange}
               aria-label="Volume"
               className="w-20 h-1 hidden sm:block"
-              style={{ accentColor: 'var(--color-court)' }}
+              style={{ accentColor: 'rgba(255, 255, 255, 0.95)' }}
             />
             <span
               className="text-white/85 text-[0.78rem] font-mono tabular-nums whitespace-nowrap"

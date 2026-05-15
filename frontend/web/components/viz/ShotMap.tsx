@@ -21,11 +21,26 @@ export type ShotDot = {
   /** False = bounce landed out. Rendered as an X marker, not a dot. Defaults
    *  to true so callers that don't pass `in` keep the prior behavior. */
   in?: boolean;
+  /** Wall-clock seconds into the recording — used by the bounce drawer to
+   *  seek the video. */
+  time_s?: number | null;
+  /** Source frame index (debugging / future "step-frame" controls). */
+  frame?: number;
+  /** Which player owns the swing that produced this bounce (1 = near, 2 = far). */
+  player?: 1 | 2;
 };
 
 type Props = {
   dots: ShotDot[];
   activeFilter: StrokeKey | null;
+  /** Click a bounce — caller decides what to do (open detail drawer, seek
+   *  video, etc.). When provided, dots become focusable + show a pointer
+   *  cursor. */
+  onSelect?: (dot: ShotDot, index: number) => void;
+  /** Frame number of the selected bounce (unique identifier — bounces are
+   *  rate-limited to one per ~10 frames). When non-null, the matching dot
+   *  gets a subtle ring and all other dots fade to dim opacity. */
+  selectedFrame?: number | null;
 };
 
 /** Court units the shot map extends past the doubles sideline and past the
@@ -81,7 +96,7 @@ export function shotMapUnknownCount(dots: ShotDot[]): number {
 // Neutral color for bounces detected without a confidently paired stroke event.
 const UNKNOWN_STROKE_COLOR = 'var(--color-ink-mute)';
 
-export default function ShotMap({ dots, activeFilter }: Props) {
+export default function ShotMap({ dots, activeFilter, onSelect, selectedFrame = null }: Props) {
   const rawId = useId();
   const shadowId = useMemo(
     () => `dot-shadow-${rawId.replace(/[^a-zA-Z0-9]/g, '')}`,
@@ -99,7 +114,7 @@ export default function ShotMap({ dots, activeFilter }: Props) {
     return byStroke;
   }, [dots]);
 
-  const svgRef = useVizReveal<SVGSVGElement>('.shot-dot', {
+  const { ref: svgRef, style: revealStyle } = useVizReveal<SVGSVGElement>('.shot-dot', {
     staggerMs: 30,
     depKey: ordered.length,
   });
@@ -107,6 +122,7 @@ export default function ShotMap({ dots, activeFilter }: Props) {
   return (
     <CourtSVG
       ref={svgRef}
+      style={revealStyle}
       half="top"
       shadowId={shadowId}
       extendBehind={SHOT_MAP_EXTEND_BEHIND}
@@ -115,11 +131,23 @@ export default function ShotMap({ dots, activeFilter }: Props) {
       {ordered.map((d, i) => {
         const isUnknown = d.stroke === 'unknown';
         const isOut = d.in === false;
+        const isSelected = selectedFrame !== null && d.frame === selectedFrame;
         // Filter chips only narrow named strokes — unknowns always dim under any active filter.
-        const dim = activeFilter !== null && (isUnknown || activeFilter !== d.stroke);
+        // Selection wins next: anything not the selected bounce dims, the
+        // selected one stays full opacity (and gains a subtle ring below).
+        const dim =
+          (selectedFrame !== null && !isSelected) ||
+          (activeFilter !== null && (isUnknown || activeFilter !== d.stroke));
         const color = isUnknown
           ? UNKNOWN_STROKE_COLOR
           : STROKE_COLOR_BY_KEY[d.stroke as StrokeKey];
+        const interactive = Boolean(onSelect);
+        const handleClick = interactive
+          ? (e: React.MouseEvent<SVGGElement>) => {
+              e.stopPropagation();
+              onSelect!(d, i);
+            }
+          : undefined;
         if (isOut) {
           // OOB: render an X. Stroke color matches the stroke type so the
           // legend still narrows by stroke; an outer white halo keeps it
@@ -131,7 +159,20 @@ export default function ShotMap({ dots, activeFilter }: Props) {
               className={`shot-dot shot-dot-out ${dim ? 'dim' : ''}`}
               data-stroke={d.stroke}
               data-in="false"
+              onClick={handleClick}
+              aria-label={interactive ? `Bounce at ${(d.time_s ?? 0).toFixed(1)}s, out` : undefined}
+              style={interactive ? { cursor: 'pointer' } : undefined}
             >
+              {/* Invisible hitbox so the small marker is easy to click. */}
+              {interactive && (
+                <circle
+                  cx={d.x}
+                  cy={d.y}
+                  r={2.4}
+                  fill="transparent"
+                  pointerEvents="all"
+                />
+              )}
               <line
                 x1={d.x - arm}
                 y1={d.y - arm}
@@ -181,7 +222,19 @@ export default function ShotMap({ dots, activeFilter }: Props) {
             className={`shot-dot ${dim ? 'dim' : ''}`}
             data-stroke={d.stroke}
             data-in="true"
+            onClick={handleClick}
+            aria-label={interactive ? `Bounce at ${(d.time_s ?? 0).toFixed(1)}s, in` : undefined}
+            style={interactive ? { cursor: 'pointer' } : undefined}
           >
+            {interactive && (
+              <circle
+                cx={d.x}
+                cy={d.y}
+                r={2.4}
+                fill="transparent"
+                pointerEvents="all"
+              />
+            )}
             <circle
               cx={d.x}
               cy={d.y}

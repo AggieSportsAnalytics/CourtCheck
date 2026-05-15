@@ -349,6 +349,24 @@
   .spacing-endpoint.dim {
     opacity: 0.1 !important;
   }
+  /* Comprehensive kill of every browser-default decoration that could
+     paint around a clicked .shot-dot (Chrome focus glow, Safari tap
+     highlight, mobile blue tap-highlight, etc.). The "giant blue bubble
+     around the selected bounce" was almost certainly a browser focus
+     indicator; this rule kills it without removing keyboard a11y. */
+  .shot-dot {
+    -webkit-tap-highlight-color: transparent;
+    tap-highlight-color: transparent;
+  }
+  .shot-dot:focus,
+  .shot-dot:focus-visible,
+  .shot-dot:focus-within,
+  .shot-dot:active,
+  .shot-dot:hover {
+    outline: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
 
   /* Coach Insights tile + timestamp chip — hoisted from CoachInsights.tsx so
      PositionTile can be reused inside other surfaces (e.g. the Coverage rail

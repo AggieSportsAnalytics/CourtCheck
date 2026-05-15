@@ -62,9 +62,13 @@ export type NetApproachSummary = {
 export type ErrorEvent = {
   frame: number;
   time_s: number;
-  direction: 'long' | 'wide' | 'net';
+  /** 'missed return' = opponent's ball landed in-bounds and P1 didn't swing
+   *  at it. The other three are P1's own shots that landed out. */
+  direction: 'long' | 'wide' | 'net' | 'missed return';
   court_x: number;
   court_y: number;
+  /** 1 = near (P1) — only one we attribute today. Future-proofed for a P2 split. */
+  player?: 1 | 2;
 };
 
 export type ErrorSummary = {
@@ -72,6 +76,10 @@ export type ErrorSummary = {
   long: number;
   wide: number;
   net_err: number;
+  /** Bounces where opponent's ball landed in your half and you didn't swing
+   *  within ~1.5s. Distinct from the 3 OOB buckets above (those are your
+   *  shots that missed). */
+  missed_return: number;
   events: ErrorEvent[];
 };
 
@@ -247,11 +255,14 @@ function ErrorTile({
   if (!data || data.total === 0) {
     return (
       <div className="cc-coach-tile">
-        <TileHead eyebrow="Errors" headline="No out-of-bounds bounces." />
+        <TileHead eyebrow="Your errors" headline="No out-of-bounds bounces." />
       </div>
     );
   }
+  const missed = data.missed_return ?? 0;
+  const oob = data.long + data.wide + data.net_err;
   const rows: { label: string; n: number; color: string }[] = [
+    { label: 'Missed return', n: missed, color: 'var(--color-court)' },
     { label: 'Long', n: data.long, color: 'var(--color-amber)' },
     { label: 'Wide', n: data.wide, color: 'var(--color-plum)' },
     { label: 'Net', n: data.net_err, color: 'var(--color-clay)' },
@@ -260,9 +271,14 @@ function ErrorTile({
   return (
     <div className="cc-coach-tile">
       <TileHead
-        eyebrow="Errors"
-        headline={`${data.total} OOB · ${data.long} long, ${data.wide} wide, ${data.net_err} net.`}
+        eyebrow="Your errors"
+        headline={`${data.total} total · ${missed} missed return${missed === 1 ? '' : 's'} + ${oob} OOB.`}
       />
+      <p className="text-[0.78rem] text-ink-soft mb-3 -mt-1.5 leading-snug">
+        <em>Missed return</em> = opponent's ball landed in your half and you
+        didn't swing.{' '}
+        <em>OOB</em> = your shot landed out (long / wide / net).
+      </p>
       <div className="space-y-1.5 mb-3">
         {rows.map((r, i) => (
           <div

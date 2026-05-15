@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
 import { useVideoUpload } from '@/hooks';
@@ -118,17 +118,51 @@ export default function UploadPage() {
     return stage ? { ...derived, stage } : derived;
   }, [procPct, stage]);
 
-  const features = [
-    { title: 'Every shot', desc: 'Tracked and labeled. Forehand, backhand, serve, volley.' },
-    { title: 'Every bounce', desc: 'Exact landing point on the court. In and out calls included.' },
-    { title: 'Every movement', desc: 'Where your player covered the court. And where they didn’t.' },
-    { title: 'Repeating patterns', desc: 'Sequences that show up more than once. Called out for you.' },
+  type FeatureIcon = (props: { className?: string }) => ReactElement;
+  const ShotIcon: FeatureIcon = ({ className }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      {/* lightning bolt — captures the "shot" energy */}
+      <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />
+    </svg>
+  );
+  const BounceIcon: FeatureIcon = ({ className }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      {/* concentric crosshair — landing point */}
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+    </svg>
+  );
+  const MovementIcon: FeatureIcon = ({ className }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      {/* footprint pair — court coverage */}
+      <path d="M7 5c-1.5 0-2.5 1.5-2.5 3.5S5.5 12 7 12s2.5-1.5 2.5-3.5S8.5 5 7 5z" />
+      <path d="M5 14c-1 0-1.7.9-1.7 2 0 1.5 1.4 3 3.7 3 1.5 0 2.5-1 2.5-2 0-1.5-2-3-4.5-3z" />
+      <path d="M17 9c-1.5 0-2.5 1.5-2.5 3.5S15.5 16 17 16s2.5-1.5 2.5-3.5S18.5 9 17 9z" />
+      <path d="M15 18c-1 0-1.7.9-1.7 2 0 1.5 1.4 3 3.7 3 1.5 0 2.5-1 2.5-2 0-1.5-2-3-4.5-3z" />
+    </svg>
+  );
+  const PatternIcon: FeatureIcon = ({ className }) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      {/* repeat / loop arrows */}
+      <path d="M17 2l4 4-4 4" />
+      <path d="M3 11v-1a4 4 0 014-4h14" />
+      <path d="M7 22l-4-4 4-4" />
+      <path d="M21 13v1a4 4 0 01-4 4H3" />
+    </svg>
+  );
+
+  const features: { title: string; desc: string; Icon: FeatureIcon }[] = [
+    { title: 'Every shot',         desc: 'Tracked and labeled. Forehand, backhand, serve, volley.', Icon: ShotIcon },
+    { title: 'Every bounce',       desc: 'Exact landing point on the court. In and out calls included.', Icon: BounceIcon },
+    { title: 'Every movement',     desc: 'Where your player covered the court. And where they didn’t.', Icon: MovementIcon },
+    { title: 'Repeating patterns', desc: 'Sequences that show up more than once. Called out for you.', Icon: PatternIcon },
   ];
 
-  // Once an upload starts (processing / done / failed) the page transforms
-  // into a status view — drop the marketing header + features grid so the
-  // whole flow fits in one viewport without scrolling.
-  const compact = pane !== 'idle';
+  // Compact head/grid in every pane — including idle — so the page height
+  // stays put as the state machine transitions and the marketing-tagline
+  // headline doesn't dwarf the dropzone.
+  const compact = true;
 
   return (
     <div className={`mx-auto max-w-[760px] px-6 ${compact ? 'py-6' : 'py-10'}`}>
@@ -226,14 +260,14 @@ export default function UploadPage() {
               ? 'border-clay'
               : 'border-line'
         }`}
-        style={{ minHeight: 520 }}
+        style={{ minHeight: 340 }}
         data-state={pane}
       >
         {pane === 'idle' && <input {...getInputProps()} aria-label="Recording file input" />}
 
         {pane === 'idle' && (
-          <div className="px-8 py-14 text-center">
-            <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl bg-shade text-court dark:bg-surface dark:text-court-light">
+          <div className="px-6 py-8 text-center">
+            <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-xl bg-shade text-court dark:bg-surface dark:text-court-light">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -241,19 +275,19 @@ export default function UploadPage() {
                 strokeWidth="1.8"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="size-6"
+                className="size-5"
               >
                 <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9" />
                 <path d="M15 13l-3-3m0 0l-3 3m3-3v12" />
               </svg>
             </div>
             <h3
-              className="mb-2 font-display text-[1.6rem] font-medium tracking-[-0.014em]"
+              className="mb-1.5 font-display text-[1.25rem] font-medium tracking-[-0.012em]"
               style={{ fontVariationSettings: '"opsz" 60' }}
             >
               Drop in your recording.
             </h3>
-            <p className="mb-4 text-[0.95rem] text-ink-soft">
+            <p className="mb-3 text-[0.88rem] text-ink-soft">
               or{' '}
               <button
                 type="button"
@@ -266,15 +300,15 @@ export default function UploadPage() {
                 browse files
               </button>
             </p>
-            <p className="font-mono text-[0.72rem] uppercase tracking-[0.14em] text-ink-mute">
+            <p className="font-mono text-[0.68rem] uppercase tracking-[0.14em] text-ink-mute">
               MP4 · MOV · AVI · max {MAX_MB} MB
             </p>
           </div>
         )}
 
         {pane === 'uploading' && (
-          <div className="px-8 py-10 text-center">
-            <BounceLoader size={320} />
+          <div className="px-6 py-6 text-center">
+            <BounceLoader size={180} />
             <p className="mb-4 font-mono text-[0.72rem] uppercase tracking-[0.14em] text-ink-mute">
               Uploading
             </p>
@@ -312,8 +346,8 @@ export default function UploadPage() {
         )}
 
         {pane === 'processing' && (
-          <div className="px-8 py-10 text-center">
-            <BounceLoader size={320} />
+          <div className="px-6 py-6 text-center">
+            <BounceLoader size={180} />
             <h3
               className="mt-3 mb-2 min-h-[1.5em] font-display text-[1.4rem] font-medium tracking-[-0.014em] transition-opacity duration-200"
               style={{ fontVariationSettings: '"opsz" 72' }}
@@ -447,17 +481,7 @@ export default function UploadPage() {
               <div
                 className={`shrink-0 flex items-center justify-center rounded-[8px] bg-[color-mix(in_srgb,var(--color-court)_8%,transparent)] text-court dark:bg-[color-mix(in_srgb,var(--color-court-light)_14%,transparent)] dark:text-court-light ${compact ? 'size-7' : 'size-9'}`}
               >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className={compact ? 'size-3.5' : 'size-4'}
-                >
-                  <circle cx="12" cy="12" r="9" />
-                </svg>
+                <f.Icon className={compact ? 'size-3.5' : 'size-4'} />
               </div>
               <div>
                 <h5

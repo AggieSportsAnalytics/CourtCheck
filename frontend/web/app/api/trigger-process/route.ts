@@ -86,33 +86,44 @@ export async function POST(req: Request) {
         .eq("id", match_id);
     }
 
-    // Call Modal function to process video
-    const res = await fetch(
-      process.env.MODAL_FUNCTION_URL!,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.MODAL_WEBHOOK_SECRET}`,
-        },
-        body: JSON.stringify({
-          file_key,
-          match_id
-        }),
-      }
-    );
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error("Modal function error", errorText);
-      // Revert the optimistic processing state so the user sees the actual
-      // failure instead of "Queueing compute" forever.
-      await supabaseAdmin
-        .from("matches")
-        .update({ status: "failed", error: "Failed to start compute" })
-        .eq("id", match_id);
-      return Response.json({ error: "processing failed" }, { status: 500 });
-    }
+    // Fire Modal webhook but DO NOT await the response. Modal's
+    // @modal.fastapi_endpoint binds the HTTP connection to the function
+    // execution — process_video blocks for the entire pipeline (~5 min).
+    // Awaiting it stalls /api/trigger-process from returning to the client,
+    // which means pollStatus on the upload page never starts until the
+    // pipeline is done. That's the "STARTING for the whole upload" bug.
+    //
+    // The pre-write above (progress=0.005, stage='Queueing compute') is
+    // already in the DB, so polling has something to read the moment we
+    // return. Modal's _stage breadcrumbs (0.008 'Downloading recording',
+    // 0.012 'Loading models', ...) update the row as the pipeline progresses.
+    //
+    // If Modal returns non-ok asynchronously, we revert the row to 'failed'
+    // in the .then() callback. On Vercel this runs in the function's
+    // post-response window; if the function is killed before it resolves,
+    // the row stays in 'processing' and a separate cleanup job will
+    // eventually mark it failed (TODO).
+    fetch(process.env.MODAL_FUNCTION_URL!, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.MODAL_WEBHOOK_SECRET}`,
+      },
+      body: JSON.stringify({ file_key, match_id }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const errorText = await res.text().catch(() => "");
+          console.error("Modal returned non-ok", res.status, errorText.slice(0, 200));
+          await supabaseAdmin
+            .from("matches")
+            .update({ status: "failed", error: "Failed to start compute" })
+            .eq("id", match_id);
+        }
+      })
+      .catch((err) => {
+        console.error("Modal fetch threw", err);
+      });
 
     return Response.json({ status: "ok" });
   } catch (e) {

@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import NotesPanel, { TimedNote } from '@/components/recordings/NotesPanel';
 import VizPanel, { type ApiShot } from '@/components/recordings/VizPanel';
-import ShotBreakdown from '@/components/recordings/ShotBreakdown';
 import ScoutingReport, { ScoutingSections } from '@/components/recordings/ScoutingReport';
 import StatsCard from '@/components/recordings/StatsCard';
 import BounceLoader from '@/components/upload/BounceLoader';
@@ -20,6 +19,7 @@ import RallyTable, {
   type RallySummary,
 } from '@/components/recordings/RallyTable';
 import EditableName from '@/components/recordings/EditableName';
+import { STROKE_COLOR_BY_KEY } from '@/components/viz/CourtSVG';
 
 /**
  * Match-detail page. Ported from docs/brand-drop/mocks/match-detail.html.
@@ -344,51 +344,23 @@ export default function RecordingDetailPage() {
     { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' }
   );
 
-  // Stroke mix data — falls back to mock distribution when backend hasn't
-  // produced counts yet (e.g. legacy recordings processed before analytics).
-  const fh = recording.forehandCount ?? null;
-  const bh = recording.backhandCount ?? null;
-  const sv = recording.serveCount ?? null;
-  const totalStrokes = fh !== null && bh !== null && sv !== null ? fh + bh + sv : null;
-  const mixData = (() => {
-    if (!totalStrokes || totalStrokes === 0) {
-      // 3-class fallback — matches the live stroke classifier (FH / BH / Serve).
-      return [
-        { label: 'Forehand', pct: 54, color: 'var(--color-court)' },
-        { label: 'Backhand', pct: 33, color: 'var(--color-plum)' },
-        { label: 'Serve/Overhead', pct: 13, color: 'var(--color-amber)' },
-      ];
-    }
-    return [
-      { label: 'Forehand', pct: Math.round((fh! / totalStrokes) * 100), color: 'var(--color-court)' },
-      { label: 'Backhand', pct: Math.round((bh! / totalStrokes) * 100), color: 'var(--color-plum)' },
-      { label: 'Serve/Overhead', pct: Math.round((sv! / totalStrokes) * 100), color: 'var(--color-amber)' },
-    ];
-  })();
+  // Single source of truth — all stroke counts on this page derive from the
+  // `shots[]` array so the chip on the shot map, the mix breakdown bars,
+  // and the percentage tile can never disagree. (Previous version pulled
+  // `forehandCount` etc. from a separate aggregate which counted unpaired
+  // swings the visual didn't render.)
+  const realShots = recording.shots ?? [];
+  // Mix + accuracy now computed inside VizPanel (ShotMixAccuracyMini)
+  // from the same realDots that drive the map. This page just hands shots
+  // through and doesn't pre-aggregate.
 
   const inB = recording.inBoundsBounces ?? null;
   const outB = recording.outBoundsBounces ?? null;
   const totalBounces = inB !== null && outB !== null ? inB + outB : null;
   const inPct = totalBounces && totalBounces > 0 ? Math.round((inB! / totalBounces) * 100) : null;
 
-  const accuracyData = (() => {
-    // No per-stroke accuracy in the API yet. Use overall in-bounds %, with the
-    // remainder distributed across strokes to keep the chart honest — falls
-    // back to mock numbers if the backend hasn't produced counts.
-    if (inPct === null) {
-      return [
-        { label: 'Forehand', pct: 87, color: 'var(--color-court)' },
-        { label: 'Backhand', pct: 72, color: 'var(--color-plum)' },
-        { label: 'Serve/Overhead', pct: 71, color: 'var(--color-amber)' },
-      ];
-    }
-    return [
-      { label: 'Forehand', pct: Math.min(100, Math.round(inPct * 1.05)), color: 'var(--color-court)' },
-      { label: 'Backhand', pct: Math.max(0, Math.round(inPct * 0.85)), color: 'var(--color-plum)' },
-      { label: 'Serve/Overhead', pct: Math.round(inPct * 0.95), color: 'var(--color-amber)' },
-      { label: 'Overall', pct: inPct, color: 'var(--color-slate)' },
-    ];
-  })();
+  // (Per-stroke accuracy moved to the Shot Map's right rail — see
+  // ShotAccuracyMini in VizPanel. Single computation lives there now.)
 
   // Scouting sections — use backend prose if present, otherwise fall back to
   // plausible placeholder copy from the mock so the layout stays anchored.
@@ -397,15 +369,18 @@ export default function RecordingDetailPage() {
     { player: player || 'Player' }
   );
 
-  // Stats tiles — 4 only (per mock). Values are derived from real fields where
-  // available; otherwise show "—".
+  // Stats tiles — 4 only (per mock). Values derive from realShots so the
+  // chip / breakdown / tile all share the same total. (Previous version
+  // used recording.shotCount which is the backend's swing aggregate; that
+  // could exceed realShots.length when bounce pairing dropped some swings.)
+  const realShotCount = realShots.length;
   const winners =
-    recording.shotCount !== null && inPct !== null
-      ? Math.round((recording.shotCount * inPct) / 100 / 12)
+    realShotCount > 0 && inPct !== null
+      ? Math.round((realShotCount * inPct) / 100 / 12)
       : null;
   const unforced =
-    recording.shotCount !== null && inPct !== null
-      ? Math.max(0, Math.round((recording.shotCount * (100 - inPct)) / 100 / 8))
+    realShotCount > 0 && inPct !== null
+      ? Math.max(0, Math.round((realShotCount * (100 - inPct)) / 100 / 8))
       : null;
   // Avg rally length comes from the rally state machine (build_rallies in
   // backend/pipeline/rallies.py). The legacy shot_count/rally_count
@@ -590,8 +565,20 @@ export default function RecordingDetailPage() {
         }
       `}</style>
 
+      {/* Unified court viz card with 3-way mode toggle */}
+      <VizPanel
+        shots={recording.shots ?? []}
+        coverageGrid={recording.coverageGrid ?? []}
+        positionSummary={recording.positionSummary}
+        recordingStatus={recording.status}
+        videoRef={videoRef}
+      />
+
+      {/* (Shot mix + accuracy live inline in the Shot Map rail above —
+          single widget, single source of truth. No standalone card.) */}
+
       {/* Coach Insights — errors + net game (court position lives inside the
-          Coverage tab of VizPanel below, where it pairs with the heatmap). */}
+          Coverage tab of VizPanel above, where it pairs with the heatmap). */}
       <CoachInsights
         netApproach={recording.netApproachSummary}
         errors={recording.errorSummary}
@@ -605,24 +592,12 @@ export default function RecordingDetailPage() {
         fps={recording.fps}
       />
 
-      {/* Unified court viz card with 3-way mode toggle */}
-      <VizPanel
-        shots={recording.shots ?? []}
-        coverageGrid={recording.coverageGrid ?? []}
-        positionSummary={recording.positionSummary}
-        recordingStatus={recording.status}
-        videoRef={videoRef}
-      />
-
-      {/* Shot breakdown (Mix | Accuracy) */}
-      <ShotBreakdown mix={mixData} accuracy={accuracyData} />
-
       {/* Scouting report — 6 sections */}
       <ScoutingReport sections={scoutingSections} readMinutes={2} />
 
       {/* Stats — 4 tiles */}
       <StatsCard
-        shotsTracked={recording.shotCount ?? undefined}
+        shotsTracked={realShotCount > 0 ? realShotCount : undefined}
         tiles={[
           { label: 'Winners', value: winners ?? '—' },
           { label: 'Unforced errors', value: unforced ?? '—' },

@@ -62,13 +62,13 @@ export default function Coverage({ grid = SAMPLE_COVERAGE }: Props) {
   const cellW = halfW / COLS;
   const yOffset = 39;
 
-  const svgRef = useVizReveal<SVGSVGElement>('.heatmap-zone', {
+  const { ref: svgRef, style: revealStyle } = useVizReveal<SVGSVGElement>('.heatmap-zone', {
     staggerMs: 8,
     depKey: grid.length,
   });
 
   return (
-    <CourtSVG ref={svgRef} half="bottom" shadowId={shadowId} extendBehind={COVERAGE_EXTEND_BEHIND}>
+    <CourtSVG ref={svgRef} style={revealStyle} half="bottom" shadowId={shadowId} extendBehind={COVERAGE_EXTEND_BEHIND}>
       {grid.map((row, r) =>
         row.map((intensity, c) => (
           <rect

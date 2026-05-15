@@ -20,6 +20,9 @@ type Props = {
   shadowId: string;
   children?: ReactNode;
   className?: string;
+  /** Optional inline style overrides — merged on top of the default SVG
+   *  layout style. Used by useVizReveal to control entrance opacity/transform. */
+  style?: React.CSSProperties;
   /**
    * Extra court units to extend the viewBox past the half boundary. For
    * half='bottom', adds room below the baseline so players standing 1–5 ft
@@ -40,7 +43,7 @@ export function courtTileAspect(half: CourtHalf, extendBehind = 0, extendSide = 
 }
 
 const CourtSVG = forwardRef<SVGSVGElement, Props>(function CourtSVG(
-  { half, shadowId, children, className, extendBehind = 0, extendSide = 0 },
+  { half, shadowId, children, className, style, extendBehind = 0, extendSide = 0 },
   ref,
 ) {
   const yMin = half === 'bottom' ? 39 : 0 - (half === 'top' ? extendBehind : 0);
@@ -55,7 +58,7 @@ const CourtSVG = forwardRef<SVGSVGElement, Props>(function CourtSVG(
       preserveAspectRatio="none"
       data-shadow-id={shadowId}
       className={className}
-      style={{ display: 'block', width: '100%', height: '100%' }}
+      style={{ display: 'block', width: '100%', height: '100%', ...style }}
     >
       <defs>
         <filter id={shadowId} x="-50%" y="-50%" width="200%" height="200%">
@@ -104,10 +107,19 @@ export default CourtSVG;
  * (`backend/models/stroke_classifier_tcn.py STROKE_LABELS`).
  * Uses brand CSS vars so dark mode lights up automatically.
  */
+// Stroke palette — pinned to the dark-mode brand hexes so the dashboard
+// colors stay identical in both light and dark mode AND match the colors
+// the backend bakes into the annotated video (STROKE_COLORS_BGR in
+// backend/vision/drawing.py). Single source of truth — every stroke
+// surface (ShotMap dots, legend chips, mix bars, BouncePanel chip,
+// minimap bounces) reads from STROKE_COLOR_BY_KEY below or this array.
+//   forehand → #6FA88B  brand sage green (matches BGR(139,168,111))
+//   backhand → #B584A6  brand plum       (matches BGR(166,132,181))
+//   serve    → #DDB166  brand amber      (matches BGR(102,177,221))
 export const STROKES = [
-  { key: 'forehand', label: 'Forehand', color: 'var(--color-court)' },
-  { key: 'backhand', label: 'Backhand', color: 'var(--color-plum)' },
-  { key: 'serve', label: 'Serve/Overhead', color: 'var(--color-amber)' },
+  { key: 'forehand', label: 'Forehand', color: '#6FA88B' },
+  { key: 'backhand', label: 'Backhand', color: '#B584A6' },
+  { key: 'serve', label: 'Serve/Overhead', color: '#DDB166' },
 ] as const;
 
 export type StrokeKey = (typeof STROKES)[number]['key'];

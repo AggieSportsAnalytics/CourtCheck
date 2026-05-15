@@ -4,9 +4,15 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-def make_streamable_mp4(input_path: str) -> str:
+def make_streamable_mp4(input_path: str, source_audio_path: str | None = None) -> str:
     """
     Re-encode and remux to a browser-streamable MP4 (moov atom first).
+
+    When ``source_audio_path`` is provided, the audio track from that file is
+    muxed into the output so the annotated video keeps the original recording's
+    sound. The OpenCV writer used to produce ``input_path`` strips audio, so
+    without this the result is silent. Audio mapping uses ``?`` so files with
+    no audio track still encode cleanly (video-only output).
 
     Tries h264_nvenc (GPU, ~2-3 ms/frame) first for maximum throughput on A10G.
     Falls back to libx264 (CPU) when NVENC is unavailable (local dev, CPU instances).
@@ -16,18 +22,27 @@ def make_streamable_mp4(input_path: str) -> str:
     output_path = input_path.with_suffix("").with_name(input_path.stem + "_web.mp4")
 
     def _run_ffmpeg(codec: str) -> bool:
+        cmd = ["ffmpeg", "-y", "-i", str(input_path)]
+        if source_audio_path:
+            cmd += ["-i", str(source_audio_path)]
+        cmd += ["-c:v", codec, "-preset", "fast", "-crf", "23"]
+        if source_audio_path:
+            # Take video from the annotated input, audio from the source.
+            # The ``?`` makes the audio stream optional so source files
+            # without an audio track still encode (silent output).
+            cmd += [
+                "-map", "0:v:0",
+                "-map", "1:a:0?",
+                "-c:a", "aac",
+                "-b:a", "128k",
+                "-shortest",
+            ]
+        else:
+            cmd += ["-c:a", "copy"]
+        cmd += ["-movflags", "+faststart", str(output_path)]
         try:
             subprocess.run(
-                [
-                    "ffmpeg", "-y",
-                    "-i", str(input_path),
-                    "-c:v", codec,
-                    "-preset", "fast",
-                    "-crf", "23",
-                    "-c:a", "copy",
-                    "-movflags", "+faststart",
-                    str(output_path),
-                ],
+                cmd,
                 check=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,

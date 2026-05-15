@@ -1,11 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type RefObject } from 'react';
 import ShotMap, { SAMPLE_SHOTS, shotMapCounts, shotMapUnknownCount, type ShotDot } from '../viz/ShotMap';
 import Spacing, { SAMPLE_SPACING, spacingCounts, type SpacingShot } from '../viz/Spacing';
 import Coverage from '../viz/Coverage';
 import Legend from '../viz/Legend';
-import { StrokeKey } from '../viz/CourtSVG';
+import { StrokeKey, STROKE_COLOR_BY_KEY } from '../viz/CourtSVG';
 import { PositionTile, type PositionSummary } from './CoachInsights';
 
 type VizMode = 'shotMap' | 'spacing' | 'coverage';
@@ -35,6 +35,9 @@ type Props = {
   positionSummary?: PositionSummary | null;
   /** Recording status — drives the Coverage empty state vs sample fallback. */
   recordingStatus?: string;
+  /** Optional. When provided, clicking a bounce on the shot map opens a
+   *  side-panel and "Play from here" seeks the video. */
+  videoRef?: RefObject<HTMLVideoElement | null>;
 };
 
 const MODES: { key: VizMode; label: string }[] = [
@@ -95,6 +98,9 @@ function buildShotMapDots(shots: ApiShot[]): ShotDot[] {
       y,
       stroke: (s.stroke === 'unknown' ? 'unknown' : (s.stroke as StrokeKey)),
       in: s.in,
+      time_s: s.time_s,
+      frame: s.frame,
+      player: s.player,
     });
   }
   return dots;
@@ -136,10 +142,30 @@ function buildSpacingShots(shots: ApiShot[]): SpacingShot[] {
   return out;
 }
 
-export default function VizPanel({ shots = [], coverageGrid, positionSummary, recordingStatus }: Props) {
+export default function VizPanel({ shots = [], coverageGrid, positionSummary, recordingStatus, videoRef }: Props) {
   const [mode, setMode] = useState<VizMode>('shotMap');
   const [shotFilter, setShotFilter] = useState<StrokeKey | null>(null);
   const [spacingFilter, setSpacingFilter] = useState<StrokeKey | null>(null);
+  const [selectedShot, setSelectedShot] = useState<ShotDot | null>(null);
+
+  // Click-anywhere-off close: when a bounce is selected, any click whose
+  // target isn't a `.shot-dot` (the markers themselves) and isn't inside
+  // a `[data-bounce-panel]` (the inline detail card) clears the selection.
+  // Keeps the interaction tight without an explicit close button.
+  useEffect(() => {
+    if (!selectedShot) return;
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (target.closest('.shot-dot')) return;
+      if (target.closest('[data-bounce-panel]')) return;
+      setSelectedShot(null);
+    };
+    // Listen on capture so we run before any in-component handlers can
+    // stop propagation.
+    document.addEventListener('click', onDocClick, true);
+    return () => document.removeEventListener('click', onDocClick, true);
+  }, [selectedShot]);
 
   const head = HEAD[mode];
 
@@ -195,15 +221,39 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
     return { baselinePct, sideBias, sidePct };
   }, [realCoverageGrid]);
 
-  // Insight numbers — real when we have data, else fall back to the mock copy.
+  // Insight numbers — count from the SAME filtered set the visual renders
+  // (realDots), not the raw `shots` array. Previously the stat said "7 in 6
+  // out" while the map only showed 1 out, because buildShotMapDots drops
+  // shots without court coords + shots that landed past the wide-OOB cutoff.
   const shotInsight = useMemo(() => {
     if (!usingReal) return null;
-    const inN = shots.filter((s) => s.in).length;
-    const outN = shots.filter((s) => !s.in).length;
+    const inN = realDots.filter((d) => d.in).length;
+    const outN = realDots.filter((d) => !d.in).length;
     const total = inN + outN;
     const accuracy = total > 0 ? Math.round((inN / total) * 100) : 0;
     return { inN, outN, accuracy };
-  }, [shots, usingReal]);
+  }, [realDots, usingReal]);
+
+  // Per-stroke mix + accuracy — REAL numbers from realDots, computed once
+  // and shown together in the rail. Replaces both the redundant
+  // in/out/accuracy text AND the standalone ShotBreakdown card; the rail
+  // is now the single source of truth for stroke-distribution stats.
+  const shotByStroke = useMemo(() => {
+    if (!usingReal) return null;
+    const total = realDots.length;
+    const compute = (key: StrokeKey) => {
+      const subset = realDots.filter((d) => d.stroke === key);
+      const inN = subset.filter((d) => d.in).length;
+      const n = subset.length;
+      return {
+        key,
+        n,
+        mixPct: total > 0 ? Math.round((n / total) * 100) : 0,
+        accPct: n > 0 ? Math.round((inN / n) * 100) : null,
+      };
+    };
+    return [compute('forehand'), compute('backhand'), compute('serve')];
+  }, [realDots, usingReal]);
 
   // Read from the SAME array that feeds the map + legend so the three never
   // disagree. Previous version read realSpacing only, so when zero real shots
@@ -276,7 +326,12 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
             }}
           >
             {mode === 'shotMap' && (
-              <ShotMap dots={shotDots} activeFilter={shotFilter} />
+              <ShotMap
+                dots={shotDots}
+                activeFilter={shotFilter}
+                onSelect={usingReal ? (dot) => setSelectedShot(dot) : undefined}
+                selectedFrame={selectedShot?.frame ?? null}
+              />
             )}
             {mode === 'spacing' && (
               <Spacing shots={spacingShots} activeFilter={spacingFilter} />
@@ -330,22 +385,31 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
                 onToggle={(k) => setShotFilter((prev) => (prev === k ? null : k))}
               />
               <ShotInOutKey />
-              <CoachingInsight>
-                {shotInsight ? (
-                  <>
-                    <strong>{shotInsight.inN}</strong> in,{' '}
-                    <strong>{shotInsight.outN}</strong> out.{' '}
-                    <strong>{shotInsight.accuracy}%</strong> accuracy. Slice the
-                    count by stroke to see the bias.
-                  </>
-                ) : (
-                  <>
-                    <strong>24</strong> in, <strong>4</strong> near-miss.{' '}
-                    <strong>87%</strong> accuracy. Slice the count by stroke to
-                    see the bias.
-                  </>
-                )}
-              </CoachingInsight>
+              <StrokeBarsMini
+                eyebrow="Mix"
+                metricKey="mixPct"
+                byStroke={shotByStroke}
+                overallText={
+                  shotInsight
+                    ? `${shotInsight.inN + shotInsight.outN} shots tracked`
+                    : null
+                }
+              />
+              <StrokeBarsMini
+                eyebrow="Accuracy"
+                metricKey="accPct"
+                byStroke={shotByStroke}
+                overallText={
+                  shotInsight
+                    ? `${shotInsight.accuracy}% overall · ${shotInsight.inN} in, ${shotInsight.outN} out`
+                    : null
+                }
+              />
+              <BouncePanel
+                shot={selectedShot}
+                onClose={() => setSelectedShot(null)}
+                videoRef={videoRef}
+              />
             </>
           )}
 
@@ -571,6 +635,256 @@ function CoverageEmpty() {
         Coverage came online after this recording was processed. Reprocess it
         to generate the heatmap.
       </p>
+    </div>
+  );
+}
+
+/** Inline panel rendered in the right-side rail of the shot map view, under
+ *  the existing in/out/accuracy insight. Shows the selected bounce's
+ *  metadata + a "Play from here" button that seeks the parent <video>.
+ *  Renders nothing when no shot is selected. */
+function BouncePanel({
+  shot,
+  onClose,
+  videoRef,
+}: {
+  shot: ShotDot | null;
+  onClose: () => void;
+  videoRef?: RefObject<HTMLVideoElement | null>;
+}) {
+  useEffect(() => {
+    if (!shot) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [shot, onClose]);
+
+  if (!shot) return null;
+
+  const isUnknown = shot.stroke === 'unknown';
+  const strokeLabel = isUnknown
+    ? 'Unclassified'
+    : shot.stroke === 'forehand'
+      ? 'Forehand'
+      : shot.stroke === 'backhand'
+        ? 'Backhand'
+        : 'Serve / Overhead';
+  const strokeColor = isUnknown
+    ? 'var(--color-ink-mute)'
+    : STROKE_COLOR_BY_KEY[shot.stroke as StrokeKey];
+  const isOut = shot.in === false;
+  const sec = Math.max(0, shot.time_s ?? 0);
+  const mm = Math.floor(sec / 60).toString().padStart(2, '0');
+  const ss = Math.floor(sec % 60).toString().padStart(2, '0');
+  const ts = `${mm}:${ss}`;
+
+  const playFromHere = () => {
+    const v = videoRef?.current;
+    if (!v) return;
+    v.currentTime = sec;
+    void v.play();
+    // Scroll the video into view so the user sees the playback they just
+    // jumped to — they're scrolled down at the shot map otherwise. center
+    // the video vertically; smooth so it doesn't feel jarring.
+    v.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    onClose();
+  };
+
+  return (
+    <div
+      role="region"
+      aria-label="Selected bounce detail"
+      data-bounce-panel
+      className="rounded-lg border border-line bg-paper"
+      style={{
+        padding: '14px 16px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        animation: 'cc-bounce-panel-in 200ms cubic-bezier(.2,.7,.2,1)',
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <span className="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-ink-mute">
+            Selected bounce
+          </span>
+          <p
+            className="font-display font-medium leading-none mt-1"
+            style={{ fontFeatureSettings: '"tnum"', fontSize: '1.4rem' }}
+          >
+            {ts}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Clear selection"
+          className="text-ink-mute hover:text-ink transition-colors"
+          style={{ padding: 2, lineHeight: 0 }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[0.7rem] font-mono uppercase tracking-[0.12em]"
+          style={{
+            background: `color-mix(in srgb, ${strokeColor} 14%, var(--color-paper))`,
+            color: strokeColor,
+            border: `1px solid color-mix(in srgb, ${strokeColor} 35%, var(--color-line))`,
+          }}
+        >
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: strokeColor }} aria-hidden />
+          {strokeLabel}
+        </span>
+        <span
+          className="inline-flex items-center rounded-full px-2 py-0.5 text-[0.7rem] font-mono uppercase tracking-[0.12em]"
+          style={{
+            background: isOut
+              ? 'color-mix(in srgb, var(--color-clay) 12%, var(--color-paper))'
+              : 'color-mix(in srgb, var(--color-court) 10%, var(--color-paper))',
+            color: isOut ? 'var(--color-clay)' : 'var(--color-court)',
+            border: `1px solid ${isOut ? 'color-mix(in srgb, var(--color-clay) 35%, var(--color-line))' : 'color-mix(in srgb, var(--color-court) 35%, var(--color-line))'}`,
+          }}
+        >
+          {isOut ? 'Out' : 'In'}
+        </span>
+      </div>
+
+      <button
+        type="button"
+        onClick={playFromHere}
+        disabled={!videoRef?.current}
+        className="inline-flex items-center justify-center gap-2 rounded-full bg-ink text-cream px-4 py-2 text-[0.85rem] font-medium transition-transform duration-150 ease-out hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed dark:bg-court-deep"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+          <path d="M5 4l14 8-14 8V4z" />
+        </svg>
+        Play from here
+      </button>
+
+      <style>{`
+        @keyframes cc-bounce-panel-in {
+          from { transform: translateY(-4px); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          @keyframes cc-bounce-panel-in {
+            from, to { transform: translateY(0); opacity: 1; }
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/** One-metric mini-chart for the Shot Map right rail. Renders 3 rows
+ *  (Forehand / Backhand / Serve), each with a stroke-colored bar + the
+ *  metric value + the per-stroke count. Used twice — once for Mix, once
+ *  for Accuracy — so the two charts stay visually parallel without
+ *  cramming both metrics into the same row. */
+function StrokeBarsMini({
+  eyebrow,
+  metricKey,
+  byStroke,
+  overallText,
+}: {
+  eyebrow: string;
+  metricKey: 'mixPct' | 'accPct';
+  byStroke:
+    | {
+        key: StrokeKey;
+        n: number;
+        mixPct: number;
+        accPct: number | null;
+      }[]
+    | null;
+  overallText: string | null;
+}) {
+  if (!byStroke || overallText === null) {
+    return (
+      <div
+        className="rounded-lg text-[0.85rem] leading-snug text-ink-soft"
+        style={{
+          padding: '12px 14px',
+          background: 'color-mix(in srgb, var(--color-court) 6%, transparent)',
+        }}
+      >
+        <span className="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-ink-mute mr-2">
+          {eyebrow}
+        </span>
+        Unlocks once the recording finishes processing.
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="rounded-lg"
+      style={{
+        padding: '12px 14px',
+        background: 'color-mix(in srgb, var(--color-court) 6%, transparent)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+      }}
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-ink-mute">
+          {eyebrow}
+        </span>
+        <span className="text-[0.74rem] text-ink-soft">{overallText}</span>
+      </div>
+
+      <div className="space-y-1.5">
+        {byStroke.map((row) => {
+          const color = STROKE_COLOR_BY_KEY[row.key];
+          const label =
+            row.key === 'forehand'
+              ? 'Forehand'
+              : row.key === 'backhand'
+                ? 'Backhand'
+                : 'Serve';
+          const value = row[metricKey];
+          return (
+            <div
+              key={row.key}
+              className="grid items-center"
+              style={{ gridTemplateColumns: '76px 1fr 52px', gap: 8 }}
+            >
+              <span className="text-[0.78rem] text-ink-soft truncate">{label}</span>
+              <div className="h-2 rounded-full overflow-hidden bg-shade dark:bg-surface">
+                {value !== null && (
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${value}%`,
+                      background: color,
+                      transition: 'width 720ms cubic-bezier(0.165, 0.84, 0.44, 1)',
+                    }}
+                  />
+                )}
+              </div>
+              <span
+                className="text-right text-[0.78rem] font-display font-medium text-ink"
+                style={{ fontFeatureSettings: '"tnum"' }}
+              >
+                {value !== null ? `${value}%` : '—'}
+                <span className="text-ink-mute font-normal text-[0.7rem] ml-1">
+                  ({row.n})
+                </span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
