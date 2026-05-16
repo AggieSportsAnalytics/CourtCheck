@@ -7,6 +7,7 @@ import { PlayerCard, type PlayerCardData } from '@/components/players/PlayerCard
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Display, Num } from '@/components/ui/display'
 import { Button } from '@/components/ui/button'
+import { isDemoMode, DEMO_PLAYERS, DEMO_RECORDINGS } from '@/lib/demo/demoData'
 
 interface ApiPlayer {
   id: string
@@ -141,6 +142,14 @@ export default function PlayersPage() {
   const [sort, setSort] = useState<SortKey>('name')
 
   useEffect(() => {
+    // Demo mode: fabricated season keyed to the real roster (with photos).
+    if (isDemoMode(typeof window !== 'undefined' ? window.location.search : null)) {
+      setPlayers(DEMO_PLAYERS as unknown as ApiPlayer[])
+      setRecordings(DEMO_RECORDINGS as unknown as ApiRecording[])
+      setLoading(false)
+      return
+    }
+
     let cancelled = false
     Promise.all([
       fetch('/api/players').then((r) =>

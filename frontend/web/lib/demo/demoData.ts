@@ -84,18 +84,21 @@ export type DemoRecording = {
   player_id: string | null;
 };
 
-// UC Davis women's tennis is the design partner. Plausible roster (not real
-// individuals) so the screen recording reads as a real, populated program.
+// Real UC Davis women's tennis roster (the design partner) + real headshot
+// URLs so the screen recording shows actual faces. Photos resolve through
+// /api/proxy-image (ucdavisaggies.com is allowlisted; the proxy follows its
+// CDN redirect). Recordings/stats below are fabricated.
+const UCD = 'https://ucdavisaggies.com/images/2025/12/2';
 export const DEMO_PLAYERS: DemoPlayer[] = [
-  { id: 'demo-p1', name: 'Maya Lin', position: 'Singles 1', year: 'Senior', photo_url: null, created_at: daysAgo(120) },
-  { id: 'demo-p2', name: 'Jordan Rivera', position: 'Singles 2', year: 'Junior', photo_url: null, created_at: daysAgo(118) },
-  { id: 'demo-p3', name: 'Aspen Park', position: 'Singles 3', year: 'Sophomore', photo_url: null, created_at: daysAgo(110) },
-  { id: 'demo-p4', name: 'Daniela Cruz', position: 'Singles 4', year: 'Senior', photo_url: null, created_at: daysAgo(108) },
-  { id: 'demo-p5', name: 'Sophie Whitman', position: 'Singles 5', year: 'Freshman', photo_url: null, created_at: daysAgo(96) },
-  { id: 'demo-p6', name: 'Renata Oyelaran', position: 'Singles 6', year: 'Sophomore', photo_url: null, created_at: daysAgo(92) },
-  { id: 'demo-p7', name: 'Priya Sharma', position: 'Doubles A', year: 'Junior', photo_url: null, created_at: daysAgo(86) },
-  { id: 'demo-p8', name: 'Camille Boucher', position: 'Doubles B', year: 'Senior', photo_url: null, created_at: daysAgo(80) },
-  { id: 'demo-p9', name: 'Hana Watanabe', position: 'Reserve', year: 'Freshman', photo_url: null, created_at: daysAgo(64) },
+  { id: 'demo-p1', name: 'Polina Marakhtanova', position: 'Singles 1', year: 'So.', photo_url: `${UCD}/WTEN_Headshots-1.jpg?width=80&quality=90`, created_at: daysAgo(120) },
+  { id: 'demo-p2', name: 'Mika Ikemori', position: 'Singles 2', year: 'Jr.', photo_url: `${UCD}/WTEN_Headshots-3.jpg?width=80&quality=90`, created_at: daysAgo(118) },
+  { id: 'demo-p3', name: 'Kaia Wolfe', position: 'Singles 3', year: 'Sr.', photo_url: `${UCD}/WTEN_Headshots-7.jpg?width=80&quality=90`, created_at: daysAgo(110) },
+  { id: 'demo-p4', name: 'Sophia Sappa', position: 'Singles 4', year: 'Jr.', photo_url: `${UCD}/WTEN_Headshots-2.jpg?width=80&quality=90`, created_at: daysAgo(108) },
+  { id: 'demo-p5', name: 'Aileena Hu', position: 'Singles 5', year: 'So.', photo_url: `${UCD}/WTEN_Headshots-6.jpg?width=80&quality=90`, created_at: daysAgo(96) },
+  { id: 'demo-p6', name: 'Isabella Bringas', position: 'Singles 6', year: 'So.', photo_url: `${UCD}/WTEN_Headshots-8.jpg?width=80&quality=90`, created_at: daysAgo(92) },
+  { id: 'demo-p7', name: 'Maya Youssef', position: 'Doubles A', year: 'Sr.', photo_url: `${UCD}/WTEN_Headshots.jpg?width=80&quality=90`, created_at: daysAgo(86) },
+  { id: 'demo-p8', name: 'Penelope Wong', position: 'Doubles B', year: 'So.', photo_url: `${UCD}/WTEN_Headshots-4.jpg?width=80&quality=90`, created_at: daysAgo(80) },
+  { id: 'demo-p9', name: 'Vivian Gallaway', position: 'Reserve', year: 'Fr.', photo_url: `${UCD}/WTEN_Headshots-5.jpg?width=80&quality=90`, created_at: daysAgo(64) },
 ];
 
 const OPPONENTS = ['Stanford', 'Cal', 'USC', 'UCLA', 'Pepperdine', 'Saint Mary’s', 'Fresno State', 'Pacific'];
