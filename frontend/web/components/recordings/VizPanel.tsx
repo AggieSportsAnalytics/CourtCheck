@@ -424,6 +424,7 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
               />
               <QualityLegend />
               <MarkerLegend />
+              <SpacingBarsMini counts={spacingInsight} />
               <CoachingInsight>
                 {spacingInsight ? (
                   <>
@@ -533,9 +534,9 @@ function QualityLegend() {
       style={{ borderTop: '1px solid var(--color-line-soft)' }}
     >
       <QualityKey color="var(--color-plum)" label="Jammed (< 1 ft)" width={10} />
-      <QualityKey color="var(--color-clay)" label="Squeezed" width={16} />
-      <QualityKey color="var(--color-court)" label="Ideal" width={28} />
-      <QualityKey color="var(--color-amber)" label="Long (reaching)" width={42} />
+      <QualityKey color="var(--color-clay)" label="Squeezed (1–2 ft)" width={16} />
+      <QualityKey color="var(--color-court)" label="Ideal (2–3.5 ft)" width={28} />
+      <QualityKey color="var(--color-amber)" label="Long (3.5+ ft)" width={42} />
     </div>
   );
 }
@@ -885,6 +886,99 @@ function StrokeBarsMini({
                 ) : (
                   '—'
                 )}
+                <span className="text-ink-mute font-normal text-[0.7rem] ml-1">
+                  ({row.n})
+                </span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Spacing distribution as a bar breakdown — same card / count-up / entrance /
+ *  hover as the Shot Map Mix + Accuracy charts. */
+function SpacingBarsMini({
+  counts,
+}: {
+  counts: { jammed: number; squeezed: number; ideal: number; long: number } | null;
+}) {
+  const shown = useEntranceReveal(counts);
+  const total = counts
+    ? counts.jammed + counts.squeezed + counts.ideal + counts.long
+    : 0;
+
+  if (!counts || total === 0) {
+    return (
+      <div
+        className="rounded-lg text-[0.85rem] leading-snug text-ink-soft"
+        style={{
+          padding: '12px 14px',
+          background: 'color-mix(in srgb, var(--color-court) 6%, transparent)',
+        }}
+      >
+        <span className="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-ink-mute mr-2">
+          Spacing
+        </span>
+        Unlocks once the recording finishes processing.
+      </div>
+    );
+  }
+
+  const rows: { key: string; label: string; n: number; color: string }[] = [
+    { key: 'jammed', label: 'Jammed', n: counts.jammed, color: 'var(--color-plum)' },
+    { key: 'squeezed', label: 'Squeezed', n: counts.squeezed, color: 'var(--color-clay)' },
+    { key: 'ideal', label: 'Ideal', n: counts.ideal, color: 'var(--color-court)' },
+    { key: 'long', label: 'Long', n: counts.long, color: 'var(--color-amber)' },
+  ];
+
+  return (
+    <div
+      className="cc-strokebars rounded-lg"
+      style={{
+        padding: '12px 14px',
+        background: 'color-mix(in srgb, var(--color-court) 6%, transparent)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+      }}
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-ink-mute">
+          Spacing
+        </span>
+        <span className="text-[0.74rem] text-ink-soft">
+          {total} contact{total === 1 ? '' : 's'} tracked
+        </span>
+      </div>
+
+      <div className="space-y-1.5">
+        {rows.map((row) => {
+          const pct = Math.round((row.n / total) * 100);
+          return (
+            <div
+              key={row.key}
+              className="grid items-center"
+              style={{ gridTemplateColumns: '76px 1fr 52px', gap: 8 }}
+            >
+              <span className="text-[0.78rem] text-ink-soft truncate">{row.label}</span>
+              <div className="h-2 rounded-full overflow-hidden bg-shade dark:bg-surface">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: shown ? `${pct}%` : '0%',
+                    background: row.color,
+                    transition: 'width 720ms cubic-bezier(0.165, 0.84, 0.44, 1)',
+                  }}
+                />
+              </div>
+              <span
+                className="text-right text-[0.78rem] font-display font-medium text-ink"
+                style={{ fontFeatureSettings: '"tnum"' }}
+              >
+                <CountUp value={pct} play={shown} suffix="%" />
                 <span className="text-ink-mute font-normal text-[0.7rem] ml-1">
                   ({row.n})
                 </span>

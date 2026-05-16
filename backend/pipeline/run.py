@@ -1297,10 +1297,6 @@ def generate_scouting_report(
         duration_sec = round(num_frames / fps) if fps else 0
         duration_str = f"{duration_sec // 60}m {duration_sec % 60}s"
 
-        in_b = stats.get("in_bounds_bounces", 0) or 0
-        out_b = stats.get("out_bounds_bounces", 0) or 0
-        total_b = in_b + out_b
-        acc = f"{round(in_b / total_b * 100)}%" if total_b > 0 else "N/A"
         handedness = stats.get("handedness", "right")
 
         fh = stats.get("forehand_count", 0)
@@ -1325,6 +1321,13 @@ def generate_scouting_report(
                         far_left += 1
                     else:
                         far_right += 1
+
+        # Accuracy is the analyzed player's OWN shots only (P1), not the
+        # match's combined in/out bounce count.
+        p1_total = sum(per_total.values())
+        p1_oob = sum(per_oob.values())
+        p1_in = p1_total - p1_oob
+        p1_acc = f"{round(p1_in / p1_total * 100)}%" if p1_total > 0 else "N/A"
 
         def err_rate(key: str) -> str:
             t = per_total.get(key, 0)
@@ -1367,8 +1370,8 @@ def generate_scouting_report(
             f"Rally end reasons: {end_reasons}\n\n"
             f"Strokes (near player): Forehand {fh}, Backhand {bh}, Serve {srv} "
             f"(total {total_strokes})\n"
-            f"Overall shot accuracy (bounces in vs out): {acc} "
-            f"({in_b} in / {out_b} out of {total_b} bounces)\n"
+            f"Your shot accuracy (P1 shots only): {p1_acc} "
+            f"({p1_in} of {p1_total} of your shots landed in)\n"
             f"Error breakdown — total P1 errors: {es.get('total', 0)} "
             f"(long: {es.get('long', 0)}, wide: {es.get('wide', 0)}, "
             f"net: {es.get('net_err', 0)}, "
