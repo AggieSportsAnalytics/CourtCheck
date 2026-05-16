@@ -1,22 +1,33 @@
 /**
- * Demo fixtures — used ONLY when `?demo=1` is in the URL (or
- * NEXT_PUBLIC_DEMO_MODE=1). Makes the dashboard + recordings list look like a
+ * Demo fixtures — make the dashboard + recordings/players list look like a
  * coach has been using CourtCheck for a season, for screen-recording the
  * pitch. No Supabase writes, no cloned videos: match-detail is still demoed
- * from a real processed recording. Toggle off by dropping the query param.
+ * from a real processed recording.
+ *
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ TEMPORARY: demo mode is ON BY DEFAULT for the case-comp demo.        │
+ * │ REVERT before real use — flip DEFAULT_DEMO_ON back to false (or set  │
+ * │ NEXT_PUBLIC_DEMO_MODE=0). The toggle / ?demo=0 still forces live.    │
+ * └─────────────────────────────────────────────────────────────────────┘
  */
 
 export const DEMO_LS_KEY = 'cc-demo';
 
-/** True when demo mode is active: persistent toggle (localStorage), env, or
- *  a `?demo=1` URL param. The toggle is the primary switch; the param still
- *  works and the <DemoToggle> syncs it into localStorage so it persists
- *  across navigation. */
+// Tri-state: localStorage 'cc-demo' === '1' (on) / '0' (explicit off) /
+// absent (use this default). Flip to false to restore opt-in behavior.
+const DEFAULT_DEMO_ON = true;
+
+/** True when demo mode is active. ON by default (see banner above); the
+ *  <DemoToggle> writes '0' to force live data and '1' to force demo, and a
+ *  `?demo=0`/`?demo=1` param overrides for the current view. */
 export function isDemoMode(search?: URLSearchParams | string | null): boolean {
   if (process.env.NEXT_PUBLIC_DEMO_MODE === '1') return true;
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === '0') return false;
   if (typeof window !== 'undefined') {
     try {
-      if (window.localStorage.getItem(DEMO_LS_KEY) === '1') return true;
+      const v = window.localStorage.getItem(DEMO_LS_KEY);
+      if (v === '1') return true;
+      if (v === '0') return false;
     } catch {
       /* localStorage blocked — fall through */
     }
@@ -26,24 +37,29 @@ export function isDemoMode(search?: URLSearchParams | string | null): boolean {
       typeof search === 'string' ? new URLSearchParams(search) : search;
     const v = params.get('demo');
     if (v === '1' || v === 'true') return true;
+    if (v === '0' || v === 'false') return false;
   }
-  return false;
+  return DEFAULT_DEMO_ON;
 }
 
 export function getDemoFlag(): boolean {
-  if (typeof window === 'undefined') return false;
+  if (typeof window === 'undefined') return DEFAULT_DEMO_ON;
   try {
-    return window.localStorage.getItem(DEMO_LS_KEY) === '1';
+    const v = window.localStorage.getItem(DEMO_LS_KEY);
+    if (v === '1') return true;
+    if (v === '0') return false;
   } catch {
-    return false;
+    /* localStorage blocked */
   }
+  return DEFAULT_DEMO_ON;
 }
 
 export function setDemoFlag(on: boolean): void {
   if (typeof window === 'undefined') return;
   try {
-    if (on) window.localStorage.setItem(DEMO_LS_KEY, '1');
-    else window.localStorage.removeItem(DEMO_LS_KEY);
+    // Persist the explicit choice ('0' = off) so it survives the
+    // ON-by-default; clearing the key would just fall back to ON.
+    window.localStorage.setItem(DEMO_LS_KEY, on ? '1' : '0');
   } catch {
     /* localStorage blocked — no-op */
   }
