@@ -3,6 +3,16 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { checkRateLimit, rateLimitResponse, clientIp } from '@/lib/ratelimit';
+import { isAdmin } from '@/lib/admin';
+
+function isHttpsUrl(s: unknown): s is string {
+  if (typeof s !== 'string' || s.length === 0) return false;
+  try {
+    return new URL(s).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 async function getAuthenticatedUser() {
   const cookieStore = await cookies();
@@ -65,6 +75,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Players are the shared team roster; only admins (env-configured) mutate.
+    if (!isAdmin(user.email)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const rl = await checkRateLimit({
       userId: user.id,
       ip: clientIp(req),
@@ -76,17 +91,27 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const name = (body.name as string | undefined)?.trim();
-    if (!name) {
-      return NextResponse.json({ error: 'name is required' }, { status: 400 });
+    if (!name || name.length > 100) {
+      return NextResponse.json({ error: 'name required (max 100 chars)' }, { status: 400 });
     }
     const handedness =
       body.handedness === 'left' ? 'left' : body.handedness === 'right' ? 'right' : null;
 
+    // photo_url must be a real https URL or null — blocks javascript:, data:,
+    // file:, and internal-network URIs from being stored and later rendered.
+    let photoUrl: string | null = null;
+    if (body.photo_url !== undefined && body.photo_url !== null) {
+      if (!isHttpsUrl(body.photo_url)) {
+        return NextResponse.json({ error: 'photo_url must be https' }, { status: 400 });
+      }
+      photoUrl = body.photo_url;
+    }
+
     const insertRow: Record<string, unknown> = {
       name,
-      position: body.position ?? null,
-      year: body.year ?? null,
-      photo_url: body.photo_url ?? null,
+      position: typeof body.position === 'string' ? body.position.slice(0, 50) : null,
+      year: typeof body.year === 'string' ? body.year.slice(0, 20) : null,
+      photo_url: photoUrl,
     };
     if (handedness) insertRow.handedness = handedness;
 

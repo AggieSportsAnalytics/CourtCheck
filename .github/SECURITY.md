@@ -28,6 +28,18 @@ Rotate the following on any of these triggers: maintainer leaves the project, se
 | `OPENAI_API_KEY` | Modal env | OpenAI dashboard → revoke + create → update Modal |
 | Google OAuth Client Secret | Supabase Auth Providers | Google Cloud Console → Credentials → reset → paste into Supabase |
 
+## Admin Allowlist
+
+The `players` table is a shared team roster — any authenticated user can read, only listed admins can mutate. Configured via the `ADMIN_EMAILS` env var on Vercel (comma-separated, lowercased on match).
+
+**Default = empty = deny-all.** A misconfigured deploy fails closed (every player POST/PATCH returns 403 until an admin email is set).
+
+```
+ADMIN_EMAILS=brile761@gmail.com,kenny@…,anik@…
+```
+
+To add a new admin: append to the env var in Vercel → Settings → Environment Variables → redeploy. No code change required.
+
 ## Automated Scanning
 
 CI runs on every PR and push to `main`:

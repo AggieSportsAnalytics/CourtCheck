@@ -117,8 +117,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Upstream error' }, { status: 502 });
     }
 
-    // Refuse anything not image/* — even if an allowed host serves HTML or JSON.
-    const contentType = upstream.headers.get('content-type') ?? 'image/webp';
+    // Refuse anything not image/* — including a missing Content-Type header.
+    // Treating "no header" as a default image type would let an upstream that
+    // strips its content-type bypass the gate.
+    const contentType = upstream.headers.get('content-type') ?? '';
     if (!contentType.startsWith('image/')) {
       return NextResponse.json({ error: 'Upstream not an image' }, { status: 502 });
     }

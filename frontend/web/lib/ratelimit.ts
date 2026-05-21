@@ -16,7 +16,13 @@ export interface RateLimitOpts {
 
 export async function checkRateLimit(opts: RateLimitOpts): Promise<RateLimitResult> {
   const { bucket, limit, windowSec, userId, ip } = opts;
-  if (!userId && !ip) return { ok: true }; // nothing to key on
+  if (!userId && !ip) {
+    // No identifier means we can't count this caller — refuse rather than
+    // let the request through unrate-limited. Misconfigured caller is a bug,
+    // not a reason to skip enforcement.
+    console.warn('[ratelimit] no userId or ip provided', { bucket });
+    return { ok: false, retryAfterSec: windowSec };
+  }
 
   const since = new Date(Date.now() - windowSec * 1000).toISOString();
 

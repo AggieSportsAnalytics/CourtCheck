@@ -3,6 +3,16 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { checkRateLimit, rateLimitResponse, clientIp } from '@/lib/ratelimit';
+import { isAdmin } from '@/lib/admin';
+
+function isHttpsUrl(s: unknown): s is string {
+  if (typeof s !== 'string' || s.length === 0) return false;
+  try {
+    return new URL(s).protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
 
 async function getAuthenticatedUser() {
   const cookieStore = await cookies();
@@ -77,6 +87,10 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    if (!isAdmin(user.email)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const rl = await checkRateLimit({
       userId: user.id,
       ip: clientIp(req),
@@ -100,9 +114,21 @@ export async function PATCH(
       }
       updates.name = name;
     }
-    if (body.position !== undefined) updates.position = body.position;
-    if (body.year !== undefined) updates.year = body.year;
-    if (body.photo_url !== undefined) updates.photo_url = body.photo_url;
+    if (body.position !== undefined) {
+      updates.position = typeof body.position === 'string' ? body.position.slice(0, 50) : null;
+    }
+    if (body.year !== undefined) {
+      updates.year = typeof body.year === 'string' ? body.year.slice(0, 20) : null;
+    }
+    if (body.photo_url !== undefined) {
+      if (body.photo_url === null || body.photo_url === '') {
+        updates.photo_url = null;
+      } else if (!isHttpsUrl(body.photo_url)) {
+        return NextResponse.json({ error: 'photo_url must be https' }, { status: 400 });
+      } else {
+        updates.photo_url = body.photo_url;
+      }
+    }
     if (body.handedness !== undefined) {
       if (body.handedness !== 'left' && body.handedness !== 'right') {
         return NextResponse.json(
