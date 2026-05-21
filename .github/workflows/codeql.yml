@@ -33,7 +33,9 @@ jobs:
         uses: github/codeql-action/init@v3
         with:
           languages: ${{ matrix.language }}
-          queries: security-and-quality
+          # security-extended = broader CVE coverage than default, without
+          # code-quality nits (unused vars/imports) bundled in security-and-quality.
+          queries: security-extended
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@v3
