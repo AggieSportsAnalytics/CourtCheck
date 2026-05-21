@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { v4 as uuidv4 } from "uuid";
+import { checkRateLimit, rateLimitResponse, clientIp } from '@/lib/ratelimit';
 
 const ALLOWED_EXTS = ['mp4', 'mov', 'avi'];
 
@@ -41,6 +42,17 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // 10 upload-URL creations / hour. Real users upload 1-3/day; this leaves
+    // room for retries while blocking automated abuse.
+    const rl = await checkRateLimit({
+      userId: user.id,
+      ip: clientIp(req),
+      bucket: 'create-upload',
+      limit: 10,
+      windowSec: 3600,
+    });
+    if (!rl.ok) return rateLimitResponse(rl.retryAfterSec);
 
     const body = await req.json();
     const playerId: string | null = typeof body.player_id === 'string' ? body.player_id : null;

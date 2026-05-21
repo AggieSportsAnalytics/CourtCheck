@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { checkRateLimit, rateLimitResponse, clientIp } from '@/lib/ratelimit';
 
 // Polled by the recording detail page every 5s while a recording is processing.
 // Force-dynamic so Next.js doesn't pin progress/stage/status to a cached value.
@@ -211,6 +212,15 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const rl = await checkRateLimit({
+      userId: user.id,
+      ip: clientIp(req),
+      bucket: 'recordings-patch',
+      limit: 30,
+      windowSec: 3600,
+    });
+    if (!rl.ok) return rateLimitResponse(rl.retryAfterSec);
+
     const { id } = await params;
     const body = await req.json();
 
@@ -272,7 +282,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -298,6 +308,16 @@ export async function DELETE(
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Deletes destroy data + storage objects; cap per-user to slow abuse.
+    const rl = await checkRateLimit({
+      userId: user.id,
+      ip: clientIp(req),
+      bucket: 'recordings-delete',
+      limit: 10,
+      windowSec: 3600,
+    });
+    if (!rl.ok) return rateLimitResponse(rl.retryAfterSec);
 
     const { id } = await params;
 

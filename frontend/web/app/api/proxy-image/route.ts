@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import { checkRateLimit, clientIp, rateLimitResponse } from '@/lib/ratelimit';
 
 // `googleusercontent.com` (suffix) covers the rotating lh3/lh4/lh5 subdomains
 // Google serves OAuth profile photos from — required for Google sign-in avatars.
@@ -9,6 +12,9 @@ const ALLOWED_HOSTS = [
   'googleusercontent.com',
 ];
 const MAX_REDIRECTS = 3;
+// Hard cap on response size — prevents an attacker from chaining the allowlist
+// to a multi-GB asset and burning Vercel egress. 8 MiB is plenty for player photos.
+const MAX_RESPONSE_BYTES = 8 * 1024 * 1024;
 
 function isAllowed(u: URL): boolean {
   return (
@@ -18,6 +24,40 @@ function isAllowed(u: URL): boolean {
 }
 
 export async function GET(req: NextRequest) {
+  // Require auth — proxy-image is only used in-app for player photos. Closing
+  // this prevents the endpoint from being used as a free image proxy / amplifier.
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll(); },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) =>
+            cookieStore.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Rate-limit per user: 120/hr (~2/min). Player list renders 20-30 cards
+  // so a normal page view bursts ~30 images; this leaves room for re-renders
+  // without throttling a legit user.
+  const rl = await checkRateLimit({
+    userId: user.id,
+    ip: clientIp(req),
+    bucket: 'proxy-image',
+    limit: 120,
+    windowSec: 3600,
+  });
+  if (!rl.ok) return rateLimitResponse(rl.retryAfterSec);
+
   const url = req.nextUrl.searchParams.get('url');
   if (!url) {
     return NextResponse.json({ error: 'Missing url param' }, { status: 400 });
@@ -77,8 +117,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Upstream error' }, { status: 502 });
     }
 
+    // Refuse anything not image/* — even if an allowed host serves HTML or JSON.
     const contentType = upstream.headers.get('content-type') ?? 'image/webp';
+    if (!contentType.startsWith('image/')) {
+      return NextResponse.json({ error: 'Upstream not an image' }, { status: 502 });
+    }
+
+    // Reject oversized responses via Content-Length first; if missing, cap via stream.
+    const declared = Number(upstream.headers.get('content-length') ?? '0');
+    if (declared > MAX_RESPONSE_BYTES) {
+      return NextResponse.json({ error: 'Upstream too large' }, { status: 502 });
+    }
     const buffer = await upstream.arrayBuffer();
+    if (buffer.byteLength > MAX_RESPONSE_BYTES) {
+      return NextResponse.json({ error: 'Upstream too large' }, { status: 502 });
+    }
 
     return new NextResponse(buffer, {
       status: 200,

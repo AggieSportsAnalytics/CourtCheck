@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { checkRateLimit, rateLimitResponse, clientIp } from '@/lib/ratelimit';
 
 async function getAuthenticatedUser() {
   const cookieStore = await cookies();
@@ -63,6 +64,15 @@ export async function POST(req: Request) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const rl = await checkRateLimit({
+      userId: user.id,
+      ip: clientIp(req),
+      bucket: 'players-post',
+      limit: 10,
+      windowSec: 3600,
+    });
+    if (!rl.ok) return rateLimitResponse(rl.retryAfterSec);
 
     const body = await req.json();
     const name = (body.name as string | undefined)?.trim();

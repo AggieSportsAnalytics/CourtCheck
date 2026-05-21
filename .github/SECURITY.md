@@ -46,13 +46,56 @@ Some hardening can't live in code. Apply these in the Supabase dashboard for the
 2. **Google OAuth — enabled.** Auth → Providers → Google. Authorized redirect URI in Google Cloud: `https://qfqcadgzvflsowzmmfmx.supabase.co/auth/v1/callback`.
 3. **Enforce MFA on the AggieSportsAnalytics GitHub org owner account** — Settings → Password and authentication → 2FA → authenticator app. One-time; protects the project from a phished maintainer password.
 
-## Storage Bucket Visibility
+## Storage Bucket Visibility + Caps
 
-| Bucket | Public | Why |
+| Bucket | Public | Size cap | Mime types | Why |
+|---|---|---|---|---|
+| `raw-videos` | **private** | 2 GiB | video/mp4, mov, avi, webm | Coach-uploaded match footage. Signed URLs only. |
+| `results` | **private** | 500 MiB | any | Processed outputs + heatmaps. Signed URLs only. |
+| `swing-clips` | private | 100 MiB | any | Per-annotator training clips. |
+| `assets` | public | unlimited | any | Brand assets served via plain `<img src>`. |
+
+Any new bucket holding user-uploaded content defaults to private with a size cap. Reach for `getPublicUrl` only for static brand assets.
+
+## Rate Limits (per authenticated user, rolling 1-hour window)
+
+Backed by `public.rate_limit_events` table + `lib/ratelimit.ts`. Fails open on infra error to avoid taking down legit traffic. 429 with `Retry-After` header on breach.
+
+| Endpoint | Limit | Reason |
 |---|---|---|
-| `raw-videos` | **private** | Coach-uploaded match footage. Access via signed URLs only. |
-| `results` | **private** | Processed match outputs + heatmaps. Signed URLs only. |
-| `swing-clips` | private | Per-annotator training clips. |
-| `assets` | public | Brand assets (logos, marketing) served via plain `<img src>`. |
+| `POST /api/create-upload` | 10 | One upload per ~6 min; covers retries |
+| `GET /api/proxy-image` | 120 | A page renders ~20 player cards; leaves room for re-renders |
+| `PATCH /api/recordings/:id` | 30 | Renames are uncommon |
+| `DELETE /api/recordings/:id` | 10 | Destructive — capped tight |
+| `POST /api/players` | 10 | Roster additions are infrequent |
+| `PATCH /api/players/:id` | 30 | Profile edits |
+| `POST /api/trigger-process` | 20 | Processing jobs are expensive (Modal A10G) |
 
-Any new bucket holding user-uploaded content defaults to private. Reach for `getPublicUrl` only for static brand assets.
+Prune old rows via `SELECT public.rate_limit_prune();` (or wire pg_cron).
+
+## Audit Log
+
+`public.audit_log` captures all INSERT/UPDATE/DELETE on `matches` and `players` via a `SECURITY DEFINER` trigger. Stores `actor` (auth.uid), full before/after JSONB. Service-role-only (RLS enabled, no policies).
+
+Query examples:
+```sql
+-- Recent deletes on matches
+SELECT at, actor, row_id, old_row->>'name'
+FROM public.audit_log
+WHERE op = 'DELETE' AND table_name = 'matches'
+ORDER BY at DESC LIMIT 50;
+
+-- Activity by user
+SELECT op, table_name, COUNT(*)
+FROM public.audit_log
+WHERE actor = '<uuid>' AND at > now() - interval '7 days'
+GROUP BY op, table_name;
+```
+
+## Supabase Dashboard Toggles
+
+1. **Leaked-password protection (HIBP)** — *requires Supabase Pro plan.* Auth → Providers → Email → "Prevent use of leaked passwords". On Free tier, our signup form enforces minimum 10-char passwords as the next-best floor; revisit when we upgrade.
+2. **Min password length** — Auth → Providers → Email → set min length to 10 to match the client-side rule. ([docs](https://supabase.com/docs/guides/auth/password-security))
+3. **Google OAuth — enabled.** Auth → Providers → Google. Authorized redirect URI in Google Cloud: `https://qfqcadgzvflsowzmmfmx.supabase.co/auth/v1/callback`.
+4. **Rate limit auth endpoints** — Auth → Rate Limits → set 'Sign-ups per IP' and 'Sign-ins per IP' to reasonable floors (e.g., 30/hour). Catches credential stuffing.
+5. **Enforce MFA on the AggieSportsAnalytics GitHub org owner account** — Settings → Password and authentication → 2FA → authenticator app.

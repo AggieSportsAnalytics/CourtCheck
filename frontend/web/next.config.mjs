@@ -5,6 +5,15 @@ const nextConfig = {
   },
   async headers() {
     return [
+      // /api/* — also disable caching so signed URLs + user data never cache
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'X-Robots-Tag', value: 'noindex' },
+        ],
+      },
       {
         source: '/(.*)',
         headers: [
@@ -12,6 +21,11 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          { key: 'X-DNS-Prefetch-Control', value: 'off' },
+          // same-origin-allow-popups so the Google OAuth popup flow works while
+          // still isolating tabs from arbitrary window.opener access.
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
+          { key: 'Cross-Origin-Resource-Policy', value: 'same-site' },
           {
             key: 'Strict-Transport-Security',
             value: 'max-age=63072000; includeSubDomains; preload',
