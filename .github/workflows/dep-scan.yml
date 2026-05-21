@@ -39,8 +39,29 @@ jobs:
           python-version: '3.11'
       - name: Install pip-audit
         run: pip install pip-audit
+      # Accepted-risk CVE list (review quarterly):
+      #   PYSEC-2025-183  pyjwt    disputed; key length is caller's responsibility
+      #   PYSEC-2025-{189-197,210}  torch  local memory corruption — attacker must
+      #                                    already have code execution in Modal
+      #   PYSEC-2026-139  torch    pt2 deserialization, local only, no fix yet
+      #   PYSEC-2026-89   markdown HTML parser DoS; we don't parse untrusted
+      #                            markdown on the backend (frontend uses
+      #                            rehype-sanitize on GPT scouting reports)
       - name: Audit requirements.txt
-        # PYSEC-2025-183 (pyjwt) disputed by maintainer; revisit quarterly
-        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2025-183 --strict
+        run: |
+          pip-audit -r requirements.txt --strict \
+            --ignore-vuln PYSEC-2025-183 \
+            --ignore-vuln PYSEC-2025-189 \
+            --ignore-vuln PYSEC-2025-190 \
+            --ignore-vuln PYSEC-2025-191 \
+            --ignore-vuln PYSEC-2025-192 \
+            --ignore-vuln PYSEC-2025-193 \
+            --ignore-vuln PYSEC-2025-194 \
+            --ignore-vuln PYSEC-2025-195 \
+            --ignore-vuln PYSEC-2025-196 \
+            --ignore-vuln PYSEC-2025-197 \
+            --ignore-vuln PYSEC-2025-210 \
+            --ignore-vuln PYSEC-2026-139 \
+            --ignore-vuln PYSEC-2026-89
       - name: Audit requirements-annotation.txt
-        run: pip-audit -r requirements-annotation.txt --strict
+        run: pip-audit -r requirements-annotation.txt --strict --ignore-vuln PYSEC-2026-89
