@@ -1,0 +1,46 @@
+name: Dependency Scan
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    name: npm audit (frontend/web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/web/package-lock.json
+      - name: Install
+        working-directory: frontend/web
+        run: npm ci --ignore-scripts
+      - name: Audit (fail on high+)
+        working-directory: frontend/web
+        run: npm audit --audit-level=high
+
+  pip-audit:
+    name: pip-audit (backend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Audit requirements.txt
+        # PYSEC-2025-183 (pyjwt) disputed by maintainer; revisit quarterly
+        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2025-183 --strict
+      - name: Audit requirements-annotation.txt
+        run: pip-audit -r requirements-annotation.txt --strict

@@ -11,10 +11,10 @@ gdown
 imutils
 tqdm
 supabase
-python-dotenv
+python-dotenv>=1.2.2
 
 modal
-requests
+requests>=2.33.0
 ffmpeg-python
 fastapi
 openai

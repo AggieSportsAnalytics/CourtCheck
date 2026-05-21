@@ -1,0 +1,17 @@
+# Run locally with: pre-commit install (one-time setup per clone)
+# Hooks fire on `git commit`; remote CI runs the same scans on PRs.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.4
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: detect-private-key
+      - id: check-merge-conflict
+      - id: end-of-file-fixer
+        exclude: '\.lock$|package-lock\.json$|pnpm-lock\.yaml$'
+      - id: trailing-whitespace
+        exclude: '\.md$'
