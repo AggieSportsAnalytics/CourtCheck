@@ -31,8 +31,10 @@ export async function updateSession(request: NextRequest) {
   const { data: { session } } = await supabase.auth.getSession()
   const isAuthenticated = !!session
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/auth')
-  const isLandingRoute = request.nextUrl.pathname.startsWith('/landing')
+  const path = request.nextUrl.pathname
+  const isAuthRoute = path.startsWith('/auth')
+  const isLandingRoute = path.startsWith('/landing')
+  const isOnboardingRoute = path === '/onboarding' || path.startsWith('/api/onboarding')
   const isProtectedRoute = !isAuthRoute && !isLandingRoute
 
   // If not authenticated and trying to access protected route, redirect to landing
@@ -43,6 +45,15 @@ export async function updateSession(request: NextRequest) {
   // If authenticated and trying to access auth pages, redirect to dashboard
   if (isAuthenticated && isAuthRoute) {
     return NextResponse.redirect(new URL('/', request.url))
+  }
+
+  // If authenticated but not yet onboarded, force /onboarding before any
+  // app surface loads. /onboarding itself and /api/onboarding are always allowed.
+  if (isAuthenticated && !isOnboardingRoute && !isAuthRoute && !isLandingRoute) {
+    const onboarded = (session?.user?.user_metadata as { onboarded?: boolean } | undefined)?.onboarded === true
+    if (!onboarded) {
+      return NextResponse.redirect(new URL('/onboarding', request.url))
+    }
   }
 
   return response

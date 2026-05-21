@@ -33,9 +33,16 @@ async function getAuthenticatedUser() {
   return user ?? null;
 }
 
-// GET returns demo players (user_id IS NULL — UC Davis roster, read-only)
-// AND the caller's own players. Frontend can distinguish via the `user_id`
-// field on each row: null = demo, non-null = the caller's row.
+// Visibility rules:
+//   - Users who have completed onboarding (user_metadata.onboarding_template set):
+//     see ONLY their own players. Templates (user_id IS NULL) are hidden because
+//     they would either have been cloned ('uc-davis') or intentionally skipped
+//     ('empty').
+//   - Legacy users (onboarded but onboarding_template missing, e.g. backfilled
+//     from before the onboarding flow existed): see demo + own. Keeps their
+//     existing experience unchanged.
+//   - Not-yet-onboarded users: see only their own (which is usually nothing).
+//     Middleware will have redirected them to /onboarding before they hit this.
 export async function GET() {
   try {
     const user = await getAuthenticatedUser();
@@ -43,21 +50,25 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // The select includes user_id so the UI can label demo vs owned rows.
-    // Pre-migration safety: handedness and user_id might not exist on older envs.
+    const meta = (user.user_metadata ?? {}) as { onboarding_template?: string };
+    const includeDemo = !meta.onboarding_template;
+
     const SELECT_FULL = 'id, name, position, year, photo_url, handedness, user_id, created_at';
     const SELECT_NO_OWNER = 'id, name, position, year, photo_url, handedness, created_at';
     const SELECT_LEGACY = 'id, name, position, year, photo_url, created_at';
 
     async function tryFetch(cols: string, ownerFilter: boolean) {
       let q = supabaseAdmin.from('players').select(cols).order('name', { ascending: true });
-      if (ownerFilter) q = q.or(`user_id.is.null,user_id.eq.${user!.id}`);
+      if (ownerFilter) {
+        q = includeDemo
+          ? q.or(`user_id.is.null,user_id.eq.${user!.id}`)
+          : q.eq('user_id', user!.id);
+      }
       return q;
     }
 
     let { data, error } = await tryFetch(SELECT_FULL, true);
     if (error && /does not exist/.test(error.message ?? '')) {
-      // user_id column missing — fall back to no-owner filter, no user_id field
       ({ data, error } = await tryFetch(SELECT_NO_OWNER, false));
       if (error && /does not exist/.test(error.message ?? '')) {
         ({ data, error } = await tryFetch(SELECT_LEGACY, false));
