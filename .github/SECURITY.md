@@ -42,9 +42,9 @@ Dependabot runs weekly, groups minor + patch into single PRs per ecosystem.
 
 Some hardening can't live in code. Apply these in the Supabase dashboard for the CourtCheck project:
 
-1. **Enable leaked-password protection** — Auth → Policies → toggle on "Check passwords against HaveIBeenPwned". Blocks signups using known-breached passwords. ([docs](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection))
-2. **Enable Google OAuth** — Auth → Providers → Google → enable. Paste the OAuth Client ID + Secret from Google Cloud Console (Credentials → OAuth 2.0 Client IDs → CourtCheck). Authorized redirect URI in Google Cloud must match: `https://qfqcadgzvflsowzmmfmx.supabase.co/auth/v1/callback`.
-3. **Enforce MFA on the org owner account** — Settings → Account → enable TOTP. One-time; protects the project from a phished maintainer password.
+1. **Leaked-password protection (HIBP)** — *requires Supabase Pro plan.* Auth → Providers → Email → "Prevent use of leaked passwords". On Free tier, our signup form enforces minimum 10-char passwords as the next-best floor; revisit when we upgrade. ([docs](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection))
+2. **Google OAuth — enabled.** Auth → Providers → Google. Authorized redirect URI in Google Cloud: `https://qfqcadgzvflsowzmmfmx.supabase.co/auth/v1/callback`.
+3. **Enforce MFA on the AggieSportsAnalytics GitHub org owner account** — Settings → Password and authentication → 2FA → authenticator app. One-time; protects the project from a phished maintainer password.
 
 ## Storage Bucket Visibility
 
