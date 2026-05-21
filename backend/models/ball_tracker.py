@@ -102,6 +102,19 @@ class BallTrackerNet(nn.Module):
 
 ## Ball Detection
 class BallDetector:
+    # Far-court ROI pass — mirrors PlayerTracker.detect_frame_with_far_roi.
+    # The full-frame inference at 640x360 downsizes a ~15px far-baseline ball
+    # to ~5px, which TrackNet's heatmap regression handles poorly and which the
+    # downstream CatBoost bounce model then can't detect inflections on. The
+    # ROI pass crops the far half of the court at near-native resolution before
+    # resizing to TrackNet's 640x360 input, effectively 2-3x'ing the far-side
+    # ball's pixel size in the model's view.
+    _FAR_COURT_CORNERS = np.array([
+        [[286.0, 161.0]], [[1379.0, 161.0]],
+        [[286.0, 1778.0]], [[1379.0, 1778.0]],
+    ], dtype=np.float32)
+    _FAR_ROI_PAD = 40  # image-space padding around projected far-court rect
+
     def __init__(self, path_model=None, device="cuda"):
         self.model = BallTrackerNet(input_channels=9, out_channels=256)
         self.device = device
@@ -115,6 +128,13 @@ class BallDetector:
         self.height = 360
         self.frame_buffer = deque(maxlen=3)
         self.prev_pred = [None, None]
+
+        # Separate state for the ROI pass — its 3-frame buffer + prev_pred must
+        # not mix with the main full-frame pass since they're different scales.
+        self.roi_frame_buffer = deque(maxlen=3)
+        self.roi_prev_pred = [None, None]
+        self._roi_bounds = None        # image-space crop (x1,y1,x2,y2); cached since calibration is static
+        self._roi_logged = False
 
     def infer_single(self, current_frame):
         """Processes a single frame, using internal buffer for context."""
@@ -200,3 +220,107 @@ class BallDetector:
                 y = circles[0][0][1] * scale_y
         return x, y
 
+    # ------------------------------------------------------------------
+    # ROI pass: tracks the ball on a far-court crop at near-native pixel
+    # resolution. Used to backfill frames where the main full-frame pass
+    # missed the ball — typically far-side bounce frames where the ball
+    # is only ~5px in the 640x360 downscale and the heatmap loses it.
+    # ------------------------------------------------------------------
+    def _compute_far_court_roi_bounds(self, frame_shape, H_frame):
+        """Project the far-court rectangle (court ref space) into image space
+        and return (x1, y1, x2, y2) with padding. Cached after first call —
+        calibration is static across the run so the bounds never change."""
+        if self._roi_bounds is not None:
+            return self._roi_bounds
+        if H_frame is None:
+            return None
+        frame_h, frame_w = frame_shape[:2]
+        mapped = cv2.perspectiveTransform(self._FAR_COURT_CORNERS, H_frame)
+        xs = mapped[:, 0, 0]
+        ys = mapped[:, 0, 1]
+        x1 = max(0, int(np.min(xs)) - self._FAR_ROI_PAD)
+        y1 = max(0, int(np.min(ys)) - self._FAR_ROI_PAD)
+        x2 = min(frame_w, int(np.max(xs)) + self._FAR_ROI_PAD)
+        y2 = min(frame_h, int(np.max(ys)) + self._FAR_ROI_PAD)
+        if x2 - x1 < 50 or y2 - y1 < 50:
+            return None  # degenerate crop; calibration probably wrong
+        self._roi_bounds = (x1, y1, x2, y2)
+        if not self._roi_logged:
+            print(f"[BallROI] Far-court crop in image space: ({x1},{y1}) -> ({x2},{y2})  size={x2-x1}x{y2-y1}", flush=True)
+            self._roi_logged = True
+        return self._roi_bounds
+
+    def _infer_roi_crop(self, current_frame, bounds):
+        """TrackNet inference on the far-court crop with its own 3-frame buffer.
+        Returns (x, y) in CROP-space pixel coords, or (None, None)."""
+        x1, y1, x2, y2 = bounds
+        crop = current_frame[y1:y2, x1:x2]
+        if crop.size == 0:
+            return (None, None)
+        self.roi_frame_buffer.append(crop)
+        if len(self.roi_frame_buffer) < 3:
+            return (None, None)
+
+        frame_m2, frame_m1, frame_0 = list(self.roi_frame_buffer)
+        # Each buffered crop must share the same (h, w) for the concat below.
+        # Calibration is static, so all crops are bounds-sized — guaranteed.
+        crop_h, crop_w = frame_0.shape[:2]
+
+        img        = cv2.resize(frame_0,    (self.width, self.height))
+        img_prev   = cv2.resize(frame_m1,   (self.width, self.height))
+        img_prev2  = cv2.resize(frame_m2,   (self.width, self.height))
+
+        imgs = np.concatenate((img, img_prev, img_prev2), axis=2)
+        imgs = imgs.astype(np.float32) / 255.0
+        imgs = np.rollaxis(imgs, 2, 0)
+        inp = np.expand_dims(imgs, axis=0)
+
+        with torch.no_grad():
+            tensor = torch.from_numpy(inp)
+            tensor = tensor.half() if self.device == "cuda" else tensor.float()
+            out = self.model(tensor.to(self.device))
+            output = out.argmax(dim=1).detach().cpu().numpy()
+
+        # Postprocess returns coords in the model's input frame (= crop space
+        # after resize). Pass crop_w/h so the scaling matches.
+        x_pred, y_pred = self.postprocess(
+            output, self.roi_prev_pred, frame_w=crop_w, frame_h=crop_h,
+        )
+        self.roi_prev_pred = [x_pred, y_pred]
+        return (x_pred, y_pred)
+
+    def infer_with_far_roi(self, frame, H_frame):
+        """Main pass + ROI backfill in one call.
+
+        Strategy:
+          - Always run the main full-frame pass (preserves trajectory continuity
+            for the near-court ball where TrackNet works well).
+          - Also run the ROI pass on the far-court crop every frame so its
+            3-frame buffer stays in lockstep with the video.
+          - If main missed (returned None), use the ROI result mapped back to
+            full-frame coords. If main hit, keep main.
+
+        Falls back to plain infer_single() when H_frame is None (no calibration).
+        """
+        main_pred = self.infer_single(frame)
+
+        if H_frame is None:
+            return main_pred
+
+        bounds = self._compute_far_court_roi_bounds(frame.shape, H_frame)
+        if bounds is None:
+            return main_pred
+
+        x_main, y_main = main_pred
+        # Always feed the ROI buffer so it doesn't go stale.
+        x_crop, y_crop = self._infer_roi_crop(frame, bounds)
+
+        if x_main is not None and y_main is not None:
+            return main_pred  # main wins when it has a value
+
+        if x_crop is None or y_crop is None:
+            return main_pred  # neither pass hit — preserve None
+
+        # Map crop-space coords back to original frame coords.
+        x1, y1, _, _ = bounds
+        return (x_crop + x1, y_crop + y1)

@@ -1,26 +1,32 @@
-"""One-shot cleanup of raw uploads for already-processed recordings.
+"""Sweep raw uploads for processed recordings past the retention window.
 
-The pipeline only deletes the raw video for runs that succeed *after* the
-DELETE_RAW_AFTER_PROCESS feature shipped. Existing rows still have their raw
-sitting in the `raw-videos` bucket — this script reclaims that storage in one
-pass.
+Backend default: raws stay in storage for 7 days after processing so coaches
+can hit Reprocess without re-uploading. This script is the cleanup pass that
+removes them after that window expires. Intended to run daily (Modal scheduled
+function or cron).
 
 Safety:
   - Dry-run by default (`--apply` required to actually delete).
-  - Only touches rows where `status='done'` and a processed video lives in
-    `results_path`; rows mid-flight or failed are skipped.
+  - Only touches rows where `status='done'` AND `created_at` is older than the
+    retention window. Rows mid-flight or failed are skipped.
   - Verifies the processed video is reachable in `results` before deleting the
     raw, so a corrupted row doesn't lose the only copy.
   - Prints every action; pipe to a log if you want a paper trail.
 
 Usage:
-    # Dry run (default):
+    # Default 7-day window, dry run:
     python -m backend.tools.cleanup_old_raws
 
-    # Actually delete:
+    # Apply with default window:
     python -m backend.tools.cleanup_old_raws --apply
 
-    # Just look at one match id:
+    # Shorter window (e.g. when storage is tight):
+    python -m backend.tools.cleanup_old_raws --min-age-days 3 --apply
+
+    # Backfill / wipe everything regardless of age:
+    python -m backend.tools.cleanup_old_raws --min-age-days 0 --apply
+
+    # Just look at one match id (ignores age):
     python -m backend.tools.cleanup_old_raws --match-id <uuid> --apply
 """
 
@@ -29,6 +35,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 from typing import Iterable
 
 from supabase import create_client
@@ -61,25 +68,36 @@ def _processed_exists(supabase, results_path: str) -> bool:
         return False
 
 
-def cleanup(match_ids: Iterable[str] | None, apply: bool) -> None:
+def cleanup(match_ids: Iterable[str] | None, apply: bool, min_age_days: int) -> None:
     supabase = _get_supabase()
 
     query = (
         supabase.table("matches")
-        .select("id, name, input_path, results_path, status")
+        .select("id, name, input_path, results_path, status, created_at")
         .eq("status", "done")
         .not_.is_("input_path", "null")
     )
     if match_ids:
         ids = list(match_ids)
         query = query.in_("id", ids)
+    elif min_age_days > 0:
+        # Only sweep rows older than the retention window. Single-match runs
+        # ignore the window (operator already specified the row).
+        cutoff = datetime.now(timezone.utc) - timedelta(days=min_age_days)
+        query = query.lt("created_at", cutoff.isoformat())
     rows = query.execute().data or []
 
     if not rows:
-        print("No eligible rows found (no status=done rows with a non-null input_path).")
+        window_note = (
+            f" older than {min_age_days} days" if min_age_days > 0 and not match_ids else ""
+        )
+        print(f"No eligible rows found (no status=done rows{window_note}).")
         return
 
-    print(f"Found {len(rows)} candidate rows. Mode: {'APPLY' if apply else 'DRY RUN'}\n")
+    print(
+        f"Found {len(rows)} candidate rows "
+        f"(retention: {min_age_days} days). Mode: {'APPLY' if apply else 'DRY RUN'}\n"
+    )
 
     removed = 0
     skipped = 0
@@ -137,10 +155,17 @@ def main() -> None:
         "--match-id",
         action="append",
         dest="match_ids",
-        help="Restrict the run to one or more match ids. Repeatable.",
+        help="Restrict the run to one or more match ids. Repeatable. Ignores --min-age-days.",
+    )
+    parser.add_argument(
+        "--min-age-days",
+        type=int,
+        default=7,
+        help="Minimum age (in days, by created_at) before a raw is eligible for cleanup. "
+             "Default: 7 (matches backend retention window). Set to 0 to sweep everything.",
     )
     args = parser.parse_args()
-    cleanup(args.match_ids, apply=args.apply)
+    cleanup(args.match_ids, apply=args.apply, min_age_days=args.min_age_days)
 
 
 if __name__ == "__main__":

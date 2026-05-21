@@ -108,6 +108,9 @@ export default function RecordingDetailPage() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [confirmingReprocess, setConfirmingReprocess] = useState(false);
+  const [reprocessing, setReprocessing] = useState(false);
+  const [reprocessError, setReprocessError] = useState<string | null>(null);
 
   const handleDeleteRecording = useCallback(async () => {
     setDeleting(true);
@@ -125,6 +128,34 @@ export default function RecordingDetailPage() {
       setDeleting(false);
     }
   }, [id, router]);
+
+  const handleReprocessRecording = useCallback(async () => {
+    setReprocessing(true);
+    setReprocessError(null);
+    try {
+      const res = await fetch('/api/trigger-process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ match_id: id }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setReprocessError(body?.error || 'Failed to start reprocess.');
+        setReprocessing(false);
+        return;
+      }
+      // Flip local status to processing so the existing polling UI kicks in;
+      // the next /api/recordings/[id] poll will overwrite with server truth.
+      setRecording((prev) =>
+        prev ? { ...prev, status: 'processing', progress: 0, error: null, stage: 'Queueing compute' } : prev,
+      );
+      setConfirmingReprocess(false);
+      setReprocessing(false);
+    } catch {
+      setReprocessError('Failed to start reprocess.');
+      setReprocessing(false);
+    }
+  }, [id]);
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -402,58 +433,116 @@ export default function RecordingDetailPage() {
     <div className="max-w-[1280px] mx-auto px-6 pt-7">
       <div className="flex items-center justify-between gap-4 mb-4">
         <Crumb recordingName={recording.filename} noMargin />
-        {confirmingDelete ? (
-          <div className="flex items-center gap-2">
-            <span className="text-[0.8rem] text-ink-soft">
-              Delete this recording?
-            </span>
+        <div className="flex items-center gap-2">
+          {/* Reprocess — only relevant once a run has settled (done/failed).
+              While processing, the polling UI is already in control. */}
+          {(recording.status === 'done' || recording.status === 'failed') && (
+            confirmingReprocess ? (
+              <div className="flex items-center gap-2">
+                <span className="text-[0.8rem] text-ink-soft">
+                  Rerun pipeline?
+                </span>
+                <button
+                  type="button"
+                  onClick={handleReprocessRecording}
+                  disabled={reprocessing}
+                  className="inline-flex items-center px-3 py-1.5 rounded-full bg-court text-cream text-[0.8rem] font-medium transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
+                >
+                  {reprocessing ? 'Starting…' : 'Reprocess'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmingReprocess(false);
+                    setReprocessError(null);
+                  }}
+                  disabled={reprocessing}
+                  className="inline-flex items-center px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink text-[0.8rem] font-medium transition-colors cursor-pointer disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingReprocess(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-court hover:text-court text-[0.8rem] font-medium transition-colors cursor-pointer"
+                title="Re-run the pipeline on the original upload"
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 12a9 9 0 0 1 15.5-6.3L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-15.5 6.3L3 16" />
+                  <path d="M3 21v-5h5" />
+                </svg>
+                Reprocess
+              </button>
+            )
+          )}
+
+          {confirmingDelete ? (
+            <div className="flex items-center gap-2">
+              <span className="text-[0.8rem] text-ink-soft">
+                Delete this recording?
+              </span>
+              <button
+                type="button"
+                onClick={handleDeleteRecording}
+                disabled={deleting}
+                className="inline-flex items-center px-3 py-1.5 rounded-full bg-clay text-cream text-[0.8rem] font-medium transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
+              >
+                {deleting ? 'Deleting…' : 'Delete'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmingDelete(false);
+                  setDeleteError(null);
+                }}
+                disabled={deleting}
+                className="inline-flex items-center px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink text-[0.8rem] font-medium transition-colors cursor-pointer disabled:opacity-60"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
             <button
               type="button"
-              onClick={handleDeleteRecording}
-              disabled={deleting}
-              className="inline-flex items-center px-3 py-1.5 rounded-full bg-clay text-cream text-[0.8rem] font-medium transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
+              onClick={() => setConfirmingDelete(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-clay hover:text-clay text-[0.8rem] font-medium transition-colors cursor-pointer"
             >
-              {deleting ? 'Deleting…' : 'Delete'}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M3 6h18" />
+                <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
+                <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+              </svg>
+              Delete
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setConfirmingDelete(false);
-                setDeleteError(null);
-              }}
-              disabled={deleting}
-              className="inline-flex items-center px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink text-[0.8rem] font-medium transition-colors cursor-pointer disabled:opacity-60"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setConfirmingDelete(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-clay hover:text-clay text-[0.8rem] font-medium transition-colors cursor-pointer"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M3 6h18" />
-              <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
-              <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-            </svg>
-            Delete
-          </button>
-        )}
+          )}
+        </div>
       </div>
-      {deleteError && (
-        <p className="text-[0.8rem] text-clay mb-4">{deleteError}</p>
+      {(deleteError || reprocessError) && (
+        <p className="text-[0.8rem] text-clay mb-4">{deleteError || reprocessError}</p>
       )}
 
       {/* Header */}

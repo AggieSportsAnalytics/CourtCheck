@@ -1781,7 +1781,13 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             if not ret:
                 break
             if i % config.ball_detection_interval == 0:
-                ball_pos = ball_detector.infer_single(frame)
+                # ROI-aware inference backfills far-court frames the main
+                # 640x360 downscale would miss. Falls back to plain
+                # infer_single when no calibration is available.
+                if calibrated_H_frame is not None:
+                    ball_pos = ball_detector.infer_with_far_roi(frame, calibrated_H_frame)
+                else:
+                    ball_pos = ball_detector.infer_single(frame)
             else:
                 ball_pos = None  # filled by _interpolate_ball_track after loop
             ball_track.append(ball_pos)
@@ -2318,16 +2324,18 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             supabase.table("matches").update(update_data).eq("id", match_id).execute()
             print(f"[Pipeline] Done — bounces={len(bounces_valid)}/{len(bounces_all)} shots={len(shots_data)} rallies={rally_count} | in={in_bounds_bounces} out={out_bounds_bounces} | FH={final_forehand} BH={final_backhand} Srv={final_serve}")
 
-            # ---------- Storage cleanup: drop the raw upload ----------
-            # Once the processed video and metadata are persisted, the raw clip
-            # in `raw-videos` is dead weight — the live app reads from `results`.
-            # Keeps storage cost roughly halved (raw ≈ processed in size).
-            # Skipped on failed runs so the user can retry without re-uploading.
-            # Set DELETE_RAW_AFTER_PROCESS=0 in the Modal env to keep raws.
-            if os.environ.get("DELETE_RAW_AFTER_PROCESS", "1") != "0":
-                # `input_path` on the matches row is the raw-videos key. Look it
-                # up rather than threading it through every callsite, so the
-                # cleanup stays correct even if the key was rewritten.
+            # ---------- Storage cleanup: deferred ----------
+            # Raws used to delete immediately after a successful run, but that
+            # killed the Reprocess flow — coaches couldn't rerun the pipeline
+            # on a match after a pipeline algorithm change (e.g. the bounce
+            # SoT refactor) without re-uploading the source. Raws now stay in
+            # storage for a retention window so reprocess works for any recent
+            # match; the daily cleanup_old_raws job sweeps anything past the
+            # window (default 7 days).
+            #
+            # Opt back into immediate deletion with DELETE_RAW_AFTER_PROCESS=1
+            # if storage cost becomes the binding constraint again.
+            if os.environ.get("DELETE_RAW_AFTER_PROCESS", "0") == "1":
                 try:
                     raw_key_row = (
                         supabase.table("matches")
@@ -2341,8 +2349,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                         supabase.storage.from_("raw-videos").remove([raw_key])
                         print(f"[Storage] Removed raw upload {raw_key}")
                 except Exception as e:
-                    # Non-fatal — log and move on; the recording is already
-                    # marked done and the processed video is live.
                     print(f"[Storage] Could not remove raw upload: {e}")
         else:
             print(f"\n✅ Local processing complete!")
