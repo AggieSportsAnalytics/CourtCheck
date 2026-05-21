@@ -222,6 +222,119 @@ def _detect_court_once(
     return best_H_ref, best_kps
 
 
+# Single source of truth for "is this bounce real and where did it land."
+# Pre-2026-05-21 every consumer (build_shots, build_error_summary, the per-frame
+# minimap render) had its own copy of:
+#   - the ±5 frame ball-fallback (when ball_track[bframe] is None)
+#   - the homography projection
+#   - the plausibility gate (-6 < svg_y < 84, -3 < svg_x < 30)
+# When any of them diverged we got the kind of inconsistency a coach can spot in
+# 10 seconds: shotmap shows N dots, minimap shows M dots, Coach Insights shows
+# K. Funnel everything through this once instead.
+#
+# Plausibility threshold lives here too: the CatBoost trajectory detector
+# occasionally fires on noisy ball tracks (ball leaves frame, gets re-acquired
+# at a wild pixel position). Those project to svg_y of -65 ("65 court units
+# behind the far baseline" = the stands) and were inflating out-of-bounds
+# counts. Allow ~6 units past each baseline / ~3 past each sideline; anything
+# further is treated as detector noise and dropped.
+def compute_bounce_positions(
+    bounces,
+    ball_track,
+    homography_matrices,
+    court_ref,
+):
+    """For each bounce frame, return its court coords + side, or None if invalid.
+
+    Returns dict mapping bounce_frame -> {
+        "svg_x": float,  # 0-30 SVG units (doubles court = 0..27 + alleys)
+        "svg_y": float,  # 0-78 SVG units (net at 39; far baseline=0, near=78)
+        "ball_px": tuple[float, float],  # ball pixel position used for projection
+        "side":  "far" | "near" | "net",  # which half the bounce landed on
+    }
+
+    Bounces that fail any of the following are EXCLUDED from the returned dict:
+      - frame out of ball_track / homography range
+      - no ball_track entry at bframe AND no fallback within ±5 frames
+      - projection fails
+      - plausibility gate: svg coords physically impossible
+    """
+    BOUNCE_BALL_SCAN = 5
+    PLAUSIBLE_X_MIN, PLAUSIBLE_X_MAX = -3.0, 30.0
+    PLAUSIBLE_Y_MIN, PLAUSIBLE_Y_MAX = -6.0, 84.0
+    NET_BAND = (37.0, 41.0)  # svg_y between these = net-line ambiguous
+
+    left_x   = court_ref.left_court_line[0][0]
+    right_x  = court_ref.right_court_line[0][0]
+    top_y    = court_ref.baseline_top[0][1]
+    bottom_y = court_ref.baseline_bottom[0][1]
+    span_x = max(1.0, right_x - left_x)
+    span_y = max(1.0, bottom_y - top_y)
+
+    out: dict[int, dict] = {}
+
+    for bframe in sorted(bounces):
+        if bframe >= len(ball_track) or bframe >= len(homography_matrices):
+            continue
+
+        # 1. Resolve ball position with ±5 frame fallback. Ball is often
+        #    occluded at the exact bounce frame (body, shadow, low contrast).
+        bpos = ball_track[bframe]
+        if bpos is None or bpos[0] is None:
+            bpos = None
+            for delta in range(1, BOUNCE_BALL_SCAN + 1):
+                for f in (bframe - delta, bframe + delta):
+                    if 0 <= f < len(ball_track):
+                        cand = ball_track[f]
+                        if cand is not None and cand[0] is not None:
+                            bpos = cand
+                            break
+                if bpos is not None:
+                    break
+            if bpos is None:
+                continue
+
+        bx, by = float(bpos[0]), float(bpos[1])
+
+        # 2. Project to court coordinates via per-frame homography.
+        H = homography_matrices[bframe]
+        if H is None:
+            continue
+        pt = np.array([[[bx, by]]], dtype=np.float32)
+        try:
+            mapped = cv2.perspectiveTransform(pt, H)
+        except cv2.error:
+            continue
+        cx, cy = float(mapped[0, 0, 0]), float(mapped[0, 0, 1])
+        svg_x = (cx - left_x) / span_x * 27.0
+        svg_y = (cy - top_y) / span_y * 78.0
+
+        # 3. Plausibility gate. svg_y of -65 means "65 court units past the
+        #    far baseline" — that's geometrically impossible and almost always
+        #    detector noise.
+        if (
+            svg_x < PLAUSIBLE_X_MIN or svg_x > PLAUSIBLE_X_MAX
+            or svg_y < PLAUSIBLE_Y_MIN or svg_y > PLAUSIBLE_Y_MAX
+        ):
+            continue
+
+        if NET_BAND[0] <= svg_y <= NET_BAND[1]:
+            side = "net"
+        elif svg_y < 39.0:
+            side = "far"   # opponent's half
+        else:
+            side = "near"  # P1's half
+
+        out[int(bframe)] = {
+            "svg_x": svg_x,
+            "svg_y": svg_y,
+            "ball_px": (bx, by),
+            "side": side,
+        }
+
+    return out
+
+
 def build_shots(
     bounces,
     ball_track,
@@ -231,14 +344,27 @@ def build_shots(
     court_ref,
     in_bounds_set,
     fps,
+    bounce_positions=None,
 ):
     """Build the per-shot record used by the frontend courtmaps.
 
-    For each bounce, pair it with the most recent preceding swing event (within
-    1.5s @ fps) to recover the stroke type + hitter. Project bounce, ball-at-
-    contact, and player-at-contact into 0-27 x 0-78 court units (net at y=39)
-    matching the locked viz SVG geometry from `docs/brand-drop/mocks/visuals.html`.
+    Bounce coordinates come from compute_bounce_positions() (the single source
+    of truth) — invalid bounces (failed plausibility, no ball detection in ±5
+    frames, projection error) are already filtered out before they reach this
+    function.
+
+    For each remaining bounce we pair it with the responsible swing using
+    side-aware sequential matching: a P1 (near-side) swing only claims bounces
+    that landed on the FAR half. Without this, a P1 swing could claim the
+    opponent's return bounce (which lands on P1's own half) — that bug was
+    producing 6/7 "P1 shots" landing on P1's own side, which is geometrically
+    impossible for a forwards-hit shot.
     """
+    if bounce_positions is None:
+        bounce_positions = compute_bounce_positions(
+            bounces, ball_track, homography_matrices, court_ref,
+        )
+
     left_x   = court_ref.left_court_line[0][0]    # 286 px
     right_x  = court_ref.right_court_line[0][0]   # 1379 px
     top_y    = court_ref.baseline_top[0][1]        # 561 px
@@ -348,27 +474,39 @@ def build_shots(
         "Serve/Overhead": "serve",
     }
 
-    # Two-pass pairing:
-    #   PASS 1 (strict, sequential) — each swing claims the first unclaimed
-    #   bounce between its peak_frame and the next swing's peak_frame. This is
-    #   the highest-confidence pairing (mirrors rally structure: swing → ball
-    #   travels → bounce → next swing).
+    # Two-pass side-aware pairing:
+    #   PASS 1 (strict, sequential) — each swing scans forward through valid
+    #   bounces inside its window [peak_frame, next_peak_frame) and claims the
+    #   first one on the OPPOSITE half (P1 swings → far-side bounce; P2 swings
+    #   → near-side bounce). Net-line bounces (37 ≤ svg_y ≤ 41) are claimable
+    #   by either side.
     #
-    #   PASS 2 (fallback, nearest within window) — any bounce still unpaired
-    #   gets the label of the NEAREST swing whose peak_frame is within
-    #   `FALLBACK_WINDOW` seconds, in either direction. This catches:
-    #     - bounces past the LAST swing (post-rally rolls, end-of-clip)
-    #     - second bounces of OOB shots that the sequential pass orphaned
+    #   PASS 2 (fallback, nearest within window, side-aware) — any plausible
+    #   bounce still unpaired gets the label of the NEAREST swing within
+    #   FALLBACK_WINDOW seconds whose side matches. Catches:
+    #     - bounces past the LAST swing
     #     - bounces between two swings that were too clustered for strict claim
     #
-    # Bounces with NO swing inside the fallback window stay "unknown" (true
-    # warmup balls, dead time).
-    sorted_bounces = sorted(bounces)
+    # Bounces with NO same-side swing in either window stay "unknown" — this
+    # is correct for opponent (P2) return bounces, since we don't classify P2's
+    # strokes today.
+    sorted_bounces = sorted(int(b) for b in bounces if int(b) in bounce_positions)
     bounce_to_swing: dict[int, dict] = {}
 
-    # ----- PASS 1: strict sequential -----
-    bounces_for_search = list(sorted_bounces)
-    claim_cursor = 0
+    def _swing_side(swing):
+        """P1 (track_id > 0) is near, expects far-side bounces; P2 is far,
+        expects near-side bounces."""
+        try:
+            tid = int(swing.get("track_id", 1))
+        except (TypeError, ValueError):
+            return "far"
+        return "far" if tid > 0 else "near"
+
+    def _side_matches(bounce_side, expected_side):
+        return bounce_side == expected_side or bounce_side == "net"
+
+    # ----- PASS 1: strict sequential, side-aware -----
+    strict_paired = 0
     for i, swing in enumerate(all_swings_sorted):
         pf = int(swing.get("peak_frame", -1))
         if pf < 0:
@@ -378,18 +516,22 @@ def build_shots(
             if i + 1 < len(all_swings_sorted)
             else None
         )
-        while claim_cursor < len(bounces_for_search) and bounces_for_search[claim_cursor] <= pf:
-            claim_cursor += 1
-        if claim_cursor >= len(bounces_for_search):
+        expected = _swing_side(swing)
+        for candidate in sorted_bounces:
+            if candidate <= pf:
+                continue
+            if next_pf is not None and candidate >= next_pf:
+                break
+            if candidate in bounce_to_swing:
+                continue
+            cand_side = bounce_positions[candidate]["side"]
+            if not _side_matches(cand_side, expected):
+                continue
+            bounce_to_swing[candidate] = swing
+            strict_paired += 1
             break
-        candidate = bounces_for_search[claim_cursor]
-        if next_pf is not None and candidate >= next_pf:
-            continue
-        bounce_to_swing[candidate] = swing
-        claim_cursor += 1
-    strict_paired = len(bounce_to_swing)
 
-    # ----- PASS 2: nearest-within-window fallback -----
+    # ----- PASS 2: nearest-within-window fallback, side-aware -----
     FALLBACK_WINDOW_FRAMES = int(round(2.5 * (fps or 30.0)))
     swing_peaks_with_event = [
         (int(s.get("peak_frame", -1)), s)
@@ -400,9 +542,12 @@ def build_shots(
     for bframe in sorted_bounces:
         if bframe in bounce_to_swing:
             continue
+        cand_side = bounce_positions[bframe]["side"]
         best_swing = None
         best_dist = FALLBACK_WINDOW_FRAMES + 1
         for pf, swing in swing_peaks_with_event:
+            if not _side_matches(cand_side, _swing_side(swing)):
+                continue
             d = abs(bframe - pf)
             if d < best_dist:
                 best_dist = d
@@ -419,48 +564,16 @@ def build_shots(
     )
 
     shots = []
-    # Diagnostic counters — surfaced in logs so we can tell from a Modal log
-    # exactly why bounces aren't producing shot-map dots.
-    skip_oob = 0
-    skip_no_ball = 0
-    skip_no_proj = 0
+    # Bounces that didn't make it into bounce_positions failed plausibility,
+    # had no ball detection, or projection error. Diagnostic count for parity
+    # with the old log line.
+    dropped_invalid = len([b for b in bounces if int(b) not in bounce_positions])
     ok_count = 0
 
-    for bframe in sorted(bounces):
-        if bframe >= len(ball_track):
-            skip_oob += 1
-            continue
-        bpos = ball_track[bframe]
-        # The bounce detector predicts a bounce moment from CatBoost trajectory
-        # analysis over surrounding frames. The ball is often occluded AT the
-        # bounce frame itself (player body, shadow, hard contrast with court
-        # surface), so the interpolated ball_track may have None there even
-        # though the bounce really happened. Scan nearby frames for the
-        # closest valid detection so we still place the dot.
-        if bpos is None or bpos[0] is None:
-            BOUNCE_BALL_SCAN = 5
-            bpos = None
-            for delta in range(1, BOUNCE_BALL_SCAN + 1):
-                for f in (bframe - delta, bframe + delta):
-                    if 0 <= f < len(ball_track):
-                        cand = ball_track[f]
-                        if cand is not None and cand[0] is not None:
-                            bpos = cand
-                            break
-                if bpos is not None:
-                    break
-            if bpos is None:
-                skip_no_ball += 1
-                continue
-        bx, by = bpos
-        court_bx, court_by = project(bframe, bx, by)
-        if court_bx is None:
-            skip_no_proj += 1
-            continue
-        svg_x, svg_y = to_court(court_bx, court_by)
-        if svg_x is None:
-            skip_no_proj += 1
-            continue
+    for bframe in sorted_bounces:
+        pos = bounce_positions[bframe]
+        svg_x, svg_y = pos["svg_x"], pos["svg_y"]
+        bx, by = pos["ball_px"]
         ok_count += 1
 
         ev = bounce_to_swing.get(bframe)
@@ -582,9 +695,8 @@ def build_shots(
         })
 
     print(
-        f"[Shots] Built {ok_count} shots from {len(sorted_bounces)} bounces "
-        f"(skipped: {skip_oob} out-of-range, {skip_no_ball} no ball detection in ±5 frames, "
-        f"{skip_no_proj} projection failed)",
+        f"[Shots] Built {ok_count} shots from {len(bounces)} raw bounces "
+        f"(dropped {dropped_invalid} as detector noise / off-court projection)",
         flush=True,
     )
     return shots
@@ -1854,6 +1966,20 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             last_H_ref = calibrated_H_ref
             last_kps = calibrated_keypoints  # use saved keypoints to draw court lines
 
+        # Pre-compute the valid-bounce set BEFORE Pass 2 so the minimap render
+        # filters out detector noise. Production runs (UC Davis, St Mary's) are
+        # always calibrated, so homography_matrices is fully populated above and
+        # this captures the true valid set. Uncalibrated dev runs fall back to
+        # the raw set (minimap shows everything; build_shots still filters
+        # after Pass 2 via the canonical recompute).
+        if calibrated_H_ref is not None and bounces_all:
+            bounce_positions_render = compute_bounce_positions(
+                bounces_all, ball_track, homography_matrices, court_ref,
+            )
+            bounces_for_minimap = set(bounce_positions_render.keys())
+        else:
+            bounces_for_minimap = set(bounces_all)
+
         # Pre-compute static minimap background once — court reference never changes.
         # Lighter mid steel-blue so saturated bounce dots really pop. The
         # previous deeper tone made colored dots disappear after the ~3.4×
@@ -1900,7 +2026,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
 
             minimap = draw_minimap_ball_and_bounces(
                 minimap=minimap, homography_inv=H_ref, ball_track=ball_track,
-                frame_idx=frame_idx, bounces=bounces_all,
+                frame_idx=frame_idx, bounces=bounces_for_minimap,
                 trace_length=config.trace_length_minimap,
                 trace_color=config.ball_trace_color,
                 trace_min_alpha=config.ball_trace_min_alpha,
@@ -1945,14 +2071,30 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         cap.release()
         out.release()
 
-        # ---------- In-bounds / out-of-bounds bounce classification ----------
-        in_bounds_bounces, out_bounds_bounces, in_bounds_set = count_in_out_bounces(
+        # ---------- Single source of truth for bounce coords + validity ----------
+        # Computed once, threaded through every consumer (build_shots,
+        # build_error_summary, minimap render filter) so they can't diverge.
+        # See compute_bounce_positions() doc for filter logic.
+        bounce_positions = compute_bounce_positions(
             bounces_all, ball_track, homography_matrices, court_ref
+        )
+        bounces_valid = set(bounce_positions.keys())
+        dropped = len(bounces_all) - len(bounces_valid)
+        if dropped > 0:
+            print(
+                f"[Bounce] {len(bounces_valid)}/{len(bounces_all)} bounces passed "
+                f"plausibility gate (dropped {dropped} detector-noise / off-court)"
+            )
+
+        # ---------- In-bounds / out-of-bounds bounce classification ----------
+        # Filtered bounces only — old code counted detector noise as OOB.
+        in_bounds_bounces, out_bounds_bounces, in_bounds_set = count_in_out_bounces(
+            bounces_valid, ball_track, homography_matrices, court_ref
         )
 
         # ---------- Per-shot courtmap data (court coords + stroke type) ----------
         shots_data = build_shots(
-            bounces=bounces_all,
+            bounces=bounces_valid,
             ball_track=ball_track,
             homography_matrices=homography_matrices,
             swing_events=swing_events,
@@ -1960,6 +2102,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             court_ref=court_ref,
             in_bounds_set=in_bounds_set,
             fps=fps,
+            bounce_positions=bounce_positions,
         )
         print(f"[Shots] Built {len(shots_data)} courtmap records")
 
@@ -1988,7 +2131,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             player_detections=player_detections,
             homography_matrices=homography_matrices,
             court_ref=court_ref,
-            bounces=bounces_all,
+            bounces=bounces_valid,
             in_bounds_set=in_bounds_set,
             fps=fps,
         )
@@ -1998,7 +2141,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         )
 
         error_summary = build_error_summary(
-            bounces=bounces_all,
+            bounces=bounces_valid,
             ball_track=ball_track,
             homography_matrices=homography_matrices,
             court_ref=court_ref,
@@ -2014,7 +2157,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
 
         # ---------- Rally state machine ----------
         rallies = build_rallies(
-            bounces=bounces_all,
+            bounces=bounces_valid,
             ball_track=ball_track,
             homography_matrices=homography_matrices,
             swing_events=swing_events,
@@ -2044,9 +2187,9 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         # ---------- AI Scouting Report ----------
         scouting_report = generate_scouting_report(
             stats={
-                "shot_count": len(shot_frames),
+                "shot_count": len(shots_data),
                 "rally_count": rally_count,
-                "bounce_count": len(bounces_all),
+                "bounce_count": len(bounces_valid),
                 "in_bounds_bounces": in_bounds_bounces,
                 "out_bounds_bounces": out_bounds_bounces,
                 "forehand_count": final_forehand,
@@ -2080,7 +2223,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             generate_minimap_heatmaps(
                 homography_matrices=homography_matrices,
                 ball_track=ball_track,
-                bounces=bounces_all,
+                bounces=bounces_valid,
                 player_detections=player_detections,
                 output_bounce_heatmap=local_bounce_path,
                 output_player_heatmap=local_player_path,
@@ -2127,8 +2270,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 "fps": fps,
                 "num_frames": total_frames,
                 # Tennis stats
-                "bounce_count": len(bounces_all),
-                "shot_count": len(shot_frames),
+                "bounce_count": len(bounces_valid),
+                "shot_count": len(shots_data),
                 "rally_count": rally_count,
                 "in_bounds_bounces": in_bounds_bounces,
                 "out_bounds_bounces": out_bounds_bounces,
@@ -2173,7 +2316,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                     pass  # column not yet migrated
 
             supabase.table("matches").update(update_data).eq("id", match_id).execute()
-            print(f"[Pipeline] Done — bounces={len(bounces_all)} shots={len(shot_frames)} rallies={rally_count} | in={in_bounds_bounces} out={out_bounds_bounces} | FH={final_forehand} BH={final_backhand} Srv={final_serve}")
+            print(f"[Pipeline] Done — bounces={len(bounces_valid)}/{len(bounces_all)} shots={len(shots_data)} rallies={rally_count} | in={in_bounds_bounces} out={out_bounds_bounces} | FH={final_forehand} BH={final_backhand} Srv={final_serve}")
 
             # ---------- Storage cleanup: drop the raw upload ----------
             # Once the processed video and metadata are persisted, the raw clip
@@ -2205,7 +2348,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             print(f"\n✅ Local processing complete!")
             print(f"   Output: {streamable_output}")
             print(f"   FPS: {fps}, Frames: {total_frames}")
-            print(f"   Bounces: {len(bounces_all)} ({in_bounds_bounces} in / {out_bounds_bounces} out)")
+            print(f"   Bounces: {len(bounces_valid)} valid / {len(bounces_all)} raw ({in_bounds_bounces} in / {out_bounds_bounces} out)")
             print(f"   Shots: {len(shot_frames)}, Rallies: {rally_count}")
             print(f"   Strokes — FH: {final_forehand}, BH: {final_backhand}, Serve: {final_serve}")
             if len(swing_events) > 0:
@@ -2241,8 +2384,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             "meta": {
                 "fps": fps,
                 "num_frames": total_frames,
-                "bounce_count": len(bounces_all),
-                "shot_count": len(shot_frames),
+                "bounce_count": len(bounces_valid),
+                "shot_count": len(shots_data),
                 "rally_count": rally_count,
             },
         }
