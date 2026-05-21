@@ -3,7 +3,6 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { checkRateLimit, rateLimitResponse, clientIp } from '@/lib/ratelimit';
-import { isAdmin } from '@/lib/admin';
 
 function isHttpsUrl(s: unknown): s is string {
   if (typeof s !== 'string' || s.length === 0) return false;
@@ -34,6 +33,9 @@ async function getAuthenticatedUser() {
   return user ?? null;
 }
 
+// GET returns demo players (user_id IS NULL — UC Davis roster, read-only)
+// AND the caller's own players. Frontend can distinguish via the `user_id`
+// field on each row: null = demo, non-null = the caller's row.
 export async function GET() {
   try {
     const user = await getAuthenticatedUser();
@@ -41,19 +43,25 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Pre-migration safety: try with handedness, retry without if the column
-    // hasn't been added yet so existing environments stay responsive.
-    let { data, error } = await supabaseAdmin
-      .from('players')
-      .select('id, name, position, year, photo_url, handedness, created_at')
-      .order('name', { ascending: true });
-    if (error && typeof error.message === 'string' && error.message.includes('does not exist')) {
-      const retry = await supabaseAdmin
-        .from('players')
-        .select('id, name, position, year, photo_url, created_at')
-        .order('name', { ascending: true });
-      data = retry.data as typeof data;
-      error = retry.error;
+    // The select includes user_id so the UI can label demo vs owned rows.
+    // Pre-migration safety: handedness and user_id might not exist on older envs.
+    const SELECT_FULL = 'id, name, position, year, photo_url, handedness, user_id, created_at';
+    const SELECT_NO_OWNER = 'id, name, position, year, photo_url, handedness, created_at';
+    const SELECT_LEGACY = 'id, name, position, year, photo_url, created_at';
+
+    async function tryFetch(cols: string, ownerFilter: boolean) {
+      let q = supabaseAdmin.from('players').select(cols).order('name', { ascending: true });
+      if (ownerFilter) q = q.or(`user_id.is.null,user_id.eq.${user!.id}`);
+      return q;
+    }
+
+    let { data, error } = await tryFetch(SELECT_FULL, true);
+    if (error && /does not exist/.test(error.message ?? '')) {
+      // user_id column missing — fall back to no-owner filter, no user_id field
+      ({ data, error } = await tryFetch(SELECT_NO_OWNER, false));
+      if (error && /does not exist/.test(error.message ?? '')) {
+        ({ data, error } = await tryFetch(SELECT_LEGACY, false));
+      }
     }
 
     if (error) {
@@ -73,11 +81,6 @@ export async function POST(req: Request) {
     const user = await getAuthenticatedUser();
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Players are the shared team roster; only admins (env-configured) mutate.
-    if (!isAdmin(user.email)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const rl = await checkRateLimit({
@@ -107,11 +110,13 @@ export async function POST(req: Request) {
       photoUrl = body.photo_url;
     }
 
+    // Pin user_id to the caller so a client can't claim a row as someone else's.
     const insertRow: Record<string, unknown> = {
       name,
       position: typeof body.position === 'string' ? body.position.slice(0, 50) : null,
       year: typeof body.year === 'string' ? body.year.slice(0, 20) : null,
       photo_url: photoUrl,
+      user_id: user.id,
     };
     if (handedness) insertRow.handedness = handedness;
 

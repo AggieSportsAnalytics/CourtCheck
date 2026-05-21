@@ -28,17 +28,20 @@ Rotate the following on any of these triggers: maintainer leaves the project, se
 | `OPENAI_API_KEY` | Modal env | OpenAI dashboard → revoke + create → update Modal |
 | Google OAuth Client Secret | Supabase Auth Providers | Google Cloud Console → Credentials → reset → paste into Supabase |
 
-## Admin Allowlist
+## Player Ownership Model
 
-The `players` table is a shared team roster — any authenticated user can read, only listed admins can mutate. Configured via the `ADMIN_EMAILS` env var on Vercel (comma-separated, lowercased on match).
+Per-user dashboards. The model:
 
-**Default = empty = deny-all.** A misconfigured deploy fails closed (every player POST/PATCH returns 403 until an admin email is set).
+| `players.user_id` | Visibility | Mutability |
+|---|---|---|
+| `NULL` | Read-only for every authed user (UC Davis demo data) | Service-role only (DB dashboard) |
+| `<uuid>` | Only the owning user (caller = user_id) | Only the owner |
 
-```
-ADMIN_EMAILS=brile761@gmail.com,kenny@…,anik@…
-```
+Enforced two ways:
+- **RLS policies** on `public.players` — `players_read_demo_or_own`, `players_insert_own`, `players_update_own`, `players_delete_own`. Service-role bypasses (admin API routes still work) but the policies cover any direct anon/authenticated REST call.
+- **API ownership checks** in `app/api/players/[id]/route.ts` — fetch + match `user_id` before PATCH/DELETE; the UPDATE itself also `.eq('user_id', user.id)` for race-safety.
 
-To add a new admin: append to the env var in Vercel → Settings → Environment Variables → redeploy. No code change required.
+POST always pins `user_id = caller`, so a client can't claim a row as someone else's. GET filters to `(user_id IS NULL OR user_id = caller)`.
 
 ## Automated Scanning
 

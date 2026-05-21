@@ -3,7 +3,6 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { checkRateLimit, rateLimitResponse, clientIp } from '@/lib/ratelimit';
-import { isAdmin } from '@/lib/admin';
 
 function isHttpsUrl(s: unknown): s is string {
   if (typeof s !== 'string' || s.length === 0) return false;
@@ -38,6 +37,15 @@ async function getAuthenticatedUser() {
   return user ?? null;
 }
 
+// Fetch a player row by id, returning the user_id so callers can check ownership.
+async function fetchPlayerForOwnershipCheck(id: string) {
+  return supabaseAdmin
+    .from('players')
+    .select('id, user_id')
+    .eq('id', id)
+    .single();
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -50,10 +58,9 @@ export async function GET(
 
     const { id } = await params;
 
-    // Pre-migration safety: drop handedness from the select on column-missing.
     let { data, error } = await supabaseAdmin
       .from('players')
-      .select('id, name, position, year, photo_url, handedness, created_at')
+      .select('id, name, position, year, photo_url, handedness, user_id, created_at')
       .eq('id', id)
       .single();
     if (error && typeof error.message === 'string' && error.message.includes('does not exist')) {
@@ -67,6 +74,13 @@ export async function GET(
     }
 
     if (error || !data) {
+      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+    }
+
+    // Restrict visibility: caller can see demo (user_id null) or own rows only.
+    // Using `as` to narrow the type since the legacy retry omits user_id.
+    const owner = (data as { user_id?: string | null }).user_id ?? null;
+    if (owner !== null && owner !== user.id) {
       return NextResponse.json({ error: 'Player not found' }, { status: 404 });
     }
 
@@ -87,10 +101,6 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!isAdmin(user.email)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const rl = await checkRateLimit({
       userId: user.id,
       ip: clientIp(req),
@@ -101,6 +111,18 @@ export async function PATCH(
     if (!rl.ok) return rateLimitResponse(rl.retryAfterSec);
 
     const { id } = await params;
+
+    // Ownership check: only the row's owner can edit. Demo rows (user_id null)
+    // are read-only for everyone. Returns 404 (not 403) for non-owned rows
+    // to avoid leaking existence of other users' players.
+    const { data: ownerRow, error: ownerErr } = await fetchPlayerForOwnershipCheck(id);
+    if (ownerErr || !ownerRow) {
+      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+    }
+    if (ownerRow.user_id !== user.id) {
+      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+    }
+
     const body = await req.json();
 
     const updates: Record<string, unknown> = {};
@@ -143,15 +165,16 @@ export async function PATCH(
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
     }
 
+    // Defense in depth: re-assert ownership in the UPDATE itself so a race
+    // between the fetch above and the write can't strip a row from another
+    // user (the .eq('user_id', ...) means a mismatched row updates zero rows).
     const { error } = await supabaseAdmin
       .from('players')
       .update(updates)
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user.id);
 
     if (error) {
-      // Likely the handedness column hasn't been migrated yet — surface a
-      // helpful message rather than a generic 500 so the operator can run
-      // the migration without grep-spelunking.
       if (typeof error.message === 'string' && error.message.includes('does not exist')) {
         return NextResponse.json(
           { error: 'handedness column missing — apply 20260513_add_player_handedness.sql' },
