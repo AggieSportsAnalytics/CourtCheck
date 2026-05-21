@@ -1,5 +1,41 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+// Hard cap on video duration. Modal's HTTP timeout on the pipeline endpoint is
+// 30 min; 15 min leaves headroom for processing + buffer for tracker slowdowns
+// on long rallies. Server has no way to know duration before the upload lands,
+// so the gate is client-side; pair with the storage bucket size cap server-side.
+const MAX_DURATION_SEC = 15 * 60;
+
+async function probeVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    const cleanup = () => {
+      URL.revokeObjectURL(url);
+      video.remove();
+    };
+    video.onloadedmetadata = () => {
+      const d = video.duration;
+      cleanup();
+      if (!Number.isFinite(d) || d <= 0) reject(new Error('Could not read duration'));
+      else resolve(d);
+    };
+    video.onerror = () => {
+      cleanup();
+      reject(new Error('Could not load video metadata'));
+    };
+    video.src = url;
+  });
+}
+
+function formatMinSec(sec: number): string {
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return `${m}m ${s.toString().padStart(2, '0')}s`;
+}
+
 export type UploadStatus =
   | 'idle'
   | 'creating upload'
@@ -196,6 +232,23 @@ export function useVideoUpload(
         setBytesTotal(file.size);
         setBytesUploaded(0);
         setUploadProgress(0);
+
+        // Duration gate (client-side) — catches the 30-min Modal timeout before
+        // the user wastes time uploading a 2GB file we'd then reject.
+        try {
+          const duration = await probeVideoDuration(file);
+          if (duration > MAX_DURATION_SEC) {
+            throw new Error(
+              `Video is ${formatMinSec(duration)} — please trim or split into ${formatMinSec(MAX_DURATION_SEC)} or shorter clips. (Long-match support is coming.)`,
+            );
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Could not read video';
+          setError(msg);
+          setStatus('idle');
+          return;
+        }
+
         setStatus('creating upload');
 
         const trimmedName = options?.name?.trim();
