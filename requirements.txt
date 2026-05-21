@@ -14,7 +14,7 @@ supabase
 python-dotenv>=1.2.2
 
 modal
-requests>=2.33.0
+requests>=2.34.2
 ffmpeg-python
 fastapi
 openai
