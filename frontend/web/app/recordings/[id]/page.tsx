@@ -129,34 +129,6 @@ export default function RecordingDetailPage() {
     }
   }, [id, router]);
 
-  const handleReprocessRecording = useCallback(async () => {
-    setReprocessing(true);
-    setReprocessError(null);
-    try {
-      const res = await fetch('/api/trigger-process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ match_id: id }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setReprocessError(body?.error || 'Failed to start reprocess.');
-        setReprocessing(false);
-        return;
-      }
-      // Flip local status to processing so the existing polling UI kicks in;
-      // the next /api/recordings/[id] poll will overwrite with server truth.
-      setRecording((prev) =>
-        prev ? { ...prev, status: 'processing', progress: 0, error: null, stage: 'Queueing compute' } : prev,
-      );
-      setConfirmingReprocess(false);
-      setReprocessing(false);
-    } catch {
-      setReprocessError('Failed to start reprocess.');
-      setReprocessing(false);
-    }
-  }, [id]);
-
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const notesTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -201,6 +173,47 @@ export default function RecordingDetailPage() {
     },
     [id, savingNotes]
   );
+
+  const handleReprocessRecording = useCallback(async () => {
+    setReprocessing(true);
+    setReprocessError(null);
+    try {
+      const res = await fetch('/api/trigger-process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ match_id: id }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setReprocessError(body?.error || 'Failed to start reprocess.');
+        setReprocessing(false);
+        return;
+      }
+      // Flip local status to processing so the page swaps to the
+      // BounceLoader / progress-bar view immediately, before the first
+      // poll lands.
+      setRecording((prev) =>
+        prev ? { ...prev, status: 'processing', progress: 0, error: null, stage: 'Queueing compute' } : prev,
+      );
+      // Polling was cleared the first time this recording reached 'done'
+      // (see fetchRecording above). A reprocess kicks the row back to
+      // 'processing' on the server, so we restart the 5s poll loop here
+      // — otherwise the page stays frozen on the processing screen
+      // forever even after the new pipeline completes.
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+      }
+      pollRef.current = setInterval(() => fetchRecording(), 5000);
+      // Kick one immediate fetch so the real backend progress / stage
+      // shows up within a second rather than waiting for the first tick.
+      fetchRecording();
+      setConfirmingReprocess(false);
+      setReprocessing(false);
+    } catch {
+      setReprocessError('Failed to start reprocess.');
+      setReprocessing(false);
+    }
+  }, [id, fetchRecording]);
 
   useEffect(() => {
     const controller = new AbortController();
