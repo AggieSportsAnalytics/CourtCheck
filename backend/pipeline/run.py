@@ -694,105 +694,20 @@ def build_shots(
             "player_court_y": round(player_svg_y, 3) if player_svg_y is not None else None,
         })
 
-    # ------------------------------------------------------------------
-    # Synthetic bounces from unpaired P1 swings.
-    #
-    # CatBoost's bounce detector relies on trajectory inflection signals,
-    # which collapse on the far side when TrackNet loses the ball at the
-    # bounce moment (small ball + court contrast + body occlusion). Even
-    # with the ROI ball-tracker pass and a lower CatBoost threshold, real
-    # P1 shots regularly go undetected — the rally pattern shows two
-    # consecutive opponent-return bounces on P1's side with no intervening
-    # opp-side bounce.
-    #
-    # Fill those gaps using the swing event itself: if we know P1 hit the
-    # ball at peak_frame and the bounce model didn't catch where it
-    # landed, mirror P1's chest position across the net to estimate an
-    # opp-side landing position. The position is coarse (cross-court
-    # mirror, not ball-trajectory projection) but the COUNT is right and
-    # the shotmap visualization can render every actual P1 shot.
-    #
-    # Synthetic shots get marked with synthetic=True so downstream
-    # consumers (Coach Insights, scouting report) can choose whether to
-    # weight them differently.
-    paired_swing_peaks = {
-        int(s.get("peak_frame", -1)) for s in bounce_to_swing.values()
-    }
-    synthetic_count = 0
-    for swing in all_swings_sorted:
-        tid = int(swing.get("track_id", 1))
-        if tid <= 0:
-            continue  # P2 swings — we don't classify them
-        peak_frame = int(swing.get("peak_frame", -1))
-        if peak_frame < 0 or peak_frame in paired_swing_peaks:
-            continue
-        if not _is_swing_a_return(swing):
-            continue  # not a real return (ball wasn't approaching the hitter)
-
-        # Locate P1's chest position at peak_frame for the mirror estimate.
-        if peak_frame >= len(player_detections):
-            continue
-        dets = player_detections[peak_frame] or {}
-        bbox = dets.get(tid)
-        if bbox is None:
-            continue
-        try:
-            x1_px, y1_px, x2_px, y2_px = bbox[:4]
-        except (TypeError, ValueError):
-            continue
-        anchor_px = (float(x1_px) + float(x2_px)) / 2.0
-        anchor_py = float(y1_px) + (float(y2_px) - float(y1_px)) * 0.6
-        player_court = project(peak_frame, anchor_px, anchor_py)
-        if player_court[0] is None:
-            continue
-        player_svg = to_court(*player_court)
-        if player_svg[0] is None:
-            continue
-
-        # Cross-court mirror across the net. Net at svg_y=39, centerline
-        # at svg_x=13.5. A deep P1 standing at (10, 80) gets a synthetic
-        # bounce at (17, 17) — mid-depth opp side cross-court, a typical
-        # rally landing. Clamp into the singles court so the synthetic
-        # never lands on the alleys or past the baseline (which would
-        # then get classified out by count_in_out_bounces).
-        synth_x = max(2.0, min(25.0, 27.0 - player_svg[0]))
-        synth_y = max(4.0, min(35.0, 78.0 - player_svg[1]))
-
-        # Assume bounce lands ~0.5s after contact; bumped by 1 frame past
-        # any existing bounce so sort order stays clean.
-        BOUNCE_AFTER_FRAMES = int(round(0.5 * (fps or 30.0)))
-        synth_frame = peak_frame + BOUNCE_AFTER_FRAMES
-
-        stroke = STROKE_MAP.get(swing.get("label", ""), "unknown")
-        shots.append({
-            "frame": int(synth_frame),
-            "time_s": float(synth_frame / fps) if fps else None,
-            "stroke": stroke,
-            "player": 1,
-            "court_x": round(float(synth_x), 3),
-            "court_y": round(float(synth_y), 3),
-            # Synthetic bounces are "in" by construction (we clamped into
-            # the singles court above). Calling them out would be a lie
-            # we can't ground.
-            "in": True,
-            "ball_court_x": None,
-            "ball_court_y": None,
-            "player_court_x": round(player_svg[0], 3),
-            "player_court_y": round(player_svg[1], 3),
-            # Flag so the UI / scouting report can show provenance.
-            "synthetic": True,
-        })
-        synthetic_count += 1
-
-    if synthetic_count:
-        # Keep shots sorted by frame for any downstream consumer that
-        # assumes chronological order (e.g. rally builder).
-        shots.sort(key=lambda s: int(s["frame"]))
+    # Note: bounce SYNTHESIS from unpaired P1 swings was attempted in
+    # commit 726b384 (cross-court mirror estimate) but reverted in 86ae101.
+    # The mirror approach produced clustered y=4.0 artifacts because deep
+    # players hit from behind the baseline (y>70) so 78-player_y underflows
+    # the clamp floor. Real fix is either (a) ball-trajectory projection
+    # when the ball IS tracked at contact, or (b) retraining the CatBoost
+    # bounce model on UC Davis labeled clips so the inflection threshold
+    # adapts to far-side ball pixel size. Until one of those lands, the
+    # shot count = real CatBoost detections + plausibility gate. Honest is
+    # better than a confidently-wrong overlay.
 
     print(
         f"[Shots] Built {ok_count} shots from {len(bounces)} raw bounces "
-        f"(dropped {dropped_invalid} as detector noise / off-court projection) "
-        f"+ {synthetic_count} synthesized from unpaired P1 swings",
+        f"(dropped {dropped_invalid} as detector noise / off-court projection)",
         flush=True,
     )
     return shots
