@@ -1900,7 +1900,12 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 bounces_all = {sample_indices[b] for b in bounces_sub if b < len(sample_indices)}
             else:
                 bounces_all = bounce_detector.predict(x_ball_raw, y_ball_raw, smooth=True)
-            print(f"[Bounce] {len(bounces_all)} bounces | ball tracked: {non_none_raw}/{len(x_ball_raw)} frames")
+            roi_backfills = getattr(ball_detector, "roi_backfill_count", 0)
+            print(
+                f"[Bounce] {len(bounces_all)} bounces | "
+                f"ball tracked: {non_none_raw}/{len(x_ball_raw)} frames "
+                f"(ROI backfilled {roi_backfills} far-side frames the main pass missed)"
+            )
 
         shot_frames = detect_shot_frames(ball_track)
         shot_frames_set = set(shot_frames)

@@ -90,7 +90,13 @@ class PipelineConfig:
     # ========== Bounce Detection ==========
     # CatBoost regressor confidence threshold (0-1). Higher = fewer but more certain bounces.
     # 0.20 = original (too permissive). 0.40 = calibrated for broadcast tennis footage.
-    bounce_threshold: float = 0.25
+    # 0.18 = paired with the far-court ROI ball-tracker pass + plausibility gate
+    # downstream. The ROI improves far-side trajectory quality so weaker
+    # inflections are still real bounces — raising the recall of P1 shots
+    # landing on the opponent's far half. False positives get caught by the
+    # compute_bounce_positions() plausibility filter and the side-aware shot
+    # pairing, so the cost of a lower threshold is bounded.
+    bounce_threshold: float = 0.18
 
     # Minimum frames between two accepted bounces. Enforces ball physics — a ball cannot
     # bounce twice within < 0.5s (15 frames at 30fps). Filters duplicate detections per event.

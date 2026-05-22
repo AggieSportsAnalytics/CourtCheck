@@ -134,7 +134,9 @@ class BallDetector:
         self.roi_frame_buffer = deque(maxlen=3)
         self.roi_prev_pred = [None, None]
         self._roi_bounds = None        # image-space crop (x1,y1,x2,y2); cached since calibration is static
+        self._roi_letterbox = None     # (pad_top, pad_bottom, pad_left, pad_right) for aspect-preserving resize
         self._roi_logged = False
+        self.roi_backfill_count = 0    # diagnostic: how many frames the ROI saved
 
     def infer_single(self, current_frame):
         """Processes a single frame, using internal buffer for context."""
@@ -245,8 +247,39 @@ class BallDetector:
         if x2 - x1 < 50 or y2 - y1 < 50:
             return None  # degenerate crop; calibration probably wrong
         self._roi_bounds = (x1, y1, x2, y2)
+
+        # Precompute letterbox padding so the crop, when resized into
+        # TrackNet's 640x360 input, preserves aspect ratio. Without this a
+        # ~626x202 crop got stretched to 640x360 (1.78x vertical squish) and
+        # the ball appeared oval — TrackNet's heatmap regression then localized
+        # poorly. We add black bars top/bottom so the ball stays round in the
+        # model's view.
+        crop_w = x2 - x1
+        crop_h = y2 - y1
+        target_aspect = self.width / self.height  # 640/360 = 1.778
+        crop_aspect = crop_w / crop_h
+        if crop_aspect > target_aspect:
+            # Crop is wider than target → pad height
+            new_h = int(round(crop_w / target_aspect))
+            pad_v = new_h - crop_h
+            pad_top = pad_v // 2
+            pad_bottom = pad_v - pad_top
+            pad_left = pad_right = 0
+        else:
+            # Crop is taller than target → pad width
+            new_w = int(round(crop_h * target_aspect))
+            pad_h = new_w - crop_w
+            pad_left = pad_h // 2
+            pad_right = pad_h - pad_left
+            pad_top = pad_bottom = 0
+        self._roi_letterbox = (pad_top, pad_bottom, pad_left, pad_right)
+
         if not self._roi_logged:
-            print(f"[BallROI] Far-court crop in image space: ({x1},{y1}) -> ({x2},{y2})  size={x2-x1}x{y2-y1}", flush=True)
+            print(
+                f"[BallROI] Far-court crop in image space: ({x1},{y1}) -> ({x2},{y2}) "
+                f"size={crop_w}x{crop_h} | letterbox pad t/b/l/r={pad_top}/{pad_bottom}/{pad_left}/{pad_right}",
+                flush=True,
+            )
             self._roi_logged = True
         return self._roi_bounds
 
@@ -257,6 +290,17 @@ class BallDetector:
         crop = current_frame[y1:y2, x1:x2]
         if crop.size == 0:
             return (None, None)
+
+        # Letterbox to preserve aspect ratio so the ball stays round in
+        # TrackNet's view. _roi_letterbox was precomputed when bounds were.
+        if self._roi_letterbox is not None:
+            pad_top, pad_bottom, pad_left, pad_right = self._roi_letterbox
+            if pad_top or pad_bottom or pad_left or pad_right:
+                crop = cv2.copyMakeBorder(
+                    crop, pad_top, pad_bottom, pad_left, pad_right,
+                    cv2.BORDER_CONSTANT, value=(0, 0, 0),
+                )
+
         self.roi_frame_buffer.append(crop)
         if len(self.roi_frame_buffer) < 3:
             return (None, None)
@@ -281,12 +325,25 @@ class BallDetector:
             out = self.model(tensor.to(self.device))
             output = out.argmax(dim=1).detach().cpu().numpy()
 
-        # Postprocess returns coords in the model's input frame (= crop space
-        # after resize). Pass crop_w/h so the scaling matches.
+        # Postprocess returns coords in the model's input frame (= padded crop
+        # space after resize). Pass padded crop_w/h so the scaling matches.
         x_pred, y_pred = self.postprocess(
             output, self.roi_prev_pred, frame_w=crop_w, frame_h=crop_h,
         )
         self.roi_prev_pred = [x_pred, y_pred]
+
+        # Strip the letterbox padding so the returned coords are in the
+        # ORIGINAL crop space (matching the caller's bounds-relative offset).
+        if x_pred is not None and self._roi_letterbox is not None:
+            pad_top, _, pad_left, _ = self._roi_letterbox
+            x_pred -= pad_left
+            y_pred -= pad_top
+            # Drop detections that landed entirely in the padded black borders.
+            orig_w = (x2 - x1)
+            orig_h = (y2 - y1)
+            if x_pred < 0 or y_pred < 0 or x_pred >= orig_w or y_pred >= orig_h:
+                return (None, None)
+
         return (x_pred, y_pred)
 
     def infer_with_far_roi(self, frame, H_frame):
@@ -323,4 +380,5 @@ class BallDetector:
 
         # Map crop-space coords back to original frame coords.
         x1, y1, _, _ = bounds
+        self.roi_backfill_count += 1
         return (x_crop + x1, y_crop + y1)
