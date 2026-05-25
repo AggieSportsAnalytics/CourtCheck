@@ -444,9 +444,9 @@ export default function RecordingDetailPage() {
 
   return (
     <div className="max-w-[1280px] mx-auto px-6 pt-7">
-      <div className="flex items-center justify-between gap-4 mb-4">
+      <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
         <Crumb recordingName={recording.filename} noMargin />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Reprocess — only relevant once a run has settled (done/failed).
               While processing, the polling UI is already in control. */}
           {(recording.status === 'done' || recording.status === 'failed') && (
