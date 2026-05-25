@@ -71,7 +71,11 @@ async function shoot(page, p, w) {
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ storageState: STORAGE });
   await ctx.addInitScript(() => {
-    try { localStorage.setItem('cc-demo', '1'); } catch {}
+    try {
+      localStorage.setItem('cc-demo', '1');
+      sessionStorage.setItem('ccDashSplashSeen', '1');
+      sessionStorage.setItem('ccLandingSplashSeen', '1');
+    } catch {}
   });
   const page = await ctx.newPage();
   for (const p of APP_PAGES) {

@@ -60,23 +60,20 @@ export default function Sidebar({ user, onSignOut }: Props) {
   const menuRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('cc-sidebar-collapsed')
-      const start = stored === '1'
-      setCollapsed(start)
-      document.body.classList.toggle('sidebar-collapsed', start)
-    } catch {}
-
     const mq = window.matchMedia('(max-width: 1100px)')
     function applyViewport() {
+      let next: boolean
       if (mq.matches) {
-        document.body.classList.add('sidebar-collapsed')
+        next = true
       } else {
         try {
-          const stored = localStorage.getItem('cc-sidebar-collapsed')
-          document.body.classList.toggle('sidebar-collapsed', stored === '1')
-        } catch {}
+          next = localStorage.getItem('cc-sidebar-collapsed') === '1'
+        } catch {
+          next = false
+        }
       }
+      setCollapsed(next)
+      document.body.classList.toggle('sidebar-collapsed', next)
     }
     applyViewport()
     mq.addEventListener('change', applyViewport)
