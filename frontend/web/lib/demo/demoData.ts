@@ -3,23 +3,17 @@
  * coach has been using CourtCheck for a season, for screen-recording the
  * pitch. No Supabase writes, no cloned videos: match-detail is still demoed
  * from a real processed recording.
- *
- * ┌─────────────────────────────────────────────────────────────────────┐
- * │ TEMPORARY: demo mode is ON BY DEFAULT for the case-comp demo.        │
- * │ REVERT before real use — flip DEFAULT_DEMO_ON back to false (or set  │
- * │ NEXT_PUBLIC_DEMO_MODE=0). The toggle / ?demo=0 still forces live.    │
- * └─────────────────────────────────────────────────────────────────────┘
  */
 
 export const DEMO_LS_KEY = 'cc-demo';
 
 // Tri-state: localStorage 'cc-demo' === '1' (on) / '0' (explicit off) /
-// absent (use this default). Flip to false to restore opt-in behavior.
-const DEFAULT_DEMO_ON = true;
+// absent (use this default).
+const DEFAULT_DEMO_ON = false;
 
-/** True when demo mode is active. ON by default (see banner above); the
- *  <DemoToggle> writes '0' to force live data and '1' to force demo, and a
- *  `?demo=0`/`?demo=1` param overrides for the current view. */
+/** True when demo mode is active. OFF by default; the <DemoToggle> writes
+ *  '1' to force demo and '0' to force live, and a `?demo=1`/`?demo=0` param
+ *  overrides for the current view. */
 export function isDemoMode(search?: URLSearchParams | string | null): boolean {
   if (process.env.NEXT_PUBLIC_DEMO_MODE === '1') return true;
   if (process.env.NEXT_PUBLIC_DEMO_MODE === '0') return false;
