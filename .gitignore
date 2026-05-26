@@ -53,6 +53,10 @@ yarn-error.log*
 pnpm-debug.log*
 .pnpm-debug.log*
 
+# Source-of-truth lockfile is package-lock.json (npm) per CI workflow.
+# pnpm-lock.yaml is a local-only artifact for developers using pnpm.
+frontend/web/pnpm-lock.yaml
+
 # OS junk
 .DS_Store
 Thumbs.db
