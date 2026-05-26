@@ -66,3 +66,8 @@ docs/HANDOFF*.md
 docs/PRD*.md
 docs/upgrade-plan*.md
 docs/superpowers/
+
+# Audit (responsive screenshots, session state) — local-only
+frontend/web/scripts/audit/storageState.json
+frontend/web/scripts/audit/screenshots/
+frontend/web/scripts/audit/sign-in-failed.png

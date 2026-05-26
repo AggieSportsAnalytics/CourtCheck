@@ -46,6 +46,11 @@
         radial-gradient(900px 800px at -10% 80%, var(--bg-grad-2), transparent 60%);
       background-attachment: fixed;
       transition: background-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+      /* Decorative floating cards in the hero use percent-based positioning
+         (top: -18%, right: -1%) and can drift past the viewport edge at
+         medium widths (1024-1280). Clip horizontally so they never produce a
+         scrollbar; vertical scroll is unaffected. */
+      overflow-x: clip;
     }
     a { color: inherit; text-decoration: none; }
 
@@ -433,9 +438,9 @@
        so this section reads as a distinct elevated plane against hero-wrap (--paper) and body (--cream). */
     body.dark .problem-wrap { background: var(--surface); color: var(--ink); border-top: 1px solid var(--line); }
     .problem {
-      padding: 120px 0 100px;
+      padding: 120px 56px 100px;
     }
-    @media (max-width: 700px) { .problem { padding: 72px 0 56px; } }
+    @media (max-width: 700px) { .problem { padding: 72px 28px 56px; } }
     .problem-grid {
       display: grid; grid-template-columns: 1.1fr 1fr;
       gap: 80px; align-items: start;
@@ -939,6 +944,11 @@
         background var(--dur-base) var(--ease-out),
         box-shadow var(--dur-base) var(--ease-out),
         padding var(--dur-base) var(--ease-out);
+    }
+    /* Narrow viewports: container's 28px side-padding can't absorb the -24px bleed,
+       so .insight overflows the viewport. Reset the bleed and tighten padding. */
+    @media (max-width: 700px) {
+      .insight { margin-left: 0; margin-right: 0; padding: 16px 18px; }
     }
     .insight:hover {
       transform: translateY(-4px);

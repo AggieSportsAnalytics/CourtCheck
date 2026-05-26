@@ -70,10 +70,12 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@types/node": "^25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "playwright": "^1.60.0",
     "postcss": "^8.5.10",
     "tailwindcss": "^4.1.9",
     "typescript": "^5"
