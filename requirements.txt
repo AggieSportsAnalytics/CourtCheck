@@ -16,5 +16,5 @@ python-dotenv>=1.2.2
 modal
 requests>=2.34.2
 ffmpeg-python
-fastapi
+fastapi==0.136.2  # 0.136.3 ships malicious fastar dep per MAL-2026-4750
 openai
