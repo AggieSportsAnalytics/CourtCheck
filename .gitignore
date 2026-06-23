@@ -31,7 +31,11 @@ backend/output_videos/
 backend/runs/
 backend/tracker_stubs/
 backend/analysis/
-backend/training/
+# Keep backend/training/*.py source tracked so teammates can reproduce the training pipeline.
+# Only ignore the heavy/regenerable artifacts: clip datasets, eval reports, caches.
+backend/training/data/
+backend/training/runs/
+backend/training/__pycache__/
 backend/calibration_frames/videos/
 *.mp4
 *.mov
