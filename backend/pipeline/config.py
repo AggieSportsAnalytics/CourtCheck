@@ -96,11 +96,16 @@ class PipelineConfig:
     # landing on the opponent's far half. False positives get caught by the
     # compute_bounce_positions() plausibility filter and the side-aware shot
     # pairing, so the cost of a lower threshold is bounded.
-    bounce_threshold: float = 0.18
+    bounce_threshold: float = 0.25
 
     # Minimum frames between two accepted bounces. Enforces ball physics — a ball cannot
     # bounce twice within < 0.5s (15 frames at 30fps). Filters duplicate detections per event.
     bounce_min_gap_frames: int = 10
+
+    # CatBoost bounce weights filename inside backend/weights/. Defaults to the original
+    # broadcast-trained weights; flip to "bounce_detection_weights_ucd.cbm" after the
+    # UC-Davis retrain ships.
+    bounce_model_weights: str = 'bounce_detection_weights_ucd.cbm'
 
     # ========== Stroke Classifier ==========
     # Path to TCN weights trained on pose keypoints (THETIS dataset).

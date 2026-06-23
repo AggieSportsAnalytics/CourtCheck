@@ -4,10 +4,14 @@ Ground-truth annotation tool for short test clips.
 Usage:
     python -m backend.eval.annotate path/to/clip.mp4
 
-Hotkeys:
+Navigation:
     space      play / pause
     j / l      step -1 / +1 frame
     , / .      step -10 / +10 frames
+    n / p      jump to next / previous BOUNCE in gt.json
+    N / P      jump to next / previous STROKE in gt.json
+
+Stamping:
     1 / 2      set current player tag (P1 = near, P2 = far)
     f          stamp Forehand at current frame
     b          stamp Backhand
@@ -15,13 +19,23 @@ Hotkeys:
     v          stamp Volley
     i          stamp bounce IN-bounds at current frame
     o          stamp bounce OUT-of-bounds at current frame
+
+Review (for pre-labeled clips):
+    d          delete the bounce nearest current frame (within ±15 frames)
+    D          delete the stroke nearest current frame (within ±15 frames)
+
+Other:
     u          undo most recent event
     w          save (write JSON, stay open)
     q          save and quit
     ESC        quit without saving
 
+HUD shows when the current frame is on or near an existing bounce/stroke,
+including an [AUTO] flag for pre-labeled (machine-seeded) bounces.
+
 Output: <video>.gt.json next to the clip. Re-running on a clip with an existing
-.gt.json loads it for further editing.
+.gt.json loads it for further editing. Pre-label with:
+    python -m backend.training.pre_label_bounces --glob 'clips/*.mp4'
 """
 
 import argparse
@@ -33,7 +47,8 @@ import cv2
 
 
 STROKE_HOTKEYS = {"f": "FH", "b": "BH", "s": "Serve", "v": "Volley"}
-HUD_HEIGHT = 90
+HUD_HEIGHT = 110
+NEAR_WINDOW = 15  # frames — proximity for "near bounce" HUD + delete-nearest
 
 
 def load_gt(gt_path: Path) -> dict:
@@ -53,18 +68,55 @@ def save_gt(gt_path: Path, video_path: Path, fps: float, total: int, strokes: li
     gt_path.write_text(json.dumps(payload, indent=2))
 
 
-def draw_hud(frame, frame_idx: int, total: int, player: int, last_event: str, n_strokes: int, n_bounces: int):
+def _nearest(events: list[dict], frame_idx: int, window: int) -> tuple[int, int] | None:
+    """Return (event_index, distance) of the nearest event within ±window, or None."""
+    best = None
+    for i, ev in enumerate(events):
+        d = abs(int(ev["frame"]) - frame_idx)
+        if d <= window and (best is None or d < best[1]):
+            best = (i, d)
+    return best
+
+
+def draw_hud(
+    frame,
+    frame_idx: int,
+    total: int,
+    player: int,
+    last_event: str,
+    strokes: list[dict],
+    bounces: list[dict],
+):
     h, w = frame.shape[:2]
     overlay = frame.copy()
     cv2.rectangle(overlay, (0, h - HUD_HEIGHT), (w, h), (0, 0, 0), -1)
     cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, frame)
 
-    info = f"Frame {frame_idx:>4}/{total - 1}   Player P{player}   Strokes {n_strokes}   Bounces {n_bounces}"
-    cv2.putText(frame, info, (10, h - 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+    info = (f"Frame {frame_idx:>4}/{total - 1}   Player P{player}   "
+            f"Strokes {len(strokes)}   Bounces {len(bounces)}")
+    cv2.putText(frame, info, (10, h - 82), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1, cv2.LINE_AA)
+
+    near_b = _nearest(bounces, frame_idx, NEAR_WINDOW)
+    near_s = _nearest(strokes, frame_idx, NEAR_WINDOW)
+    near_msg = ""
+    if near_b is not None:
+        b = bounces[near_b[0]]
+        tag = "[AUTO]" if b.get("auto_labeled") else "[MAN]"
+        in_out = "IN" if b.get("in_bounds") else "OUT"
+        delta = b["frame"] - frame_idx
+        near_msg = f"{tag} bounce {in_out} @ {b['frame']} (Δ{delta:+d})  d=delete  n/p=navigate"
+    elif near_s is not None:
+        s = strokes[near_s[0]]
+        delta = s["frame"] - frame_idx
+        near_msg = f"stroke {s.get('type','?')} P{s.get('player','?')} @ {s['frame']} (Δ{delta:+d})  D=delete  N/P=navigate"
+    if near_msg:
+        cv2.putText(frame, near_msg, (10, h - 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (140, 240, 180), 1, cv2.LINE_AA)
+
     if last_event:
         cv2.putText(frame, last_event, (10, h - 36), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (180, 220, 255), 1, cv2.LINE_AA)
-    keys = "space play  j/l +-1  ,/. +-10  1/2 player  f/b/s/v stroke  i/o bounce  u undo  w save  q quit"
-    cv2.putText(frame, keys, (10, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (180, 180, 180), 1, cv2.LINE_AA)
+    keys = ("space play  j/l +-1  ,/. +-10  n/p bounce-nav  i/o bounce  d del-bounce  "
+            "f/b/s/v stroke  1/2 player  u undo  w save  q quit")
+    cv2.putText(frame, keys, (10, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (180, 180, 180), 1, cv2.LINE_AA)
 
 
 def annotate(video_path: Path) -> None:
@@ -112,7 +164,7 @@ def annotate(video_path: Path) -> None:
             cached_frame = frame
 
         display = cached_frame.copy()
-        draw_hud(display, frame_idx, total, current_player, last_event, len(strokes), len(bounces))
+        draw_hud(display, frame_idx, total, current_player, last_event, strokes, bounces)
         cv2.imshow(window, display)
 
         wait_ms = max(1, int(1000 / fps)) if playing else 0
@@ -153,6 +205,57 @@ def annotate(video_path: Path) -> None:
             frame_idx = max(0, frame_idx - 10)
         elif ch == ".":
             frame_idx = min(total - 1, frame_idx + 10)
+        elif ch == "n":
+            future = sorted({int(b["frame"]) for b in bounces if int(b["frame"]) > frame_idx})
+            if future:
+                frame_idx = future[0]
+                last_event = f"-> next bounce frame {frame_idx}"
+            else:
+                last_event = "no bounce after this frame"
+        elif ch == "p":
+            past = sorted({int(b["frame"]) for b in bounces if int(b["frame"]) < frame_idx}, reverse=True)
+            if past:
+                frame_idx = past[0]
+                last_event = f"-> prev bounce frame {frame_idx}"
+            else:
+                last_event = "no bounce before this frame"
+        elif ch == "N":
+            future = sorted({int(s["frame"]) for s in strokes if int(s["frame"]) > frame_idx})
+            if future:
+                frame_idx = future[0]
+                last_event = f"-> next stroke frame {frame_idx}"
+            else:
+                last_event = "no stroke after this frame"
+        elif ch == "P":
+            past = sorted({int(s["frame"]) for s in strokes if int(s["frame"]) < frame_idx}, reverse=True)
+            if past:
+                frame_idx = past[0]
+                last_event = f"-> prev stroke frame {frame_idx}"
+            else:
+                last_event = "no stroke before this frame"
+        elif ch == "d":
+            near = _nearest(bounces, frame_idx, NEAR_WINDOW)
+            if near is None:
+                last_event = f"no bounce within ±{NEAR_WINDOW} frames"
+            else:
+                idx = near[0]
+                removed = bounces.pop(idx)
+                history.append(("bounce_restore", removed))
+                tag = "AUTO" if removed.get("auto_labeled") else "MAN"
+                last_event = (f"- bounce {tag} {'IN' if removed.get('in_bounds') else 'OUT'} "
+                              f"@ frame {removed['frame']}")
+                print(last_event)
+        elif ch == "D":
+            near = _nearest(strokes, frame_idx, NEAR_WINDOW)
+            if near is None:
+                last_event = f"no stroke within ±{NEAR_WINDOW} frames"
+            else:
+                idx = near[0]
+                removed = strokes.pop(idx)
+                history.append(("stroke_restore", removed))
+                last_event = (f"- stroke {removed.get('type','?')} P{removed.get('player','?')} "
+                              f"@ frame {removed['frame']}")
+                print(last_event)
         elif ch == "1":
             current_player = 1
             last_event = "player -> P1"
@@ -177,13 +280,21 @@ def annotate(video_path: Path) -> None:
             if not history:
                 last_event = "nothing to undo"
                 continue
-            kind, _ = history.pop()
+            kind, payload = history.pop()
             if kind == "stroke" and strokes:
                 removed = strokes.pop()
                 last_event = f"- stroke {removed['type']} P{removed['player']} @ frame {removed['frame']}"
             elif kind == "bounce" and bounces:
                 removed = bounces.pop()
                 last_event = f"- bounce {'IN' if removed['in_bounds'] else 'OUT'} @ frame {removed['frame']}"
+            elif kind == "bounce_restore" and isinstance(payload, dict):
+                bounces.append(payload)
+                last_event = (f"+ restored bounce {'IN' if payload.get('in_bounds') else 'OUT'} "
+                              f"@ frame {payload['frame']}")
+            elif kind == "stroke_restore" and isinstance(payload, dict):
+                strokes.append(payload)
+                last_event = (f"+ restored stroke {payload.get('type','?')} P{payload.get('player','?')} "
+                              f"@ frame {payload['frame']}")
             else:
                 last_event = "undo: stale history entry skipped"
             print(last_event)

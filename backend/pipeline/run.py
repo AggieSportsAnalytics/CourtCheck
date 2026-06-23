@@ -1697,7 +1697,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         player_tracker = PlayerTracker(model_path=player_model_path, device=device, imgsz=config.player_imgsz, conf=config.player_conf)
 
         bounce_detector = BounceDetector(
-            os.path.join(WEIGHTS_DIR, "bounce_detection_weights.cbm"),
+            os.path.join(WEIGHTS_DIR, config.bounce_model_weights),
             threshold=config.bounce_threshold,
             min_gap_frames=config.bounce_min_gap_frames,
         )
