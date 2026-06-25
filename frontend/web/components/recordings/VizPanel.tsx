@@ -86,6 +86,11 @@ function buildShotMapDots(shots: ApiShot[]): ShotDot[] {
   const dots: ShotDot[] = [];
   for (const s of shots) {
     if (s.court_x == null || s.court_y == null) continue;
+    // Drop orphan bounces (no paired swing) from the main shot map. With the
+    // high-recall UCD bounce model these include real ball-skip / pre-serve
+    // bounces and false positives — coaches treat them as visual noise. The
+    // raw bounce stream is still visible on the in-video minimap.
+    if (s.stroke === 'unknown') continue;
     let y = s.court_y;
     if (y > 39) {
       // Near-half bounce — mirror to top half so it shows up on this view.
@@ -98,7 +103,7 @@ function buildShotMapDots(shots: ApiShot[]): ShotDot[] {
     dots.push({
       x: s.court_x,
       y,
-      stroke: (s.stroke === 'unknown' ? 'unknown' : (s.stroke as StrokeKey)),
+      stroke: s.stroke as StrokeKey,
       in: s.in,
       time_s: s.time_s,
       frame: s.frame,

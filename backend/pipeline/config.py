@@ -96,7 +96,7 @@ class PipelineConfig:
     # landing on the opponent's far half. False positives get caught by the
     # compute_bounce_positions() plausibility filter and the side-aware shot
     # pairing, so the cost of a lower threshold is bounded.
-    bounce_threshold: float = 0.25
+    bounce_threshold: float = 0.35
 
     # Minimum frames between two accepted bounces. Enforces ball physics — a ball cannot
     # bounce twice within < 0.5s (15 frames at 30fps). Filters duplicate detections per event.
