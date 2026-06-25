@@ -240,13 +240,18 @@ class PlayerTracker:
         far_player_max_height: int = 400,
         far_max_jump_px: float = 350,
         far_hold_frames: int = 8,
+        near_max_jump_px: float = 500,
+        near_hold_frames: int = 30,
     ) -> tuple[list[dict], list[dict]]:
         """
         Filter detections to the 2 actual players.
 
-        Near player: found by track_id vote using homography projection.
-            The near player has a large, stable bbox and a reliable court-space
-            projection — voting on track_id works well.
+        Near player: track_id vote picks a PRIMARY id, but per-frame logic
+            also accepts the best near-side detection if the primary id is
+            missing. This is critical when the near player walks off-screen
+            and BoT-SORT re-acquires them with a new track_id on return.
+            Includes proximity boost + jump rejection + hold-frames during
+            brief occlusions, same pattern as far player.
 
         Far player: found PER FRAME using court-space projection.
             YOLO track IDs for the small, distant far player fragment constantly
@@ -295,7 +300,11 @@ class PlayerTracker:
         near_info = f"near={near_id} ({near_votes[near_id]} frames)" if near_id else "near=none"
 
         # --- Step 2: Filter frames ---
-        # Near player: strict track_id match.
+        # Near player: primary track_id from vote, with per-frame spatial fallback.
+        #   When the primary id is missing in a frame (BoT-SORT re-id failure after
+        #   walk-off, occlusion, etc.) we look for the best near-side detection and
+        #   keep it under the canonical near_id so downstream pose/swing keying
+        #   stays stable. Same temporal-stabilization pattern as far player.
         # Far player: per-frame best candidate by court-space projection + largest bbox area,
         #   with temporal stabilization:
         #     - Proximity boost: candidates close to the last accepted position score higher.
@@ -303,21 +312,98 @@ class PlayerTracker:
         #     - Hold: last known bbox is carried forward during brief detection gaps.
         #     - Anchor reset: after a prolonged absence the anchor clears entirely.
         filtered_players: list[dict] = []
+        # Per-frame source track_id for near player — used in the pose phase to
+        # look up keypoints under the actual YOLO-assigned id (which differs
+        # from near_id whenever the spatial fallback kicks in). None means no
+        # fresh detection (hold) or no near player at all.
+        near_source_tid_per_frame: list[int | None] = []
         far_count = 0
+        near_fallback_count = 0    # diagnostic: frames where spatial fallback rescued
+        near_hold_count = 0        # diagnostic: frames where hold-bbox was used
         far_tid_votes: dict[int, int] = {}
+        near_fallback_tids: set[int] = set()  # diagnostic: which non-primary tids the fallback picked
 
         # Temporal stabilizer state
         far_last_bbox: list | None = None   # last accepted far player bbox (image px)
         far_miss_streak: int = 0            # consecutive frames without an accepted far player
+        near_last_bbox: list | None = None  # last accepted near player bbox (image px)
+        near_miss_streak: int = 0           # consecutive frames without an accepted near player
         _PROXIMITY_DECAY_PX = 250.0         # distance at which proximity bonus decays to zero
         _PROXIMITY_BOOST    = 2.5           # max score multiplier for on-target candidate
+        _NEAR_PROXIMITY_DECAY_PX = 350.0    # near player covers more pixels per frame
+        _NEAR_PROXIMITY_BOOST    = 2.0
+        _NEAR_MIN_HEIGHT = 80               # near player is large; small detections are noise
+        _NEAR_MIN_WIDTH  = 40
 
         for frame in player_detections:
             new_frame: dict[int, list] = {}
+            near_source_tid: int | None = None
 
-            # Include near player by ID
+            # --- Near player: try primary id first, then spatial fallback ---
             if near_id is not None and near_id in frame:
                 new_frame[near_id] = frame[near_id]
+                near_source_tid = near_id
+                near_last_bbox = frame[near_id]
+                near_miss_streak = 0
+            elif near_id is not None:
+                # Primary id missing — find best near-side detection by area + proximity
+                best_near_tid, best_near_score = None, 0.0
+                for tid, bbox in frame.items():
+                    bx1, by1, bx2, by2 = bbox
+                    bw, bh = bx2 - bx1, by2 - by1
+                    if bw < _NEAR_MIN_WIDTH or bh < _NEAR_MIN_HEIGHT:
+                        continue
+                    proj = _project_foot(bbox, H_ref)
+                    if proj is None:
+                        continue
+                    cx, cy = proj
+                    if not (court_bounds['left_x'] - x_margin <= cx <= court_bounds['right_x'] + x_margin):
+                        continue
+                    if cy <= court_bounds['net_y']:
+                        continue  # not near side
+                    score = bw * bh
+                    if near_last_bbox is not None:
+                        lx1, ly1, lx2, ly2 = near_last_bbox
+                        dist = (
+                            ((bx1 + bx2) / 2 - (lx1 + lx2) / 2) ** 2
+                            + ((by1 + by2) / 2 - (ly1 + ly2) / 2) ** 2
+                        ) ** 0.5
+                        proximity_frac = max(0.0, 1.0 - dist / _NEAR_PROXIMITY_DECAY_PX)
+                        score *= 1.0 + proximity_frac * _NEAR_PROXIMITY_BOOST
+                    if score > best_near_score:
+                        best_near_score = score
+                        best_near_tid = tid
+
+                # Jump rejection — suppress implausible relocations when anchor is fresh
+                if best_near_tid is not None and near_last_bbox is not None and near_miss_streak < 3:
+                    bx1, by1, bx2, by2 = frame[best_near_tid]
+                    lx1, ly1, lx2, ly2 = near_last_bbox
+                    jump = (
+                        ((bx1 + bx2) / 2 - (lx1 + lx2) / 2) ** 2
+                        + ((by1 + by2) / 2 - (ly1 + ly2) / 2) ** 2
+                    ) ** 0.5
+                    if jump > near_max_jump_px:
+                        best_near_tid = None
+
+                if best_near_tid is not None:
+                    new_frame[near_id] = frame[best_near_tid]
+                    near_source_tid = best_near_tid
+                    near_last_bbox = frame[best_near_tid]
+                    near_miss_streak = 0
+                    near_fallback_count += 1
+                    near_fallback_tids.add(best_near_tid)
+                elif near_last_bbox is not None and near_miss_streak < near_hold_frames:
+                    # Hold last known position during brief occlusion / walk-off.
+                    new_frame[near_id] = near_last_bbox
+                    near_source_tid = None  # no fresh pose keypoints for this frame
+                    near_miss_streak += 1
+                    near_hold_count += 1
+                else:
+                    near_miss_streak += 1
+                    if near_miss_streak > near_hold_frames * 4:
+                        near_last_bbox = None
+
+            near_source_tid_per_frame.append(near_source_tid)
 
             # Far player: score all valid candidates, apply temporal preference.
             best_tid, best_score = None, 0.0
@@ -379,7 +465,12 @@ class PlayerTracker:
 
         best_tid_overall = max(far_tid_votes, key=far_tid_votes.__getitem__) if far_tid_votes else None
         far_info = f"far={best_tid_overall if far_count > 0 else 'none'} ({far_count}/{len(player_detections)} frames)"
-        print(f"[Player] {near_info} | {far_info}")
+        near_extra = (
+            f" | near-fallback={near_fallback_count} frames (rescue tids={sorted(near_fallback_tids)[:5]})"
+            if near_fallback_count else ""
+        )
+        near_hold_extra = f" | near-hold={near_hold_count} frames" if near_hold_count else ""
+        print(f"[Player] {near_info} | {far_info}{near_extra}{near_hold_extra}")
 
         # --- Step 3: Build filtered pose list ---
         if pose_keypoints_per_frame is None:
@@ -390,7 +481,17 @@ class PlayerTracker:
             new_kps: dict[int, np.ndarray | None] = {}
             kps_frame = pose_keypoints_per_frame[i] if i < len(pose_keypoints_per_frame) else {}
             for tid in filtered_players[i]:
-                new_kps[tid] = kps_frame.get(tid)
+                if tid == near_id and near_source_tid_per_frame[i] is not None:
+                    # Near player came from a fallback detection — look up the
+                    # keypoints under the actual YOLO-assigned source id, not
+                    # the canonical near_id (which the raw pose dict doesn't
+                    # have an entry for).
+                    new_kps[tid] = kps_frame.get(near_source_tid_per_frame[i])
+                elif tid == near_id and near_source_tid_per_frame[i] is None:
+                    # Hold frame — no fresh keypoints.
+                    new_kps[tid] = None
+                else:
+                    new_kps[tid] = kps_frame.get(tid)
             filtered_poses.append(new_kps)
 
         return filtered_players, filtered_poses
