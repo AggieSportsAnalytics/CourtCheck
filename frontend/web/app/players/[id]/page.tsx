@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -9,8 +9,8 @@ import { StrokeBars, type StrokeRow } from '@/components/players/StrokeBars'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Display } from '@/components/ui/display'
 import { Button } from '@/components/ui/button'
-import { isDemoMode, DEMO_PLAYERS, DEMO_RECORDINGS } from '@/lib/demo/demoData'
 import { playerPhotoProxyUrl } from '@/lib/utils'
+import { usePlayersData, useRecordingsData } from '@/lib/hooks/useApiData'
 
 interface ApiPlayer {
   id: string
@@ -72,68 +72,33 @@ function inPct(inB: number | null, outB: number | null): number | null {
 
 export default function PlayerDetailPage() {
   const { id } = useParams<{ id: string }>()
-  const [player, setPlayer] = useState<ApiPlayer | null>(null)
-  const [recordings, setRecordings] = useState<ApiRecording[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // SWR-cached roster + recordings (demo data served via the hooks' fallback).
+  // Reusing the same keys as the dashboard/list means navigating here is an
+  // instant cache hit instead of a fresh round trip.
+  const { data: pData, error: pErr, isLoading: pLoading, mutate: mutatePlayers } = usePlayersData()
+  const { data: rData, error: rErr, isLoading: rLoading } = useRecordingsData()
   // Falls the headshot back to initials on a failed/rate-limited proxy fetch,
   // matching the PlayerCard behavior (instead of leaving a blank circle).
   const [photoFailed, setPhotoFailed] = useState(false)
 
-  useEffect(() => {
-    if (!id) return
-
-    // Demo mode: a demo-* player resolves from the fabricated roster +
-    // recordings so the player screen shows a full stat read with no network.
-    if (
-      isDemoMode(typeof window !== 'undefined' ? window.location.search : null) &&
-      id.startsWith('demo-')
-    ) {
-      const dp = DEMO_PLAYERS.find((p) => p.id === id) ?? null
-      setPlayer(dp as ApiPlayer | null)
-      const mine = DEMO_RECORDINGS.filter((r) => r.player_id === id).sort(
+  const player = useMemo<ApiPlayer | null>(
+    () =>
+      ((pData?.players ?? []) as unknown as ApiPlayer[]).find(
+        (p) => p.id === id,
+      ) ?? null,
+    [pData, id],
+  )
+  const recordings = useMemo<ApiRecording[]>(() => {
+    const all = (rData?.recordings ?? []) as unknown as ApiRecording[]
+    return all
+      .filter((r) => r.player_id === id)
+      .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       )
-      setRecordings(mine as unknown as ApiRecording[])
-      setLoading(false)
-      return
-    }
-
-    let cancelled = false
-    Promise.all([
-      fetch('/api/players').then((r) =>
-        r.ok ? r.json() : Promise.reject(new Error('Failed to load players')),
-      ),
-      fetch('/api/recordings').then((r) =>
-        r.ok ? r.json() : Promise.reject(new Error('Failed to load recordings')),
-      ),
-    ])
-      .then(([pData, rData]) => {
-        if (cancelled) return
-        const found =
-          (pData.players as ApiPlayer[]).find((p) => p.id === id) ?? null
-        setPlayer(found)
-        const all = (rData.recordings ?? []) as ApiRecording[]
-        const mine = all
-          .filter((r) => r.player_id === id)
-          .sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() -
-              new Date(a.createdAt).getTime(),
-          )
-        setRecordings(mine)
-      })
-      .catch((e: Error) => {
-        if (!cancelled) setError(e.message)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [id])
+  }, [rData, id])
+  const loading = pLoading || rLoading
+  const error = pErr || rErr ? 'Failed to load player' : null
 
   const totals = useMemo(() => {
     let shots = 0
@@ -278,7 +243,17 @@ export default function PlayerDetailPage() {
             playerId={player.id}
             value={(player.handedness as Handedness | undefined) ?? 'right'}
             onChange={(next) =>
-              setPlayer((prev) => (prev ? { ...prev, handedness: next } : prev))
+              mutatePlayers(
+                (curr) =>
+                  curr
+                    ? {
+                        players: curr.players.map((p) =>
+                          p.id === player.id ? { ...p, handedness: next } : p,
+                        ),
+                      }
+                    : curr,
+                { revalidate: false },
+              )
             }
           />
         </div>

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import EditableName from '@/components/recordings/EditableName';
 import BounceLoader from '@/components/upload/BounceLoader';
-import { isDemoMode, DEMO_RECORDINGS } from '@/lib/demo/demoData';
+import { useRecordingsData } from '@/lib/hooks/useApiData';
 
 /**
  * Recordings list. Ported from docs/brand-drop/mocks/matches-list.html.
@@ -30,14 +30,6 @@ interface Recording {
   name: string;
   filename: string;
 }
-
-type RawRecording = {
-  id: string;
-  status: Recording['status'];
-  createdAt: string;
-  name: string;
-  filename: string;
-};
 
 const AVATAR_COLORS = [
   'var(--color-court)',
@@ -82,9 +74,22 @@ function fmtDate(iso: string): string {
 
 export default function RecordingsPage() {
   const router = useRouter();
-  const [recordings, setRecordings] = useState<Recording[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // SWR-cached recordings: instant render on revisit, background revalidation,
+  // and auto-polling while anything is still processing (see useRecordingsData).
+  const { data, error: swrError, isLoading, mutate } = useRecordingsData();
+  const recordings: Recording[] = useMemo(
+    () =>
+      (data?.recordings ?? []).map((r) => ({
+        id: r.id,
+        status: r.status as Recording['status'],
+        createdAt: r.createdAt,
+        name: r.name,
+        filename: r.filename,
+      })),
+    [data],
+  );
+  const loading = isLoading;
+  const error = swrError ? (swrError as Error).message : null;
   const [query, setQuery] = useState('');
   const [thisSeasonActive, setThisSeasonActive] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -108,8 +113,13 @@ export default function RecordingsPage() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error || `Delete failed (${res.status})`);
       }
-      setRecordings((prev) => prev.filter((r) => r.id !== id));
       setConfirmDelete(null);
+      // Drop from the SWR cache immediately, then revalidate to confirm.
+      mutate(
+        (curr) =>
+          curr ? { recordings: curr.recordings.filter((r) => r.id !== id) } : curr,
+        { revalidate: true },
+      );
     } catch (e) {
       setDeleteError((e as Error).message);
     } finally {
@@ -149,7 +159,13 @@ export default function RecordingsPage() {
         results[i].status === 'fulfilled' &&
         (results[i] as PromiseFulfilledResult<Response>).value.ok
     );
-    setRecordings((prev) => prev.filter((r) => !successIds.includes(r.id)));
+    mutate(
+      (curr) =>
+        curr
+          ? { recordings: curr.recordings.filter((r) => !successIds.includes(r.id)) }
+          : curr,
+      { revalidate: true },
+    );
     setSelectedIds((prev) => {
       const next = new Set(prev);
       successIds.forEach((id) => next.delete(id));
@@ -179,42 +195,6 @@ export default function RecordingsPage() {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [filterOpen]);
-
-  useEffect(() => {
-    // Demo mode (?demo=1): a season of fabricated recordings, no network.
-    if (isDemoMode(typeof window !== 'undefined' ? window.location.search : null)) {
-      setRecordings(
-        DEMO_RECORDINGS.map((r) => ({
-          id: r.id,
-          status: r.status,
-          createdAt: r.createdAt,
-          name: r.name,
-          filename: r.filename,
-        })),
-      );
-      setLoading(false);
-      return;
-    }
-
-    fetch('/api/recordings')
-      .then((r) => {
-        if (!r.ok) throw new Error('Failed to fetch recordings');
-        return r.json();
-      })
-      .then((d: { recordings: RawRecording[] }) => {
-        setRecordings(
-          d.recordings.map((r) => ({
-            id: r.id,
-            status: r.status,
-            createdAt: r.createdAt,
-            name: r.name,
-            filename: r.filename,
-          }))
-        );
-      })
-      .catch((e) => setError((e as Error).message))
-      .finally(() => setLoading(false));
-  }, []);
 
   const filtered = useMemo(() => {
     const seasonStart = thisSeasonActive ? currentSeasonStart() : null;
@@ -546,8 +526,16 @@ export default function RecordingsPage() {
                       initialName={rec.name}
                       variant="row"
                       onSaved={(newName) =>
-                        setRecordings((prev) =>
-                          prev.map((p) => (p.id === rec.id ? { ...p, name: newName } : p)),
+                        mutate(
+                          (curr) =>
+                            curr
+                              ? {
+                                  recordings: curr.recordings.map((p) =>
+                                    p.id === rec.id ? { ...p, name: newName } : p,
+                                  ),
+                                }
+                              : curr,
+                          { revalidate: false },
                         )
                       }
                     />

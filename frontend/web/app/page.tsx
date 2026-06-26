@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import SplashOverlay from '@/components/brand/SplashOverlay';
 import TeamStrip from '@/components/dashboard/TeamStrip';
 import WatchList, { WatchItem } from '@/components/dashboard/WatchList';
 import PlayerCard, { PlayerCardData, PlayerMetric } from '@/components/dashboard/PlayerCard';
 import EmptyState from '@/components/dashboard/EmptyState';
 import { useAuth } from '@/contexts/AuthContext';
-import { isDemoMode, DEMO_PLAYERS, DEMO_RECORDINGS, DEMO_SUMMARY } from '@/lib/demo/demoData';
+import { useDashboardSummary, usePlayersData, useRecordingsData } from '@/lib/hooks/useApiData';
 
 // === API response types (mirror /api routes) ===
 
@@ -110,55 +110,18 @@ function greetingFor(hour: number): string {
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [summary, setSummary] = useState<SummaryResponse | null>(null);
-  const [playersRes, setPlayersRes] = useState<PlayersResponse | null>(null);
-  const [recordingsRes, setRecordingsRes] = useState<RecordingsResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [allFailed, setAllFailed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-
-      // Demo mode (?demo=1): render a season's worth of fabricated data so the
-      // screen recording looks lived-in. No network, no Supabase.
-      if (isDemoMode(typeof window !== 'undefined' ? window.location.search : null)) {
-        if (cancelled) return;
-        setSummary(DEMO_SUMMARY as SummaryResponse);
-        setPlayersRes({ players: DEMO_PLAYERS } as PlayersResponse);
-        setRecordingsRes({
-          recordings: DEMO_RECORDINGS as RecordingsResponse['recordings'],
-        });
-        setAllFailed(false);
-        setLoading(false);
-        return;
-      }
-
-      const results = await Promise.allSettled([
-        fetch('/api/dashboard/summary').then((r) => (r.ok ? r.json() : Promise.reject(r))),
-        fetch('/api/players').then((r) => (r.ok ? r.json() : Promise.reject(r))),
-        fetch('/api/recordings').then((r) => (r.ok ? r.json() : Promise.reject(r))),
-      ]);
-
-      if (cancelled) return;
-
-      const [s, p, r] = results;
-      if (s.status === 'fulfilled') setSummary(s.value as SummaryResponse);
-      if (p.status === 'fulfilled') setPlayersRes(p.value as PlayersResponse);
-      if (r.status === 'fulfilled') setRecordingsRes(r.value as RecordingsResponse);
-
-      const failedCount = results.filter((x) => x.status === 'rejected').length;
-      setAllFailed(failedCount === 3);
-      setLoading(false);
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  // SWR-cached: the same /api/players and /api/recordings keys the players and
+  // recordings pages use, so moving between them is an instant cache hit.
+  const summaryQ = useDashboardSummary();
+  const playersQ = usePlayersData();
+  const recordingsQ = useRecordingsData();
+  const summary = (summaryQ.data ?? null) as SummaryResponse | null;
+  const playersRes = (playersQ.data ?? null) as unknown as PlayersResponse | null;
+  const recordingsRes = (recordingsQ.data ?? null) as unknown as RecordingsResponse | null;
+  const loading = summaryQ.isLoading || playersQ.isLoading || recordingsQ.isLoading;
+  // Only the full-failure state hides the dashboard; a single failed endpoint
+  // still renders the panels that loaded (mirrors the old allSettled behavior).
+  const allFailed = !!summaryQ.error && !!playersQ.error && !!recordingsQ.error;
 
   // === Derived values ===
 

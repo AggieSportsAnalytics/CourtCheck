@@ -1,13 +1,13 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 
 import { PlayerCard, type PlayerCardData } from '@/components/players/PlayerCard'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Display, Num } from '@/components/ui/display'
 import { Button } from '@/components/ui/button'
-import { isDemoMode, DEMO_PLAYERS, DEMO_RECORDINGS } from '@/lib/demo/demoData'
+import { usePlayersData, useRecordingsData } from '@/lib/hooks/useApiData'
 
 interface ApiPlayer {
   id: string
@@ -132,48 +132,28 @@ function buildCards(
 }
 
 export default function PlayersPage() {
-  const [players, setPlayers] = useState<ApiPlayer[]>([])
-  const [recordings, setRecordings] = useState<ApiRecording[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // SWR-cached roster + recordings — shared with the dashboard and detail pages,
+  // so navigating between them serves cached data instantly.
+  const { data: pData, error: pErr, isLoading: pLoading } = usePlayersData()
+  const { data: rData, error: rErr, isLoading: rLoading } = useRecordingsData()
+  const players = useMemo(
+    () => (pData?.players ?? []) as unknown as ApiPlayer[],
+    [pData],
+  )
+  const recordings = useMemo(
+    () => (rData?.recordings ?? []) as unknown as ApiRecording[],
+    [rData],
+  )
+  const loading = pLoading || rLoading
+  const error = pErr
+    ? 'Failed to load players'
+    : rErr
+      ? 'Failed to load recordings'
+      : null
 
   const [query, setQuery] = useState('')
   const [yearFilter, setYearFilter] = useState<string>('all')
   const [sort, setSort] = useState<SortKey>('name')
-
-  useEffect(() => {
-    // Demo mode: fabricated season keyed to the real roster (with photos).
-    if (isDemoMode(typeof window !== 'undefined' ? window.location.search : null)) {
-      setPlayers(DEMO_PLAYERS as unknown as ApiPlayer[])
-      setRecordings(DEMO_RECORDINGS as unknown as ApiRecording[])
-      setLoading(false)
-      return
-    }
-
-    let cancelled = false
-    Promise.all([
-      fetch('/api/players').then((r) =>
-        r.ok ? r.json() : Promise.reject(new Error('Failed to load players')),
-      ),
-      fetch('/api/recordings').then((r) =>
-        r.ok ? r.json() : Promise.reject(new Error('Failed to load recordings')),
-      ),
-    ])
-      .then(([pData, rData]) => {
-        if (cancelled) return
-        setPlayers((pData.players ?? []) as ApiPlayer[])
-        setRecordings((rData.recordings ?? []) as ApiRecording[])
-      })
-      .catch((e: Error) => {
-        if (!cancelled) setError(e.message)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const cards = useMemo(
     () => buildCards(players, recordings),
