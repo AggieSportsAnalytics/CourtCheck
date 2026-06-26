@@ -60,7 +60,7 @@
     "react-hook-form": "^7.76.0",
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^2.1.7",
-    "recharts": "2.15.4",
+    "recharts": "3.8.1",
     "rehype-sanitize": "^6.0.0",
     "sonner": "^1.7.4",
     "swr": "^2.4.2",
