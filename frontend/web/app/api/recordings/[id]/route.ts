@@ -324,7 +324,7 @@ export async function DELETE(
     // Fetch row first to get storage paths and verify ownership
     const { data, error: fetchError } = await supabaseAdmin
       .from("matches")
-      .select("id, input_path, results_path, bounce_heatmap_path, player_heatmap_path")
+      .select("id, input_path, results_path, bounce_heatmap_path, player_heatmap_path, player_shot_map_path")
       .eq("id", id)
       .eq("user_id", user.id)
       .single();
@@ -359,6 +359,7 @@ export async function DELETE(
       data.results_path,
       data.bounce_heatmap_path,
       data.player_heatmap_path,
+      data.player_shot_map_path,
     ].filter(Boolean) as string[];
 
     if (resultsPaths.length > 0) {

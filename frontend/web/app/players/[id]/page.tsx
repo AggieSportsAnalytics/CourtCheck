@@ -10,6 +10,7 @@ import { Eyebrow } from '@/components/ui/eyebrow'
 import { Display } from '@/components/ui/display'
 import { Button } from '@/components/ui/button'
 import { isDemoMode, DEMO_PLAYERS, DEMO_RECORDINGS } from '@/lib/demo/demoData'
+import { playerPhotoProxyUrl } from '@/lib/utils'
 
 interface ApiPlayer {
   id: string
@@ -75,6 +76,9 @@ export default function PlayerDetailPage() {
   const [recordings, setRecordings] = useState<ApiRecording[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Falls the headshot back to initials on a failed/rate-limited proxy fetch,
+  // matching the PlayerCard behavior (instead of leaving a blank circle).
+  const [photoFailed, setPhotoFailed] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -230,15 +234,13 @@ export default function PlayerDetailPage() {
 
       {/* PROFILE HEAD */}
       <section className="grid items-center gap-9 pb-8 pt-6 md:grid-cols-[auto_1fr_auto]">
-        {player.photo_url ? (
+        {player.photo_url && !photoFailed ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={`/api/proxy-image?url=${encodeURIComponent(player.photo_url.replace('width=80', 'width=300'))}`}
+            src={playerPhotoProxyUrl(player.photo_url) ?? undefined}
             alt=""
             className="size-36 shrink-0 rounded-full object-cover object-top"
-            onError={(e) => {
-              ;(e.currentTarget as HTMLImageElement).style.display = 'none'
-            }}
+            onError={() => setPhotoFailed(true)}
           />
         ) : (
           <div

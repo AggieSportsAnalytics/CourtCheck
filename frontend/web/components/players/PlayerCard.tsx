@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { CountUp } from './CountUp'
+import { playerPhotoProxyUrl } from '@/lib/utils'
 
 export interface PlayerCardData {
   id: string
@@ -75,10 +76,7 @@ export function PlayerCard({ player }: { player: PlayerCardData }) {
   const [photoFailed, setPhotoFailed] = useState(false)
   const { lead, tail } = splitName(player.name)
 
-  const photoSrc =
-    player.photo_url && !photoFailed
-      ? `/api/proxy-image?url=${encodeURIComponent(player.photo_url.replace('width=80', 'width=300'))}`
-      : null
+  const photoSrc = photoFailed ? null : playerPhotoProxyUrl(player.photo_url)
 
   return (
     <Link href={`/players/${player.id}`} className="group block h-full">

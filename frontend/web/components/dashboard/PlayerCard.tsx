@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import CountUp from './CountUp';
+import { playerPhotoProxyUrl } from '@/lib/utils';
 
 export type PlayerMetric = {
   key: string;
@@ -45,10 +46,7 @@ type Props = {
 export default function PlayerCard({ player }: Props) {
   const leadIdx = findLeadIndex(player.metrics);
   const [photoFailed, setPhotoFailed] = useState(false);
-  const showPhoto = player.photoUrl && !photoFailed;
-  const photoSrc = showPhoto
-    ? `/api/proxy-image?url=${encodeURIComponent(player.photoUrl!)}`
-    : null;
+  const photoSrc = photoFailed ? null : playerPhotoProxyUrl(player.photoUrl);
 
   return (
     <Link
