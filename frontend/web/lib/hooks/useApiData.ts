@@ -73,6 +73,7 @@ export interface RecordingRow {
   outBoundsBounces?: number | null;
   player_id?: string | null;
   playerName?: string | null;
+  favorited?: boolean;
 }
 export interface RecordingsData {
   recordings: RecordingRow[];

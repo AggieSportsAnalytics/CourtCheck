@@ -56,6 +56,7 @@ type Recording = {
   createdAt: string;
   name: string;
   filename: string;
+  favorited: boolean;
   fps: number | null;
   numFrames: number | null;
   bounceCount: number | null;
@@ -111,6 +112,26 @@ export default function RecordingDetailPage() {
   const [confirmingReprocess, setConfirmingReprocess] = useState(false);
   const [reprocessing, setReprocessing] = useState(false);
   const [reprocessError, setReprocessError] = useState<string | null>(null);
+
+  const toggleFavorite = useCallback(async () => {
+    setRecording((prev) => {
+      if (!prev) return prev;
+      const next = !prev.favorited;
+      // Persist; revert in the catch if it fails.
+      fetch(`/api/recordings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ favorited: next }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error('Failed to update favorite');
+        })
+        .catch(() => {
+          setRecording((p) => (p ? { ...p, favorited: !next } : p));
+        });
+      return { ...prev, favorited: next };
+    });
+  }, [id]);
 
   const handleDeleteRecording = useCallback(async () => {
     setDeleting(true);
@@ -589,6 +610,21 @@ export default function RecordingDetailPage() {
               setRecording((prev) => (prev ? { ...prev, name: newName } : prev))
             }
           />
+          <button
+            type="button"
+            aria-label={recording.favorited ? 'Remove from favorites' : 'Add to favorites'}
+            aria-pressed={recording.favorited}
+            onClick={toggleFavorite}
+            className={`w-9 h-9 shrink-0 rounded-full border inline-flex items-center justify-center cursor-pointer transition-colors ${
+              recording.favorited
+                ? 'border-amber text-amber'
+                : 'border-line text-ink-mute hover:border-amber hover:text-amber'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" width={18} height={18} fill={recording.favorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+          </button>
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-ink-soft text-[0.95rem] mt-3 items-center">
           {recording.playerHandedness === 'left' && (

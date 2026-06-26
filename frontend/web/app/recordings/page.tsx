@@ -29,6 +29,10 @@ interface Recording {
   /** User-facing title (e.g. "test5-player", "StMarys Court2 4950 clip"). */
   name: string;
   filename: string;
+  /** Linked player (nullable — unlinked recordings filter as "Unassigned"). */
+  playerId: string | null;
+  playerName: string | null;
+  favorited: boolean;
 }
 
 const AVATAR_COLORS = [
@@ -85,6 +89,9 @@ export default function RecordingsPage() {
         createdAt: r.createdAt,
         name: r.name,
         filename: r.filename,
+        playerId: r.player_id ?? null,
+        playerName: r.playerName ?? null,
+        favorited: r.favorited ?? false,
       })),
     [data],
   );
@@ -92,8 +99,10 @@ export default function RecordingsPage() {
   const error = swrError ? (swrError as Error).message : null;
   const [query, setQuery] = useState('');
   const [thisSeasonActive, setThisSeasonActive] = useState(false);
+  const [favoritesActive, setFavoritesActive] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'done' | 'processing' | 'failed'>('all');
+  // 'all' | '<player_id>' | 'unassigned'
+  const [playerFilter, setPlayerFilter] = useState<string>('all');
   const filterRef = useRef<HTMLDivElement>(null);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -103,6 +112,43 @@ export default function RecordingsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkState, setBulkState] = useState<'idle' | 'confirming' | 'deleting'>('idle');
   const [bulkError, setBulkError] = useState<string | null>(null);
+
+  // Toggle a recording's favorite flag. Optimistically flip the SWR cache so
+  // the star reacts instantly, persist via PATCH, and roll back on failure.
+  async function toggleFavorite(id: string, next: boolean) {
+    mutate(
+      (curr) =>
+        curr
+          ? {
+              recordings: curr.recordings.map((r) =>
+                r.id === id ? { ...r, favorited: next } : r,
+              ),
+            }
+          : curr,
+      { revalidate: false },
+    );
+    try {
+      const res = await fetch(`/api/recordings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ favorited: next }),
+      });
+      if (!res.ok) throw new Error('Failed to update favorite');
+    } catch {
+      // Revert the optimistic flip.
+      mutate(
+        (curr) =>
+          curr
+            ? {
+                recordings: curr.recordings.map((r) =>
+                  r.id === id ? { ...r, favorited: !next } : r,
+                ),
+              }
+            : curr,
+        { revalidate: false },
+      );
+    }
+  }
 
   async function deleteRecording(id: string) {
     setDeletingId(id);
@@ -196,6 +242,29 @@ export default function RecordingsPage() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, [filterOpen]);
 
+  // Distinct players that actually have recordings, for the Filter dropdown.
+  // Built from the recordings themselves so the list always matches what's
+  // filterable; `hasUnassigned` adds the bucket for recordings with no player.
+  const playerOptions = useMemo(() => {
+    const byId = new Map<string, string>();
+    let hasUnassigned = false;
+    for (const r of recordings) {
+      if (r.playerId) byId.set(r.playerId, r.playerName ?? 'Unknown player');
+      else hasUnassigned = true;
+    }
+    const players = [...byId.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    return { players, hasUnassigned };
+  }, [recordings]);
+
+  const selectedPlayerName =
+    playerFilter === 'all'
+      ? null
+      : playerFilter === 'unassigned'
+        ? 'Unassigned'
+        : (playerOptions.players.find((p) => p.id === playerFilter)?.name ?? null);
+
   const filtered = useMemo(() => {
     const seasonStart = thisSeasonActive ? currentSeasonStart() : null;
     return recordings.filter((r) => {
@@ -204,10 +273,13 @@ export default function RecordingsPage() {
         if (!haystack.includes(query.trim().toLowerCase())) return false;
       }
       if (seasonStart && new Date(r.createdAt) < seasonStart) return false;
-      if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+      if (favoritesActive && !r.favorited) return false;
+      if (playerFilter === 'unassigned' && r.playerId) return false;
+      if (playerFilter !== 'all' && playerFilter !== 'unassigned' && r.playerId !== playerFilter)
+        return false;
       return true;
     });
-  }, [recordings, query, thisSeasonActive, statusFilter]);
+  }, [recordings, query, thisSeasonActive, favoritesActive, playerFilter]);
 
   if (loading) {
     return (
@@ -303,39 +375,50 @@ export default function RecordingsPage() {
           </svg>
           This season
         </Chip>
+        {/* Favorites toggle — binary, so a chip rather than a dropdown entry. */}
+        <Chip active={favoritesActive} onClick={() => setFavoritesActive((v) => !v)}>
+          <svg viewBox="0 0 24 24" width={13} height={13} fill={favoritesActive ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          Favorites
+        </Chip>
         <div ref={filterRef} className="relative">
-          <Chip active={statusFilter !== 'all'} onClick={() => setFilterOpen((v) => !v)}>
+          <Chip active={playerFilter !== 'all'} onClick={() => setFilterOpen((v) => !v)}>
             <svg viewBox="0 0 24 24" width={13} height={13} fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
             </svg>
-            Filter{statusFilter !== 'all' ? ` · ${statusFilter}` : ''}
+            {selectedPlayerName ? `Player · ${selectedPlayerName}` : 'Player'}
           </Chip>
           {filterOpen && (
             <div
-              className="absolute left-0 top-[calc(100%+8px)] z-10 bg-paper border border-line rounded-[10px] shadow-lg py-1.5 min-w-[160px]"
+              className="absolute left-0 top-[calc(100%+8px)] z-10 bg-paper border border-line rounded-[10px] shadow-lg py-1.5 min-w-[180px] max-h-[280px] overflow-y-auto"
               style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.10)' }}
             >
-              {(['all', 'done', 'processing', 'failed'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => { setStatusFilter(s); setFilterOpen(false); }}
-                  className={`w-full text-left px-4 py-2 text-[0.88rem] capitalize flex items-center justify-between gap-3 ${
-                    statusFilter === s ? 'text-ink font-medium' : 'text-ink-soft hover:text-ink'
-                  }`}
-                >
-                  {s === 'all' ? 'All statuses' : s.charAt(0).toUpperCase() + s.slice(1)}
-                  {statusFilter === s && (
-                    <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M20 6 9 17l-5-5" />
-                    </svg>
-                  )}
-                </button>
+              <PlayerOption
+                label="All players"
+                active={playerFilter === 'all'}
+                onClick={() => { setPlayerFilter('all'); setFilterOpen(false); }}
+              />
+              {playerOptions.players.map((p) => (
+                <PlayerOption
+                  key={p.id}
+                  label={p.name}
+                  active={playerFilter === p.id}
+                  onClick={() => { setPlayerFilter(p.id); setFilterOpen(false); }}
+                />
               ))}
+              {playerOptions.hasUnassigned && (
+                <PlayerOption
+                  label="Unassigned"
+                  active={playerFilter === 'unassigned'}
+                  onClick={() => { setPlayerFilter('unassigned'); setFilterOpen(false); }}
+                />
+              )}
             </div>
           )}
         </div>
-        <span className="ml-auto font-mono text-[0.72rem] uppercase tracking-[0.12em] text-ink-mute">
+        <span className="hidden md:inline ml-auto font-mono text-[0.72rem] uppercase tracking-[0.12em] text-ink-mute">
           {filtered.length} {filtered.length === 1 ? 'recording' : 'recordings'}
         </span>
         </div>
@@ -521,6 +604,26 @@ export default function RecordingsPage() {
 
                   {/* Actions column */}
                   <div className="justify-self-end flex items-center gap-1.5 shrink-0">
+                    {!isSelectionMode && (
+                      <button
+                        type="button"
+                        aria-label={rec.favorited ? 'Remove from favorites' : 'Add to favorites'}
+                        aria-pressed={rec.favorited}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(rec.id, !rec.favorited);
+                        }}
+                        className={`w-7 h-7 shrink-0 rounded-full inline-flex items-center justify-center cursor-pointer transition-colors ${
+                          rec.favorited
+                            ? 'text-amber'
+                            : 'text-ink-mute opacity-0 group-hover:opacity-100 hover:text-amber'
+                        }`}
+                      >
+                        <svg viewBox="0 0 24 24" width={15} height={15} fill={rec.favorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      </button>
+                    )}
                     <EditableName
                       recordingId={rec.id}
                       initialName={rec.name}
@@ -680,6 +783,33 @@ export default function RecordingsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function PlayerOption({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full text-left px-4 py-2 text-[0.88rem] flex items-center justify-between gap-3 ${
+        active ? 'text-ink font-medium' : 'text-ink-soft hover:text-ink'
+      }`}
+    >
+      <span className="truncate">{label}</span>
+      {active && (
+        <svg viewBox="0 0 24 24" width={12} height={12} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+          <path d="M20 6 9 17l-5-5" />
+        </svg>
+      )}
+    </button>
   );
 }
 

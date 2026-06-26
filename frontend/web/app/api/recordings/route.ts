@@ -29,17 +29,54 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from("matches")
-      .select("id, name, status, progress, error, results_path, input_path, created_at, fps, num_frames, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, bounce_heatmap_path, player_heatmap_path, player_id")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(100);
+    const BASE_COLS = "id, name, status, progress, error, results_path, input_path, created_at, fps, num_frames, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, bounce_heatmap_path, player_heatmap_path, player_id";
+    const listQuery = (cols: string) =>
+      supabaseAdmin
+        .from("matches")
+        .select(cols)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+    let { data, error } = await listQuery(`${BASE_COLS}, favorited`);
+    // Pre-migration safety: if the `favorited` column hasn't been added yet,
+    // retry without it so the list still loads (favorited defaults to false).
+    if (error && typeof error.message === "string" && error.message.includes("favorited")) {
+      ({ data, error } = await listQuery(BASE_COLS));
+    }
 
     if (error) {
       console.error("Recordings fetch error", error);
       return NextResponse.json({ error: "Failed to fetch recordings" }, { status: 500 });
     }
+
+    // Dynamic select() string can't be inferred by postgrest-js, so it widens
+    // to GenericStringError. Runtime shape is BASE_COLS (+ optional favorited).
+    type MatchRow = {
+      id: string;
+      name: string | null;
+      status: string;
+      progress: number | null;
+      error: string | null;
+      results_path: string | null;
+      input_path: string | null;
+      created_at: string;
+      fps: number | null;
+      num_frames: number | null;
+      bounce_count: number | null;
+      shot_count: number | null;
+      rally_count: number | null;
+      forehand_count: number | null;
+      backhand_count: number | null;
+      serve_count: number | null;
+      in_bounds_bounces: number | null;
+      out_bounds_bounces: number | null;
+      bounce_heatmap_path: string | null;
+      player_heatmap_path: string | null;
+      player_id: string | null;
+      favorited?: boolean | null;
+    };
+    const rows = (data ?? []) as unknown as MatchRow[];
 
     // Pull player names for any matches with a bound player_id. One query
     // instead of N+1 — collect unique IDs, fetch once, build a lookup map.
@@ -47,7 +84,7 @@ export async function GET() {
     // off the recording title), so the page needs both fields.
     const playerIds = Array.from(
       new Set(
-        (data || [])
+        rows
           .map((m) => m.player_id)
           .filter((x): x is string => typeof x === 'string' && x.length > 0),
       ),
@@ -70,7 +107,7 @@ export async function GET() {
 
     // Generate signed URLs for completed matches
     const recordings = await Promise.all(
-      (data || []).map(async (match) => {
+      rows.map(async (match) => {
         let videoUrl = null;
 
         if (match.status === "done" && match.results_path) {
@@ -104,6 +141,7 @@ export async function GET() {
           hasPlayerHeatmap: !!match.player_heatmap_path,
           player_id: match.player_id ?? null,
           playerName: match.player_id ? (playerMap[match.player_id] ?? null) : null,
+          favorited: match.favorited ?? false,
         };
       })
     );
