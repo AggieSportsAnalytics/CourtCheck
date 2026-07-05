@@ -33,8 +33,9 @@ class PipelineConfig:
     ball_model_weights: str = 'tracknet_v2_official.pt'
 
     # InpaintNet trajectory rectification — fills missed ball detections using learned trajectory physics.
-    # Runs after TrackNet inference, before linear interpolation. Off by default until validated.
-    enable_inpaint_net: bool = False
+    # Runs after TrackNet inference, before linear interpolation. Bounce detector
+    # uses the raw pre-rectification track, so inpainted points can't fabricate bounces.
+    enable_inpaint_net: bool = True
     inpaint_net_weights: str = 'inpaint_net_weights.pt'
 
     # YOLO inference resolution. Must match or exceed input video resolution for small object
@@ -62,6 +63,11 @@ class PipelineConfig:
     # Run ball detection every Nth frame; use previous result for skipped frames.
     # 1 = every frame. 2 = detect every 2nd frame (~2x throughput on TrackNet).
     ball_detection_interval: int = 1
+
+    # TrackNet inference resolution. Trained at 640x360; 1280x720 doubles the
+    # far-ball's in-model pixel size (no retrain). A/B toggle for far-court recall.
+    ball_infer_width: int = 640
+    ball_infer_height: int = 360
 
     # Far player detection thresholds (court-space projection, calibration required).
     # x_margin: how far beyond the court sideline (in court units) a foot projection

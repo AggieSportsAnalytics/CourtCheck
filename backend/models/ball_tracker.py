@@ -115,7 +115,7 @@ class BallDetector:
     ], dtype=np.float32)
     _FAR_ROI_PAD = 40  # image-space padding around projected far-court rect
 
-    def __init__(self, path_model=None, device="cuda"):
+    def __init__(self, path_model=None, device="cuda", infer_width=640, infer_height=360):
         self.model = BallTrackerNet(input_channels=9, out_channels=256)
         self.device = device
         if path_model:
@@ -124,15 +124,20 @@ class BallDetector:
             if device == "cuda":
                 self.model = self.model.half()  # FP16 for ~2x throughput on GPU
             self.model.eval()  # inference mode
-        self.width = 640
-        self.height = 360
+        # Inference resolution. TrackNetV2 trained at 640x360, but the far-court
+        # ball is only ~5px there; running larger makes the ball bigger in-model.
+        # Configurable so we can A/B without retraining.
+        self.width = infer_width
+        self.height = infer_height
         self.frame_buffer = deque(maxlen=3)
         self.prev_pred = [None, None]
+        self.prev_pred2 = [None, None]  # one before prev_pred, for velocity prediction
 
         # Separate state for the ROI pass — its 3-frame buffer + prev_pred must
         # not mix with the main full-frame pass since they're different scales.
         self.roi_frame_buffer = deque(maxlen=3)
         self.roi_prev_pred = [None, None]
+        self.roi_prev_pred2 = [None, None]
         self._roi_bounds = None        # image-space crop (x1,y1,x2,y2); cached since calibration is static
         self._roi_letterbox = None     # (pad_top, pad_bottom, pad_left, pad_right) for aspect-preserving resize
         self._roi_logged = False
@@ -168,15 +173,32 @@ class BallDetector:
             out = self.model(tensor.to(self.device))
             output = out.argmax(dim=1).detach().cpu().numpy()
 
-        # Post-process using previous prediction for stability
-        x_pred, y_pred = self.postprocess(output, self.prev_pred, frame_w=frame_w, frame_h=frame_h)
+        # Gate around the velocity-predicted next position (prev + velocity) so
+        # fast balls aren't rejected as outliers; fall back to prev_pred.
+        predicted = self._predict_next(self.prev_pred, self.prev_pred2)
+        x_pred, y_pred = self.postprocess(
+            output, self.prev_pred, frame_w=frame_w, frame_h=frame_h, predicted=predicted
+        )
 
-        # Update previous prediction state
+        # Update previous prediction state (shift history)
+        self.prev_pred2 = self.prev_pred
         self.prev_pred = [x_pred, y_pred]
 
         return (x_pred, y_pred)
 
-    def postprocess(self, feature_map, prev_pred, frame_w=1280, frame_h=720, max_dist=80):
+    @staticmethod
+    def _predict_next(prev, prev2):
+        """Linear-velocity prediction of the next ball position from the last two.
+        Returns None if either is missing (no velocity estimate available)."""
+        if (
+            prev is None or prev2 is None
+            or prev[0] is None or prev[1] is None
+            or prev2[0] is None or prev2[1] is None
+        ):
+            return None
+        return [2.0 * prev[0] - prev2[0], 2.0 * prev[1] - prev2[1]]
+
+    def postprocess(self, feature_map, prev_pred, frame_w=1280, frame_h=720, max_dist=80, predicted=None, adaptive_threshold=False):
         """
         :params
             feature_map: feature map with shape (1,360,640)
@@ -184,6 +206,10 @@ class BallDetector:
             frame_w: original frame width (used to scale TrackNet output back to frame space)
             frame_h: original frame height
             max_dist: maximum distance (in 1280x720-equivalent pixels) to filter outliers
+            predicted: [x,y] velocity-predicted next position. When given, candidates
+                are gated by distance to THIS (the ball's expected location) instead
+                of the previous frame, so a fast-moving ball isn't rejected. Falls
+                back to prev_pred when no velocity estimate is available.
         :return
             x,y ball coordinates in frame pixel space
         """
@@ -196,7 +222,14 @@ class BallDetector:
         feature_map *= 255
         feature_map = feature_map.reshape((self.height, self.width))
         feature_map = feature_map.astype(np.uint8)
-        ret, heatmap = cv2.threshold(feature_map, 127, 255, cv2.THRESH_BINARY)
+        if adaptive_threshold and feature_map.max() > 0:
+            # Far-ROI heatmaps on harder cameras (court2/6) peak well below 127,
+            # so the fixed threshold erases them entirely. Otsu adapts to the
+            # blob's own intensity, recovering weak far-ball signal. Scoped to
+            # the ROI pass so the strong near-ball main pass is untouched.
+            ret, heatmap = cv2.threshold(feature_map, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        else:
+            ret, heatmap = cv2.threshold(feature_map, 127, 255, cv2.THRESH_BINARY)
         circles = cv2.HoughCircles(
             heatmap,
             cv2.HOUGH_GRADIENT,
@@ -205,19 +238,31 @@ class BallDetector:
             param1=50,
             param2=2,
             minRadius=1,   # lowered from 2: far-baseline balls are 1-2px in 360x640 map
-            maxRadius=7,
+            maxRadius=max(7, int(round(7 * self.height / 360))),  # scale with inference res
         )
         x, y = None, None
         if circles is not None:
-            if prev_pred[0]:
-                for i in range(len(circles[0])):
-                    x_temp = circles[0][i][0] * scale_x
-                    y_temp = circles[0][i][1] * scale_y
-                    dist = distance.euclidean((x_temp, y_temp), prev_pred)
-                    if dist < scaled_max_dist:
+            # Anchor candidate selection on the velocity-predicted position when
+            # available (handles fast balls), else the previous frame's position.
+            anchor = None
+            if predicted is not None and predicted[0] is not None:
+                anchor = predicted
+            elif prev_pred[0] is not None:
+                anchor = prev_pred
+
+            if anchor is not None:
+                # Pick the candidate CLOSEST to the anchor within max_dist (not the
+                # first one) so noise near the anchor doesn't pre-empt the real ball.
+                best_d = scaled_max_dist
+                for c in circles[0]:
+                    x_temp = c[0] * scale_x
+                    y_temp = c[1] * scale_y
+                    d = distance.euclidean((x_temp, y_temp), anchor)
+                    if d < best_d:
+                        best_d = d
                         x, y = x_temp, y_temp
-                        break
             else:
+                # No history yet — take the strongest candidate.
                 x = circles[0][0][0] * scale_x
                 y = circles[0][0][1] * scale_y
         return x, y
@@ -327,9 +372,12 @@ class BallDetector:
 
         # Postprocess returns coords in the model's input frame (= padded crop
         # space after resize). Pass padded crop_w/h so the scaling matches.
+        roi_predicted = self._predict_next(self.roi_prev_pred, self.roi_prev_pred2)
         x_pred, y_pred = self.postprocess(
-            output, self.roi_prev_pred, frame_w=crop_w, frame_h=crop_h,
+            output, self.roi_prev_pred, frame_w=crop_w, frame_h=crop_h, predicted=roi_predicted,
+            adaptive_threshold=True,  # recover weak far-ball heatmaps (court2/6)
         )
+        self.roi_prev_pred2 = self.roi_prev_pred
         self.roi_prev_pred = [x_pred, y_pred]
 
         # Strip the letterbox padding so the returned coords are in the
@@ -372,13 +420,18 @@ class BallDetector:
         # Always feed the ROI buffer so it doesn't go stale.
         x_crop, y_crop = self._infer_roi_crop(frame, bounds)
 
-        if x_main is not None and y_main is not None:
-            return main_pred  # main wins when it has a value
+        x1, y1, x2, y2 = bounds
+        main_hit = x_main is not None and y_main is not None
+        roi_hit = x_crop is not None and y_crop is not None
+        main_in_far = main_hit and (x1 <= x_main <= x2 and y1 <= y_main <= y2)
 
-        if x_crop is None or y_crop is None:
-            return main_pred  # neither pass hit — preserve None
+        # Trust the high-res ROI for the far-court region: prefer it whenever the
+        # main pass missed OR it landed inside the far-court crop, where the
+        # full-frame 640x360 pass localizes the ~5px far ball unreliably (and
+        # often pre-empts a correct ROI hit with a low-quality near-miss). Keep
+        # the main pass for the near court, where TrackNet works well.
+        if roi_hit and (not main_hit or main_in_far):
+            self.roi_backfill_count += 1
+            return (x_crop + x1, y_crop + y1)
 
-        # Map crop-space coords back to original frame coords.
-        x1, y1, _, _ = bounds
-        self.roi_backfill_count += 1
-        return (x_crop + x1, y_crop + y1)
+        return main_pred

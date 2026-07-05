@@ -94,6 +94,18 @@ class PlayerTracker:
         if device == 'cuda':
             self.model.to(device)
 
+        # Dedicated detector for near-player recovery (predict-only). Kept
+        # separate from self.model so its stateless predict() calls never
+        # disturb self.model's BoT-SORT tracker state. Lazy-loaded on first
+        # dropout so videos that never lose the near player pay nothing.
+        self._model_path = model_path
+        self._device = device
+        self._recovery_model = None
+        # Monotonic so each recovered detection gets a globally-unique id and
+        # never accumulates a near-vote that could outrank the real tracked
+        # player; recovered candidates are picked only via the per-frame fallback.
+        self._near_recovery_counter = self._NEAR_RECOVERY_ID_OFFSET
+
     def detect_frame(self, frame) -> tuple[dict, dict]:
         """
         Detect players in a single frame and extract pose keypoints.
@@ -148,6 +160,10 @@ class PlayerTracker:
     _FAR_ROI_CONF = 0.005       # very low threshold: far player is tiny and blurry
     _FAR_ROI_ID_OFFSET = -1000  # synthetic track IDs: -1000, -1001, …
     _far_roi_logged = False     # log ROI bounds once per instantiation
+    _NEAR_RECOVERY_ID_OFFSET = 9000  # synthetic POSITIVE IDs for predict-recovered near players
+    _NEAR_RECOVERY_MIN_H = 100  # near player is large; smaller dets are far/noise
+    _NEAR_RECOVERY_FOOT_FRAC = 0.45  # near player's feet sit in the lower frame
+    _near_recovery_logged = False
 
     def detect_frame_with_far_roi(
         self,
@@ -228,6 +244,49 @@ class PlayerTracker:
                 keypoints_dict[synthetic_id] = None
             synthetic_id -= 1
 
+        # --- Near-player recovery ---
+        # BoT-SORT drops the near player after a walk-off/occlusion: the
+        # re-entered player is never re-confirmed with a track id, so the
+        # tracked pass (detect_frame) emits nothing for them. A plain predict
+        # pass still sees them. Only when tracking has NO near-side player this
+        # frame, run predict and add any large, lower-frame person under a
+        # synthetic POSITIVE id so choose_and_filter_players' per-frame near
+        # selection can recover them. Runs only during dropouts -> ~free on
+        # clips that never lose the near player, and never disturbs the tracker.
+        near_foot_min = frame_h * self._NEAR_RECOVERY_FOOT_FRAC
+        has_near_tracked = any(
+            tid > 0 and (b[3] - b[1]) >= self._NEAR_RECOVERY_MIN_H and b[3] >= near_foot_min
+            for tid, b in player_dict.items()
+        )
+        if not has_near_tracked:
+            if self._recovery_model is None:
+                self._recovery_model = YOLO(self._model_path)
+                if self._device == 'cuda':
+                    self._recovery_model.to(self._device)
+            pred = self._recovery_model.predict(
+                frame, verbose=False, conf=self.conf, half=True, imgsz=self.imgsz
+            )[0]
+            pred_kps = None
+            if pred.keypoints is not None and pred.keypoints.data is not None:
+                pred_kps = pred.keypoints.data.cpu().numpy()  # (N, 17, 3)
+            added = 0
+            for det_idx, box in enumerate(pred.boxes or []):
+                if pred.names[int(box.cls.item())] != "person":
+                    continue
+                rx1, ry1, rx2, ry2 = box.xyxy[0].tolist()
+                if (ry2 - ry1) < self._NEAR_RECOVERY_MIN_H or ry2 < near_foot_min:
+                    continue
+                recovery_id = self._near_recovery_counter
+                self._near_recovery_counter += 1
+                player_dict[recovery_id] = [rx1, ry1, rx2, ry2]
+                keypoints_dict[recovery_id] = (
+                    pred_kps[det_idx] if pred_kps is not None and det_idx < len(pred_kps) else None
+                )
+                added += 1
+            if added and not self._near_recovery_logged:
+                print(f"[Recovery] near-player recovery active (predict added {added} candidate(s))")
+                self._near_recovery_logged = True
+
         return player_dict, keypoints_dict
 
     def choose_and_filter_players(
@@ -283,6 +342,12 @@ class PlayerTracker:
 
         for frame in player_detections:
             for track_id, bbox in frame.items():
+                # Synthetic far-ROI detections (negative IDs) are NEVER the near
+                # player. They exist only to recover the small far player; some
+                # of them project to the near side and would otherwise hijack the
+                # near vote (observed: phantom -1001 beat the real near player).
+                if track_id <= self._FAR_ROI_ID_OFFSET:
+                    continue
                 result = _project_foot(bbox, H_ref)
                 if result is None:
                     continue
@@ -296,6 +361,8 @@ class PlayerTracker:
 
         all_tids = {tid for frame in player_detections for tid in frame}
         print(f"[Player] IDs seen: {len(all_tids)} unique {sorted(all_tids)[:10]}")
+        _top_votes = sorted(near_votes.items(), key=lambda kv: -kv[1])[:6]
+        print(f"[Player] near_votes (top): {_top_votes}")
 
         near_info = f"near={near_id} ({near_votes[near_id]} frames)" if near_id else "near=none"
 
@@ -349,6 +416,10 @@ class PlayerTracker:
                 # Primary id missing — find best near-side detection by area + proximity
                 best_near_tid, best_near_score = None, 0.0
                 for tid, bbox in frame.items():
+                    # Same invariant as the vote: synthetic far-ROI detections
+                    # are never the near player, so they must not rescue it.
+                    if tid <= self._FAR_ROI_ID_OFFSET:
+                        continue
                     bx1, by1, bx2, by2 = bbox
                     bw, bh = bx2 - bx1, by2 - by1
                     if bw < _NEAR_MIN_WIDTH or bh < _NEAR_MIN_HEIGHT:
@@ -488,8 +559,14 @@ class PlayerTracker:
                     # have an entry for).
                     new_kps[tid] = kps_frame.get(near_source_tid_per_frame[i])
                 elif tid == near_id and near_source_tid_per_frame[i] is None:
-                    # Hold frame — no fresh keypoints.
-                    new_kps[tid] = None
+                    # Hold frame — forward-fill the last good near pose instead
+                    # of None. A None here resets the swing detector's
+                    # wrist-velocity state (breaks continuity), which starves
+                    # peak detection and collapsed strokes on cameras whose near
+                    # track is recovery-dominated (e.g. court6: 9 swings vs 39/73
+                    # on court2/4). Forward-filling keeps the velocity signal
+                    # continuous across brief holds.
+                    new_kps[tid] = filtered_poses[i - 1].get(near_id) if i > 0 else None
                 else:
                     new_kps[tid] = kps_frame.get(tid)
             filtered_poses.append(new_kps)
