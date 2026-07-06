@@ -98,8 +98,16 @@ export default function PlayerDetailPage() {
 
     let cancelled = false
     Promise.all([
-      fetch('/api/players').then((r) =>
-        r.ok ? r.json() : Promise.reject(new Error('Failed to load players')),
+      // Fetch the player by id — the list endpoint hides demo/template rows
+      // (user_id IS NULL) from onboarded users, so resolving via
+      // list-and-find rendered "Player not found" for players the by-id
+      // endpoint happily returns. 404 here means genuinely not visible.
+      fetch(`/api/players/${id}`).then((r) =>
+        r.ok
+          ? r.json()
+          : r.status === 404
+            ? { player: null }
+            : Promise.reject(new Error('Failed to load player')),
       ),
       fetch('/api/recordings').then((r) =>
         r.ok ? r.json() : Promise.reject(new Error('Failed to load recordings')),
@@ -107,9 +115,7 @@ export default function PlayerDetailPage() {
     ])
       .then(([pData, rData]) => {
         if (cancelled) return
-        const found =
-          (pData.players as ApiPlayer[]).find((p) => p.id === id) ?? null
-        setPlayer(found)
+        setPlayer((pData.player as ApiPlayer | null) ?? null)
         const all = (rData.recordings ?? []) as ApiRecording[]
         const mine = all
           .filter((r) => r.player_id === id)
