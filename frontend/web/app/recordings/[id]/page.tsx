@@ -406,11 +406,11 @@ export default function RecordingDetailPage() {
   // (Per-stroke accuracy moved to the Shot Map's right rail — see
   // ShotAccuracyMini in VizPanel. Single computation lives there now.)
 
-  // Scouting sections — use backend prose if present, otherwise fall back to
-  // plausible placeholder copy from the mock so the layout stays anchored.
-  const scoutingSections: ScoutingSections = parseScoutingReport(
-    recording.scoutingReport,
-    { player: player || 'Player' }
+  // Scouting sections — backend prose parsed into 6 sections, or null when
+  // report generation failed/never ran (renders an explicit empty state; a
+  // coach must never read fabricated placeholder analysis as real).
+  const scoutingSections: ScoutingSections | null = parseScoutingReport(
+    recording.scoutingReport
   );
 
   // Stats tiles — 4 only (per mock). Values derive from realShots so the
@@ -673,6 +673,7 @@ export default function RecordingDetailPage() {
         coverageGrid={recording.coverageGrid ?? []}
         positionSummary={recording.positionSummary}
         recordingStatus={recording.status}
+        fps={recording.fps}
         videoRef={videoRef}
       />
 
@@ -694,8 +695,28 @@ export default function RecordingDetailPage() {
         fps={recording.fps}
       />
 
-      {/* Scouting report — 6 sections */}
-      <ScoutingReport sections={scoutingSections} readMinutes={2} />
+      {/* Scouting report — 6 sections, or explicit empty state when the
+          backend never produced one (generation failure / legacy row). */}
+      {scoutingSections ? (
+        <ScoutingReport sections={scoutingSections} readMinutes={2} />
+      ) : (
+        <article
+          className="bg-paper border border-line rounded-[14px] mb-8"
+          style={{ padding: '36px 44px', boxShadow: 'var(--shadow-card)' }}
+          aria-label="Scouting report unavailable"
+        >
+          <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
+            Scouting report · this recording
+          </span>
+          <p
+            className="font-display font-normal text-ink-mute mt-3 m-0"
+            style={{ fontSize: '1.12rem', lineHeight: 1.7 }}
+          >
+            No scouting report was generated for this recording. Reprocess the
+            video to generate one.
+          </p>
+        </article>
+      )}
 
       {/* Stats — 4 tiles */}
       <StatsCard
@@ -748,22 +769,13 @@ function PageStatus({ message }: { message: string }) {
 /**
  * Convert the legacy `scouting_report` markdown blob (one prose block) into
  * the 6-section format. The new backend may eventually return a structured
- * object, but for now we ship a heuristic split. If the blob is empty, we
- * use the mock copy so the layout stays anchored.
+ * object, but for now we ship a heuristic split. If the blob is empty
+ * (report generation failed or never ran), return null — the page renders
+ * an honest empty state instead of fabricated placeholder prose.
  */
-function parseScoutingReport(
-  raw: string | null,
-  ctx: { player: string }
-): ScoutingSections {
+function parseScoutingReport(raw: string | null): ScoutingSections | null {
   if (!raw || !raw.trim()) {
-    return {
-      matchSnapshot: `${ctx.player} owned the middle. Solid baseline play with a forehand-first pattern off the deuce side. Accuracy held above 80% across the full recording.`,
-      positioningTendencies: `Lived on the baseline. Drifted further back on the deuce side as the recording went on, leaving the ad sideline open to opponent angles.`,
-      errorPatterns: `Most misses came on backhand returns of heavy second serves into the ad box. Several squeezed contacts before the spacing adjusted.`,
-      strengths: `The inside-out forehand from the deuce baseline ended points when used. Slice-serve opener on the deuce side returned short consistently.`,
-      areasToImprove: `Backhand return on heavy second serves is the biggest leak. Step back a half-step to give the racquet more room.`,
-      oneLineAdjustment: `Step back a half-step on second-serve returns. Drill approach-behind-deep-slice six in a row.`,
-    };
+    return null;
   }
 
   // If the backend returns a structured object stringified as JSON, prefer
@@ -789,6 +801,9 @@ function parseScoutingReport(
   // GPT output looks like `1) Match Snapshot\n<body>\n\n2) Positioning ...`.
   // Split on lines that begin with a numbered or markdown-bold header so the
   // section heading is stripped before the body lands in the UI rail.
+  // Blocks are assigned to sections by MATCHING THE HEADER TEXT, not by
+  // position — the prompt tells the model to omit N/A sections, so a purely
+  // positional map shifts every later section under the wrong heading.
   const SECTIONS: (keyof ScoutingSections)[] = [
     'matchSnapshot',
     'positioningTendencies',
@@ -797,29 +812,32 @@ function parseScoutingReport(
     'areasToImprove',
     'oneLineAdjustment',
   ];
-  const headerRe = /^\s*(?:\*\*|#+\s*)?(?:\d+[\.\)]\s*|[-•]\s*)?([A-Z][^\n*:]+?)(?:\*\*)?\s*:?\s*$/;
-  const blocks: string[] = [];
+  const HEADER_KEYWORDS: [RegExp, keyof ScoutingSections][] = [
+    [/snapshot/i, 'matchSnapshot'],
+    [/position/i, 'positioningTendencies'],
+    [/error/i, 'errorPatterns'],
+    [/strength/i, 'strengths'],
+    [/improve/i, 'areasToImprove'],
+    [/adjustment|coaching/i, 'oneLineAdjustment'],
+  ];
+  // Header text may not contain sentence punctuation — a short prose line
+  // ("Kaia held serve well.") must not register as a header.
+  const headerRe = /^\s*(?:\*\*|#+\s*)?(?:\d+[\.\)]\s*|[-•]\s*)?([A-Z][^\n*:.,;!?]+?)(?:\*\*)?\s*:?\s*$/;
+  const blocks: { header: string; body: string }[] = [];
+  let currentHeader = '';
   let current = '';
   for (const rawLine of raw.split('\n')) {
     const line = rawLine.trimEnd();
-    const isHeader = headerRe.test(line) && line.trim().length < 60;
-    if (isHeader) {
-      if (current.trim()) blocks.push(current.trim());
+    const m = line.trim().length < 60 ? line.match(headerRe) : null;
+    if (m) {
+      if (current.trim()) blocks.push({ header: currentHeader, body: current.trim() });
+      currentHeader = m[1] ?? '';
       current = '';
     } else {
       current += (current ? '\n' : '') + line;
     }
   }
-  if (current.trim()) blocks.push(current.trim());
-
-  // If header parsing missed (e.g. flat prose), fall back to blank-line split.
-  const sectionsArr =
-    blocks.length >= 2
-      ? blocks
-      : raw
-          .split(/\n\s*\n/)
-          .map((p) => p.replace(/^[#*\s]+/, '').trim())
-          .filter(Boolean);
+  if (current.trim()) blocks.push({ header: currentHeader, body: current.trim() });
 
   const out: ScoutingSections = {
     matchSnapshot: '',
@@ -829,11 +847,35 @@ function parseScoutingReport(
     areasToImprove: '',
     oneLineAdjustment: '',
   };
-  SECTIONS.forEach((k, i) => {
-    out[k] = sectionsArr[i] ?? '';
-  });
-  if (!out.oneLineAdjustment && sectionsArr.length > 0) {
-    out.oneLineAdjustment = sectionsArr[sectionsArr.length - 1];
+
+  // Pass 1: label-match blocks to sections via header keywords.
+  const unmatched: string[] = [];
+  for (const b of blocks) {
+    const hit = HEADER_KEYWORDS.find(([re]) => re.test(b.header));
+    if (hit && !out[hit[1]]) {
+      out[hit[1]] = b.body;
+    } else {
+      unmatched.push(b.body);
+    }
+  }
+
+  // Pass 2: unlabeled leftovers (or flat prose with no headers at all) fill
+  // the remaining empty sections in order — the old positional behavior.
+  const leftovers =
+    blocks.length >= 2
+      ? unmatched
+      : raw
+          .split(/\n\s*\n/)
+          .map((p) => p.replace(/^[#*\s]+/, '').trim())
+          .filter(Boolean);
+  let li = 0;
+  for (const k of SECTIONS) {
+    if (!out[k] && li < leftovers.length) {
+      out[k] = leftovers[li++];
+    }
+  }
+  if (!out.oneLineAdjustment && leftovers.length > 0) {
+    out.oneLineAdjustment = leftovers[leftovers.length - 1];
   }
   return out;
 }

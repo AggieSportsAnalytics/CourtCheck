@@ -37,6 +37,8 @@ type Props = {
   positionSummary?: PositionSummary | null;
   /** Recording status — drives the Coverage empty state vs sample fallback. */
   recordingStatus?: string;
+  /** Source video fps — fallback for seeking when a shot has no time_s. */
+  fps?: number | null;
   /** Optional. When provided, clicking a bounce on the shot map opens a
    *  side-panel and "Play from here" seeks the video. */
   videoRef?: RefObject<HTMLVideoElement | null>;
@@ -149,7 +151,7 @@ function buildSpacingShots(shots: ApiShot[]): SpacingShot[] {
   return out;
 }
 
-export default function VizPanel({ shots = [], coverageGrid, positionSummary, recordingStatus, videoRef }: Props) {
+export default function VizPanel({ shots = [], coverageGrid, positionSummary, recordingStatus, fps, videoRef }: Props) {
   const [mode, setMode] = useState<VizMode>('shotMap');
   const [shotFilter, setShotFilter] = useState<StrokeKey | null>(null);
   const [spacingFilter, setSpacingFilter] = useState<StrokeKey | null>(null);
@@ -416,6 +418,7 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
                 shot={selectedShot}
                 onClose={() => setSelectedShot(null)}
                 videoRef={videoRef}
+                fps={fps}
               />
             </>
           )}
@@ -655,10 +658,12 @@ function BouncePanel({
   shot,
   onClose,
   videoRef,
+  fps,
 }: {
   shot: ShotDot | null;
   onClose: () => void;
   videoRef?: RefObject<HTMLVideoElement | null>;
+  fps?: number | null;
 }) {
   useEffect(() => {
     if (!shot) return;
@@ -683,7 +688,11 @@ function BouncePanel({
     ? 'var(--color-ink-mute)'
     : STROKE_COLOR_BY_KEY[shot.stroke as StrokeKey];
   const isOut = shot.in === false;
-  const sec = Math.max(0, shot.time_s ?? 0);
+  // time_s is null when the backend had no fps at export time — fall back to
+  // frame / fps (same fpsSafe pattern as RallyTable) instead of seeking to
+  // 0:00, which reads as "the timings don't match at all."
+  const fpsSafe = fps && fps > 0 ? fps : 30;
+  const sec = Math.max(0, shot.time_s ?? (shot.frame != null ? shot.frame / fpsSafe : 0));
   const mm = Math.floor(sec / 60).toString().padStart(2, '0');
   const ss = Math.floor(sec % 60).toString().padStart(2, '0');
   const ts = `${mm}:${ss}`;
