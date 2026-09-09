@@ -338,14 +338,14 @@ export default function RecordingDetailPage() {
         >
           <BounceLoader size={300} />
           <p className="font-display font-medium text-[1.4rem] tracking-[-0.014em] mt-3 mb-1">
-            <em>Analyzing</em> your recording.
+            Analyzing your recording.
           </p>
           <p className="text-[0.92rem] text-ink-soft mb-5">
             Your court report will be ready shortly. This page updates
             automatically.
           </p>
           <div className="w-full max-w-[360px]">
-            <div className="h-[4px] rounded-full overflow-hidden bg-shade dark:bg-surface">
+            <div className="h-[4px] rounded-full overflow-hidden bg-shade">
               {procPct > 0 ? (
                 <div
                   className="h-full rounded-full bg-court transition-[width] duration-300 ease-out"
@@ -754,7 +754,7 @@ export default function RecordingDetailPage() {
           aria-label="Scouting report unavailable"
         >
           <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
-            Scouting report · this recording
+            Scouting report
           </span>
           <p
             className="font-display font-normal text-ink-mute mt-3 m-0"
@@ -789,7 +789,7 @@ function Crumb({
 }) {
   return (
     <nav
-      className={`flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.14em] ${
+      className={`flex items-center gap-2 min-w-0 max-w-full font-mono text-[0.72rem] uppercase tracking-[0.14em] ${
         noMargin ? '' : 'mb-4'
       }`}
       aria-label="Breadcrumb"
@@ -798,7 +798,7 @@ function Crumb({
         Recordings
       </Link>
       <span className="text-ink-mute opacity-50">/</span>
-      <span className="text-ink truncate max-w-[60ch] normal-case tracking-normal" style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem' }}>
+      <span className="text-ink truncate min-w-0 max-w-[min(60ch,100%)] normal-case tracking-normal" style={{ fontFamily: 'var(--font-display)', fontSize: '0.95rem' }}>
         {recordingName}
       </span>
     </nav>

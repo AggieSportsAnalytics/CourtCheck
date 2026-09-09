@@ -30,7 +30,7 @@ export default function StatsCard({ shotsTracked, tiles }: Props) {
       >
         <div>
           <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
-            Stats · this recording
+            Stats
           </span>
           <h2
             className="font-display font-medium mt-2"
@@ -61,7 +61,7 @@ export default function StatsCard({ shotsTracked, tiles }: Props) {
 function Tile({ label, value, unit }: StatTileData) {
   return (
     <div
-      className="cc-stat-tile group cursor-default bg-shade dark:bg-surface border border-transparent"
+      className="cc-stat-tile group cursor-default bg-shade border border-transparent"
       style={{ padding: '26px 24px' }}
     >
       <div
@@ -75,7 +75,7 @@ function Tile({ label, value, unit }: StatTileData) {
         {label}
       </div>
       <div
-        className="font-display font-medium leading-[1.05] group-hover:text-court dark:group-hover:text-court-light"
+        className="font-display font-medium leading-[1.05] group-hover:text-court"
         style={{
           fontSize: '2.6rem',
           letterSpacing: '-0.014em',

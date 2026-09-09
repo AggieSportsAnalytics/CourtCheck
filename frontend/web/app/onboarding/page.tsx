@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 
 import { BrandMark } from '@/components/brand/BrandMark'
-import { ThemeToggle } from '@/components/brand/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -68,7 +67,6 @@ export default function OnboardingPage() {
     <div className="min-h-screen flex flex-col">
       <header className="px-7 sm:px-14 py-7 flex items-center justify-between">
         <BrandMark />
-        <ThemeToggle />
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-7 pb-16 pt-2">
@@ -81,7 +79,7 @@ export default function OnboardingPage() {
             className="font-display font-medium text-[1.65rem] tracking-[-0.014em] text-center"
             style={{ fontVariationSettings: '"opsz" 72' }}
           >
-            Pick your <em>starting roster.</em>
+            Pick your starting roster.
           </h1>
           <p className="text-ink-soft text-[0.95rem] text-center mt-2 mb-7">
             You can edit, delete, and add players any time after.

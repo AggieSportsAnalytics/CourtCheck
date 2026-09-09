@@ -89,7 +89,7 @@ export default function SignupPage() {
             <BrandMark size="md" href={null} />
           </div>
           <div className="text-center pt-2 pb-1">
-            <div className="size-16 mx-auto mb-5 rounded-full inline-flex items-center justify-center bg-[color-mix(in_srgb,var(--color-court)_12%,transparent)] text-court dark:bg-[color-mix(in_srgb,var(--color-court-light)_18%,transparent)] dark:text-court-light">
+            <div className="size-16 mx-auto mb-5 rounded-full inline-flex items-center justify-center bg-[color-mix(in_srgb,var(--color-court)_12%,transparent)] text-court">
               <svg
                 viewBox="0 0 24 24"
                 width="26"
@@ -108,7 +108,7 @@ export default function SignupPage() {
               className="font-display font-medium text-[1.5rem] tracking-[-0.014em] mb-2"
               style={{ fontVariationSettings: '"opsz" 72' }}
             >
-              Check your <em>email.</em>
+              Check your email.
             </h3>
             <p className="text-ink-soft text-[0.95rem] leading-[1.5] max-w-[32ch] mx-auto mb-5">
               We sent a confirmation link to{' '}
@@ -135,7 +135,7 @@ export default function SignupPage() {
         </div>
 
         <AuthTitle className="text-center">
-          Create your <em>account.</em>
+          Create your account.
         </AuthTitle>
         <AuthSub className="text-center">
           Upload your first recording in under a minute.
@@ -166,7 +166,7 @@ export default function SignupPage() {
                       'focus-visible:ring-2 focus-visible:ring-court/40 focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
                       selected
                         ? 'border-court bg-[color-mix(in_srgb,var(--color-court)_10%,transparent)] text-ink'
-                        : 'border-line bg-shade text-ink-soft hover:border-ink dark:bg-surface',
+                        : 'border-line bg-shade text-ink-soft hover:border-ink',
                     )}
                   >
                     {r}
@@ -254,7 +254,7 @@ export default function SignupPage() {
           Already have an account?{' '}
           <Link href="/auth/login" legacyBehavior passHref>
             <AuthInlineLink>
-              <em>Sign in.</em>
+              Sign in.
             </AuthInlineLink>
           </Link>
         </AuthFoot>

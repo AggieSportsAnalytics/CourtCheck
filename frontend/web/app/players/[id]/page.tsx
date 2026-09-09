@@ -338,7 +338,7 @@ export default function PlayerDetailPage() {
             <div>
               <Eyebrow>Recent trend</Eyebrow>
               <Display as="h2" size="md" className="mt-3">
-                Last <em>{last5.length} recording{last5.length === 1 ? '' : 's'}</em>.
+                Last {last5.length} recording{last5.length === 1 ? '' : 's'}.
               </Display>
             </div>
             <p className="max-w-[38ch] text-sm text-ink-mute">
@@ -358,7 +358,7 @@ export default function PlayerDetailPage() {
           <div>
             <Eyebrow>Recording history</Eyebrow>
             <Display as="h2" size="md" className="mt-3">
-              Every recording, <em>scrubbable</em>.
+              Recordings.
             </Display>
           </div>
         </header>
@@ -375,7 +375,7 @@ export default function PlayerDetailPage() {
           </div>
         ) : (
           <div className="cc-card overflow-hidden p-0">
-            <div className="grid grid-cols-[100px_1fr_120px_120px_60px] items-center gap-4 border-b border-line-soft bg-shade px-6 py-3.5 font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute dark:bg-surface">
+            <div className="grid grid-cols-[100px_1fr_120px_120px_60px] items-center gap-4 border-b border-line-soft bg-shade px-6 py-3.5 font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute">
               <span>Date</span>
               <span>Recording</span>
               <span>Shots</span>
@@ -589,7 +589,7 @@ function HandednessControl({
               onClick={() => update(opt)}
               className={`rounded-full px-3.5 py-1 text-[0.82rem] font-medium transition-colors duration-150 ${
                 active
-                  ? 'bg-ink text-cream dark:bg-court-deep'
+                  ? 'bg-ink text-cream'
                   : 'text-ink-soft hover:text-ink'
               } ${isSaving ? 'opacity-60' : ''}`}
             >

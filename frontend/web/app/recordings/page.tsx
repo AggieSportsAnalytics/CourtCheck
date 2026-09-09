@@ -322,7 +322,7 @@ export default function RecordingsPage() {
               letterSpacing: '-0.022em',
             }}
           >
-            Every recording, <em>scrubbable.</em>
+            Every recording.
           </h1>
           <p className="text-ink-soft text-base mt-2">
             <span className="font-display" style={{ fontFeatureSettings: '"tnum"' }}>
@@ -334,7 +334,7 @@ export default function RecordingsPage() {
 
         <Link
           href="/upload"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ink text-cream dark:bg-court-deep font-medium text-[0.95rem] hover:-translate-y-px"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ink text-cream font-medium text-[0.95rem] hover:-translate-y-px"
           style={{ transition: 'transform var(--duration-quick) var(--ease-spring), background var(--duration-base) var(--ease-out)' }}
         >
           <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
@@ -433,7 +433,7 @@ export default function RecordingsPage() {
         <div className="bg-paper border border-line rounded-[14px] overflow-hidden mb-9">
           {/* Header — hidden on mobile (rows become stacked cards there) */}
           <div
-            className={`hidden md:grid items-center px-6 py-3.5 bg-shade dark:bg-surface font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute gap-4 ${mdGridCols}`}
+            className={`hidden md:grid items-center px-6 py-3.5 bg-shade font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute gap-4 ${mdGridCols}`}
             style={{ borderBottom: '1px solid var(--color-line-soft)' }}
           >
             {/* Select-all checkbox — always in col 1 */}
@@ -830,7 +830,7 @@ function Chip({
       onClick={onClick}
       className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-[0.85rem] font-medium ${
         active
-          ? 'border-ink text-ink bg-shade dark:bg-surface font-semibold'
+          ? 'border-ink text-ink bg-shade font-semibold'
           : 'border-line bg-transparent text-ink-soft hover:text-ink hover:border-ink-mute'
       }`}
       style={{ transition: 'border-color var(--duration-quick) var(--ease-out), color var(--duration-quick) var(--ease-out), background var(--duration-quick) var(--ease-out)' }}
@@ -861,7 +861,7 @@ function EmptyState() {
       </p>
       <Link
         href="/upload"
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ink text-cream dark:bg-court-deep font-medium text-[0.95rem]"
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ink text-cream font-medium text-[0.95rem]"
       >
         <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 12h14" />

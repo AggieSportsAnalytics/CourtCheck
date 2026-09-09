@@ -128,14 +128,14 @@ export default function NotesPanel({
             }}
             placeholder="Add a note at the current timestamp"
             aria-label="Add a note"
-            className="w-full px-3.5 py-2.5 rounded-full bg-shade dark:bg-surface text-ink border border-transparent text-[0.92rem] outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 focus:bg-paper focus:border-ink-mute placeholder:text-ink-mute"
+            className="w-full px-3.5 py-2.5 rounded-full bg-shade text-ink border border-transparent text-[0.92rem] outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 focus:bg-paper focus:border-ink-mute placeholder:text-ink-mute"
             style={{ transition: 'border-color var(--duration-quick) var(--ease-out), background var(--duration-quick) var(--ease-out)' }}
           />
           <button
             type="button"
             onClick={handleAdd}
             disabled={!draft.trim() || !videoRef.current}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-ink text-cream dark:bg-court-deep font-medium text-[0.86rem] hover:-translate-y-px disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-ink text-cream font-medium text-[0.86rem] hover:-translate-y-px disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:translate-y-0"
             style={{ transition: 'opacity var(--duration-quick) var(--ease-out), transform var(--duration-quick) var(--ease-spring)' }}
           >
             <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -156,7 +156,7 @@ export default function NotesPanel({
             sorted.map((n) => (
               <div
                 key={n.originalIdx}
-                className="cc-note-row group grid items-start gap-3.5 px-3.5 py-2.5 rounded-[10px] bg-shade dark:bg-surface cursor-pointer"
+                className="cc-note-row group grid items-start gap-3.5 px-3.5 py-2.5 rounded-[10px] bg-shade cursor-pointer"
                 style={{ gridTemplateColumns: 'auto 1fr auto', transition: 'background var(--duration-quick) var(--ease-out)' }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLElement).style.background =

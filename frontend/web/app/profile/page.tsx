@@ -88,9 +88,9 @@ export default function ProfilePage() {
       <section className="pt-6 pb-7">
         <span
           aria-hidden
-          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court dark:text-court-light"
+          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-clay dark:bg-clay-soft" />
+          <span className="w-1.5 h-1.5 rounded-full bg-clay" />
           Profile
         </span>
         <h1
@@ -104,7 +104,7 @@ export default function ProfilePage() {
             paddingTop: '0.08em',
           }}
         >
-          Your <em>profile</em>.
+          Profile.
         </h1>
       </section>
 
@@ -148,7 +148,7 @@ export default function ProfilePage() {
           </h2>
           <p className="text-ink-soft font-mono text-[0.78rem] mt-1 truncate">{email}</p>
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-mute font-mono uppercase tracking-[0.14em] text-[0.66rem]">
-            <span className="text-court dark:text-court-light">{role}</span>
+            <span className="text-court">{role}</span>
             {joined && (
               <>
                 <span aria-hidden>·</span>
@@ -196,7 +196,7 @@ export default function ProfilePage() {
       {/* Stroke breakdown */}
       {!loading && summary?.hasTennisStats && totalStrokes > 0 && (
         <section className="cc-card p-7 mb-6">
-          <h3 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court dark:text-court-light mb-5">
+          <h3 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court mb-5">
             Stroke breakdown
           </h3>
           <div className="flex flex-col gap-4">
@@ -250,7 +250,7 @@ export default function ProfilePage() {
       {/* Court accuracy */}
       {!loading && totalBounced > 0 && (
         <section className="cc-card p-7 mb-6">
-          <h3 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court dark:text-court-light mb-5">
+          <h3 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court mb-5">
             Court accuracy
           </h3>
           <div className="flex items-center gap-7 flex-wrap">
@@ -319,7 +319,7 @@ export default function ProfilePage() {
       >
         <Link
           href="/upload"
-          className="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-court text-cream font-medium text-sm hover:-translate-y-px transition-transform dark:bg-court-deep dark:hover:bg-court"
+          className="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-court text-cream font-medium text-sm hover:-translate-y-px transition-transform"
         >
           New recording
           <span aria-hidden>→</span>

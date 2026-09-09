@@ -70,7 +70,7 @@ export default function UpdatePasswordPage() {
             <BrandMark size="md" href={null} />
           </div>
           <div className="text-center pt-1 pb-1">
-            <div className="size-16 mx-auto mb-5 rounded-full inline-flex items-center justify-center bg-[color-mix(in_srgb,var(--color-court)_12%,transparent)] text-court dark:bg-[color-mix(in_srgb,var(--color-court-light)_18%,transparent)] dark:text-court-light">
+            <div className="size-16 mx-auto mb-5 rounded-full inline-flex items-center justify-center bg-[color-mix(in_srgb,var(--color-court)_12%,transparent)] text-court">
               <svg
                 viewBox="0 0 24 24"
                 width="26"
@@ -88,14 +88,14 @@ export default function UpdatePasswordPage() {
               className="font-display font-medium text-[1.5rem] tracking-[-0.014em] mb-2"
               style={{ fontVariationSettings: '"opsz" 72' }}
             >
-              Password <em>updated.</em>
+              Password updated.
             </h3>
             <p className="text-ink-soft text-[0.95rem] leading-[1.5] max-w-[32ch] mx-auto mb-6">
               Other sessions have been signed out for safety.
             </p>
             <Link
               href="/auth/login"
-              className="inline-flex items-center gap-1.5 text-court font-medium border-b border-current dark:text-court-light"
+              className="inline-flex items-center gap-1.5 text-court font-medium border-b border-current"
             >
               Sign in with your new password
               <ArrowRight className="size-3.5" />
@@ -114,7 +114,7 @@ export default function UpdatePasswordPage() {
         </div>
 
         <AuthTitle className="text-center">
-          Set a new <em>password.</em>
+          Set a new password.
         </AuthTitle>
         <AuthSub className="text-center">
           At least 10 characters. Longer is stronger.

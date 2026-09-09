@@ -194,7 +194,7 @@ export default function UploadPage() {
           }`}
           style={{ fontVariationSettings: '"opsz" 72' }}
         >
-          Upload a <em>recording</em>.
+          Upload a recording.
         </h1>
         {!compact && (
           <p className="max-w-[56ch] text-[1.1rem] text-ink-soft">
@@ -289,7 +289,7 @@ export default function UploadPage() {
 
         {pane === 'idle' && pendingFile && (
           <div className="px-6 py-8 text-center">
-            <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-xl bg-shade text-court dark:bg-surface dark:text-court-light">
+            <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-xl bg-shade text-court">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -323,7 +323,7 @@ export default function UploadPage() {
                   e.stopPropagation();
                   confirmUpload();
                 }}
-                className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[0.95rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px dark:bg-court-deep"
+                className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[0.95rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px"
               >
                 Upload &amp; analyze
                 <span aria-hidden>→</span>
@@ -344,7 +344,7 @@ export default function UploadPage() {
 
         {pane === 'idle' && !pendingFile && (
           <div className="px-6 py-8 text-center">
-            <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-xl bg-shade text-court dark:bg-surface dark:text-court-light">
+            <div className="mx-auto mb-3 flex size-11 items-center justify-center rounded-xl bg-shade text-court">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -372,7 +372,7 @@ export default function UploadPage() {
                   e.stopPropagation();
                   open();
                 }}
-                className="border-b border-court font-medium text-court dark:border-court-light dark:text-court-light"
+                className="border-b border-court font-medium text-court"
               >
                 browse files
               </button>
@@ -393,10 +393,10 @@ export default function UploadPage() {
               className="mx-auto mb-6 max-w-[28ch] font-display text-[1.4rem] font-medium tracking-[-0.014em]"
               style={{ fontVariationSettings: '"opsz" 60' }}
             >
-              Uploading <em>your recording</em>.
+              Uploading your recording.
             </h3>
             {filename && (
-              <div className="mx-auto mb-7 inline-flex max-w-full items-center gap-2.5 rounded-full bg-shade px-3.5 py-2 text-[0.85rem] dark:bg-surface">
+              <div className="mx-auto mb-7 inline-flex max-w-full items-center gap-2.5 rounded-full bg-shade px-3.5 py-2 text-[0.85rem]">
                 <span className="max-w-[280px] truncate font-medium">{filename}</span>
                 {bytesTotal > 0 && (
                   <span className="font-mono text-[0.74rem] text-ink-mute">
@@ -405,7 +405,7 @@ export default function UploadPage() {
                 )}
               </div>
             )}
-            <div className="mx-auto h-[4px] max-w-[360px] overflow-hidden rounded-full bg-shade dark:bg-surface">
+            <div className="mx-auto h-[4px] max-w-[360px] overflow-hidden rounded-full bg-shade">
               <div
                 className="h-full rounded-full bg-court transition-[width] duration-200"
                 style={{ width: `${Math.max(0, Math.min(100, uploadPct))}%` }}
@@ -435,7 +435,7 @@ export default function UploadPage() {
             </h3>
 
             {/* Progress bar — always visible. Indeterminate sweep when progress = 0. */}
-            <div className="mx-auto mt-5 h-[4px] max-w-[360px] overflow-hidden rounded-full bg-shade dark:bg-surface">
+            <div className="mx-auto mt-5 h-[4px] max-w-[360px] overflow-hidden rounded-full bg-shade">
               {progress > 0 ? (
                 <div
                   className="h-full rounded-full bg-court transition-[width] duration-300 ease-out"
@@ -483,7 +483,7 @@ export default function UploadPage() {
               className="mt-3 mb-2 font-display text-[1.6rem] font-medium tracking-[-0.018em]"
               style={{ fontVariationSettings: '"opsz" 72' }}
             >
-              Recording <em>analyzed</em>.
+              Recording analyzed.
             </h3>
             <p className="mb-5 text-[0.95rem] text-ink-soft">
               Open the recording to see the read.
@@ -492,7 +492,7 @@ export default function UploadPage() {
               <button
                 type="button"
                 onClick={() => match_id && router.push(`/recordings/${match_id}`)}
-                className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[0.95rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px dark:bg-court-deep"
+                className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[0.95rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px"
               >
                 Open recording
                 <span aria-hidden>→</span>
@@ -510,7 +510,7 @@ export default function UploadPage() {
 
         {pane === 'failed' && (
           <div className="px-8 py-14 text-center">
-            <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl bg-shade text-clay dark:bg-surface">
+            <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl bg-shade text-clay">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -537,7 +537,7 @@ export default function UploadPage() {
             <button
               type="button"
               onClick={handleReset}
-              className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[0.95rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px dark:bg-court-deep"
+              className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[0.95rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px"
             >
               Try again
             </button>
@@ -556,7 +556,7 @@ export default function UploadPage() {
           {features.map((f) => (
             <div key={f.title} className={`flex items-start ${compact ? 'gap-2.5' : 'gap-3.5'}`}>
               <div
-                className={`shrink-0 flex items-center justify-center rounded-[8px] bg-[color-mix(in_srgb,var(--color-court)_8%,transparent)] text-court dark:bg-[color-mix(in_srgb,var(--color-court-light)_14%,transparent)] dark:text-court-light ${compact ? 'size-7' : 'size-9'}`}
+                className={`shrink-0 flex items-center justify-center rounded-[8px] bg-[color-mix(in_srgb,var(--color-court)_8%,transparent)] text-court ${compact ? 'size-7' : 'size-9'}`}
               >
                 <f.Icon className={compact ? 'size-3.5' : 'size-4'} />
               </div>

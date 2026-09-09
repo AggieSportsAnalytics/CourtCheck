@@ -31,7 +31,7 @@ export default function Legend({ counts, unknownCount, activeKey, onToggle }: Pr
             onClick={() => onToggle(s.key)}
             className={`cc-legend-chip inline-flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full border bg-paper text-[0.82rem] font-medium select-none ${
               isActive
-                ? 'border-ink text-ink bg-cream dark:bg-surface'
+                ? 'border-ink text-ink bg-cream'
                 : 'border-line text-ink-soft'
             } ${isMuted ? 'muted' : ''}`}
           >

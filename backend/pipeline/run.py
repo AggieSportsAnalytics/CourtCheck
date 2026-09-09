@@ -1673,17 +1673,31 @@ def generate_scouting_report(
         es = error_summary or {}
 
         prompt = (
-            "You are a Division I tennis performance analyst reviewing a single "
-            "match clip.\n"
-            "The player analyzed is the one closer to the camera (near side, "
-            "P1).\n"
+            "You are an assistant coach on a college tennis team writing notes "
+            "for the head coach after watching one recording of one player.\n"
+            "The player is the one closer to the camera (near side, P1).\n"
             f"Player handedness: {handedness}.\n\n"
-            "Write a concise, data-driven match report under 280 words.\n"
-            "Use direct second-person language ('You...').\n"
-            "Do NOT mention AI, models, cameras, or homography.\n"
-            "Use ONLY the numbers provided — do not invent statistics.\n"
-            "If a stat is N/A, omit the sentence that would cite it.\n\n"
-            "Structure your response EXACTLY with these six sections:\n"
+            "Write under 220 words. Address the player as 'you'.\n"
+            "Voice: a coach talking courtside, not an analyst writing a report. "
+            "Plain words. Short sentences mixed with a few longer ones.\n"
+            "Rules:\n"
+            "- Use ONLY the numbers provided. Never invent a statistic. Cite each "
+            "number at most once; do not restate it in another section.\n"
+            "- Call it a recording, never a match. A 2-minute clip is not a match.\n"
+            "- If a stat is N/A, or the sample is under 5 rallies or under 10 shots, "
+            "say the sample is small instead of drawing a conclusion from it.\n"
+            "- No praise words and no evaluation adverbs: never write remarkable, "
+            "impressive, excellent, strong, solid, showcasing, demonstrating, "
+            "notably, effectively, consistently, significantly.\n"
+            "- No consulting verbs: never write leverage, capitalize, enhance, "
+            "optimize, focus on, consider, aim to, strive.\n"
+            "- No 'this suggests' or 'this indicates'. State the observation, then "
+            "the drill or the adjustment.\n"
+            "- No em dashes. No bullet points. No bold.\n"
+            "- Do NOT mention AI, models, cameras, or homography.\n"
+            "- Each section is one to three sentences. Section 6 is ONE imperative "
+            "sentence under 15 words a coach could say between points.\n\n"
+            "Structure your response EXACTLY with these six section headings:\n"
             "1) Match Snapshot\n"
             "2) Positioning Tendencies\n"
             "3) Error Patterns\n"
@@ -1710,7 +1724,7 @@ def generate_scouting_report(
             "=== POSITIONING (near player, % of frames) ===\n"
             f"Inside baseline: {ps.get('inside_pct', 'N/A')}% | "
             f"On baseline: {ps.get('on_pct', 'N/A')}% | "
-            f"1-10 ft behind: {ps.get('behind_5_10_pct', 'N/A')}% | "
+            f"5-10 ft behind: {ps.get('behind_5_10_pct', 'N/A')}% | "
             f"10+ ft behind: {ps.get('behind_10_plus_pct', 'N/A')}%\n\n"
             "=== NET GAME ===\n"
             f"Net approaches: {na.get('approaches', 0)} | "
@@ -1721,8 +1735,8 @@ def generate_scouting_report(
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=550,
-            temperature=0.5,
+            max_tokens=500,
+            temperature=0.3,
         )
         return response.choices[0].message.content
     except Exception as e:

@@ -46,7 +46,7 @@ function FieldControl({
       className={cn(
         '[&>input]:w-full [&>select]:w-full',
         '[&>input]:px-3.5 [&>input]:py-3 [&>select]:px-3.5 [&>select]:py-3',
-        '[&>input]:bg-shade [&>select]:bg-shade dark:[&>input]:bg-surface dark:[&>select]:bg-surface',
+        '[&>input]:bg-shade [&>select]:bg-shade',
         '[&>input]:border [&>input]:border-transparent [&>select]:border [&>select]:border-transparent',
         '[&>input]:rounded-[10px] [&>select]:rounded-[10px]',
         '[&>input]:font-sans [&>select]:font-sans',
@@ -60,7 +60,7 @@ function FieldControl({
         '[&>input]:focus-visible:ring-2 [&>input]:focus-visible:ring-court/20 [&>select]:focus-visible:ring-2 [&>select]:focus-visible:ring-court/20',
         '[&>input:focus]:border-ink [&>input:focus]:bg-paper',
         '[&>select:focus]:border-ink [&>select:focus]:bg-paper',
-        'dark:[&>input:focus]:bg-surface dark:[&>select:focus]:bg-surface',
+        '',
         'aria-[invalid=true]:[&>input]:border-clay',
         className,
       )}

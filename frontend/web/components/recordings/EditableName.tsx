@@ -134,7 +134,7 @@ export default function EditableName({ recordingId, initialName, variant = 'titl
         type="button"
         onClick={() => void submit()}
         disabled={saving}
-        className="inline-flex items-center px-3 py-1.5 rounded-full bg-ink text-cream text-[0.82rem] font-medium hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer dark:bg-court-deep"
+        className="inline-flex items-center px-3 py-1.5 rounded-full bg-ink text-cream text-[0.82rem] font-medium hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
         style={{ transition: 'transform var(--duration-quick) var(--ease-spring)' }}
       >
         {saving ? 'Saving…' : 'Save'}

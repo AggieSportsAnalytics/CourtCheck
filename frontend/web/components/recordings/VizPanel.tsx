@@ -53,19 +53,19 @@ const MODES: { key: VizMode; label: string }[] = [
 
 const HEAD: Record<VizMode, { eyebrow: string; title: string; sub: string; halfLabel: string }> = {
   shotMap: {
-    eyebrow: 'Shot map · this recording',
+    eyebrow: 'Shot map',
     title: 'Every bounce, by stroke.',
     sub: 'Tap a stroke to isolate. Hover for detail.',
     halfLabel: "Opponent's half · where shots land",
   },
   spacing: {
-    eyebrow: 'Spacing · this recording',
+    eyebrow: 'Spacing',
     title: 'Contact spacing, by quality.',
     sub: 'Lines connect player to ball. Color encodes extension.',
     halfLabel: "Player's half · contact spacing",
   },
   coverage: {
-    eyebrow: 'Coverage · this recording',
+    eyebrow: 'Coverage',
     title: 'Where she stood.',
     sub: 'Density of time-at-position over the recording.',
     halfLabel: "Player's half · time at position",
@@ -297,7 +297,7 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
         )}
 
         <div
-          className="inline-flex gap-1 p-1 bg-shade dark:bg-surface border border-line-soft rounded-[10px] mt-3.5"
+          className="inline-flex gap-1 p-1 bg-shade border border-line-soft rounded-[10px] mt-3.5"
           role="tablist"
           aria-label="Court visualization mode"
         >
@@ -312,7 +312,7 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
                 onClick={() => setMode(key)}
                 className={`appearance-none border font-mono text-[0.72rem] uppercase tracking-[0.1em] px-3.5 py-2 rounded-[7px] cursor-pointer ${
                   active
-                    ? 'bg-ink text-cream border-ink dark:bg-court dark:border-court'
+                    ? 'bg-ink text-cream border-ink'
                     : 'bg-transparent text-ink-soft border-transparent hover:text-ink hover:border-line'
                 }`}
                 style={{ transition: 'background var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out)' }}
@@ -374,14 +374,14 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
               if (mode === 'coverage' && recordingStatus === 'done' && !usingRealCoverage) {
                 return (
                   <span className="ml-2 normal-case tracking-normal text-clay">
-                    · <em>no coverage data</em>
+                    · no coverage data
                   </span>
                 );
               }
               if (isSample) {
                 return (
                   <span className="ml-2 normal-case tracking-normal text-clay">
-                    · <em>sample data</em>
+                    · sample data
                   </span>
                 );
               }
@@ -646,7 +646,7 @@ function CoverageEmpty() {
         <line x1="12" y1="5" x2="12" y2="19" />
       </svg>
       <p className="font-display text-[1.1rem] text-ink leading-snug">
-        No coverage <em>data</em> for this recording.
+        No coverage data for this recording.
       </p>
       <p className="max-w-[300px] text-[0.85rem] text-ink-soft leading-relaxed">
         Coverage came online after this recording was processed. Reprocess it
@@ -785,7 +785,7 @@ function BouncePanel({
         type="button"
         onClick={playFromHere}
         disabled={!videoRef?.current}
-        className="inline-flex items-center justify-center gap-2 rounded-full bg-ink text-cream px-4 py-2 text-[0.85rem] font-medium transition-transform duration-150 ease-out hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed dark:bg-court-deep"
+        className="inline-flex items-center justify-center gap-2 rounded-full bg-ink text-cream px-4 py-2 text-[0.85rem] font-medium transition-transform duration-150 ease-out hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path d="M5 4l14 8-14 8V4z" />
@@ -885,7 +885,7 @@ function StrokeBarsMini({
               style={{ gridTemplateColumns: '76px 1fr 52px', gap: 8 }}
             >
               <span className="text-[0.78rem] text-ink-soft truncate">{label}</span>
-              <div className="h-2 rounded-full overflow-hidden bg-shade dark:bg-surface">
+              <div className="h-2 rounded-full overflow-hidden bg-shade">
                 {value !== null && (
                   <div
                     className="h-full rounded-full"
@@ -984,7 +984,7 @@ function SpacingBarsMini({
               style={{ gridTemplateColumns: '76px 1fr 52px', gap: 8 }}
             >
               <span className="text-[0.78rem] text-ink-soft truncate">{row.label}</span>
-              <div className="h-2 rounded-full overflow-hidden bg-shade dark:bg-surface">
+              <div className="h-2 rounded-full overflow-hidden bg-shade">
                 <div
                   className="h-full rounded-full"
                   style={{

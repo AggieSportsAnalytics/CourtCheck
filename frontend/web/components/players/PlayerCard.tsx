@@ -119,7 +119,7 @@ export function PlayerCard({ player }: { player: PlayerCardData }) {
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-2 rounded-[10px] bg-shade px-4 py-3.5 dark:bg-surface">
+        <div className="grid grid-cols-3 gap-2 rounded-[10px] bg-shade px-4 py-3.5">
           <Stat label="In bounds" pct={player.baselinePct} />
           <Stat label="Forehand" pct={player.netPct} />
           <Stat label="Serve" pct={player.firstServePct} />
