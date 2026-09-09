@@ -81,8 +81,15 @@ async function shoot(page, p, w) {
   for (const p of APP_PAGES) {
     for (const w of VIEWPORTS) {
       await shoot(page, p, w);
+      // Supabase rotates the refresh token on use; a stale saved session lands on
+      // /landing silently. Fail loudly instead of shipping screenshots of the landing.
+      if (/\/(landing|auth)/.test(new URL(page.url()).pathname)) {
+        throw new Error(`Session expired: ${p.path} redirected to ${page.url()}. Re-run scripts/audit/sign-in.mjs.`);
+      }
     }
   }
+  // Persist the rotated token so the next run does not kill the session.
+  await ctx.storageState({ path: STORAGE });
   await ctx.close();
   await browser.close();
 }
