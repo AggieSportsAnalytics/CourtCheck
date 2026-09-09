@@ -29,7 +29,7 @@ export default function Legend({ counts, unknownCount, activeKey, onToggle }: Pr
             key={s.key}
             type="button"
             onClick={() => onToggle(s.key)}
-            className={`cc-legend-chip inline-flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full border bg-paper text-[0.82rem] font-medium select-none ${
+            className={`cc-legend-chip inline-flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full border bg-paper text-[0.88rem] font-medium select-none ${
               isActive
                 ? 'border-ink text-ink bg-cream'
                 : 'border-line text-ink-soft'
@@ -41,7 +41,7 @@ export default function Legend({ counts, unknownCount, activeKey, onToggle }: Pr
             />
             <span>{s.label}</span>
             {counts[s.key] != null && (
-              <span className="font-mono text-[0.7rem] text-ink-mute ml-0.5">
+              <span className="font-mono text-[0.82rem] text-ink-mute ml-0.5">
                 {counts[s.key]}
               </span>
             )}
@@ -50,7 +50,7 @@ export default function Legend({ counts, unknownCount, activeKey, onToggle }: Pr
       })}
       {unknownCount != null && unknownCount > 0 && (
         <span
-          className="cc-legend-chip inline-flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full border border-line bg-paper text-ink-mute text-[0.82rem] font-medium select-none"
+          className="cc-legend-chip inline-flex items-center gap-2 pl-3 pr-3.5 py-1.5 rounded-full border border-line bg-paper text-ink-mute text-[0.88rem] font-medium select-none"
           aria-label={`${unknownCount} unclassified bounces`}
         >
           <span
@@ -58,7 +58,7 @@ export default function Legend({ counts, unknownCount, activeKey, onToggle }: Pr
             style={{ background: 'var(--color-paper)' }}
           />
           <span>Unclassified</span>
-          <span className="font-mono text-[0.7rem] text-ink-mute ml-0.5">
+          <span className="font-mono text-[0.82rem] text-ink-mute ml-0.5">
             {unknownCount}
           </span>
         </span>
@@ -67,7 +67,7 @@ export default function Legend({ counts, unknownCount, activeKey, onToggle }: Pr
         <button
           type="button"
           onClick={() => onToggle(activeKey)}
-          className="cc-legend-chip inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-line bg-paper text-ink-soft text-[0.82rem] font-medium italic"
+          className="cc-legend-chip inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-line bg-paper text-ink-soft text-[0.88rem] font-medium"
         >
           Show all
         </button>

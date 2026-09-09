@@ -1,5 +1,7 @@
 'use client';
 
+import { Prose } from '@/components/ui/display';
+
 import Link from 'next/link';
 
 type Props = {
@@ -17,7 +19,7 @@ export default function EmptyState({ coachName, dateLine }: Props) {
       {/* Hero */}
       <section className="pt-14 pb-7">
         <span
-          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court"
+          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.12em] text-[0.82rem] text-court"
         >
           <span
             aria-hidden
@@ -35,17 +37,13 @@ export default function EmptyState({ coachName, dateLine }: Props) {
             fontSize: 'clamp(48px, 6.4vw, 84px)',
           }}
         >
-          Welcome, <em>{coachName}.</em>
+          Welcome, {coachName}.
         </h1>
-        <p
-          className="text-ink-soft mt-4 max-w-[60ch]"
-          style={{ fontSize: '1.2rem', lineHeight: 1.5 }}
+        <Prose
+          className="text-ink-soft mt-4 max-w-[60ch] text-[1.2rem]"
         >
-          CourtCheck reads your recordings the way an experienced assistant coach
-          watches them back. Every shot in context, every pattern in plain
-          English. Upload your first recording below and we'll surface insights
-          by morning.
-        </p>
+          Upload a recording and CourtCheck tracks every shot, bounce, and stroke, then writes up what a coach would notice. Processing takes about 15 minutes.
+        </Prose>
         <div className="flex gap-3.5 items-center flex-wrap mt-7">
           <Link
             href="/upload"
@@ -72,7 +70,7 @@ export default function EmptyState({ coachName, dateLine }: Props) {
             href="/landing"
             className="inline-flex items-center gap-2.5 px-5 py-3 rounded-full border border-line text-ink text-base font-medium hover:border-ink transition-colors"
           >
-            See a sample analysis →
+            See a sample analysis
           </Link>
         </div>
       </section>
@@ -85,13 +83,13 @@ export default function EmptyState({ coachName, dateLine }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center p-12 md:p-16">
           <div>
             <span
-              className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court"
+              className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.12em] text-[0.82rem] text-court"
             >
               <span
                 aria-hidden
                 className="w-1.5 h-1.5 rounded-full bg-clay"
               />
-              Drop a recording
+              Upload a recording
             </span>
             <h2
               className="text-ink mt-4 mb-3.5"
@@ -103,14 +101,12 @@ export default function EmptyState({ coachName, dateLine }: Props) {
                 fontSize: 'clamp(32px, 3.6vw, 48px)',
               }}
             >
-              Five minutes to your first insight.
+              Your first recording.
             </h2>
-            <p className="text-ink-soft mb-6 max-w-[36ch]" style={{ fontSize: '1.05rem', lineHeight: 1.55 }}>
-              Upload an MP4 from this morning's recording. Within about 15 minutes
-              you'll have shot patterns, court coverage, spacing analysis, and a
-              coaching report. Ready to read between practices.
-            </p>
-            <div className="flex gap-6 flex-wrap text-sm text-ink-mute">
+            <Prose className="text-ink-soft mb-6 max-w-[36ch]">
+              Upload an MP4. In about 15 minutes you get the shot map, court coverage, contact spacing, and a written report.
+            </Prose>
+            <div className="flex gap-6 flex-wrap text-[0.95rem] text-ink-mute">
               <span>
                 <span
                   className="text-ink font-medium mr-1 inline-block"
@@ -136,7 +132,7 @@ export default function EmptyState({ coachName, dateLine }: Props) {
                 >
                   5
                 </span>
-                min to your first pattern
+                min to read the report
               </span>
             </div>
           </div>
@@ -171,16 +167,16 @@ export default function EmptyState({ coachName, dateLine }: Props) {
                   letterSpacing: '-0.012em',
                 }}
               >
-                Drop your recording
+              Open upload
               </div>
-              <div className="text-ink-soft text-[0.92rem]">
+              <div className="text-ink-soft text-[1.02rem]">
                 or{' '}
                 <span className="text-court font-medium border-b border-current">
-                  browse files
+                  choose a recording
                 </span>
               </div>
             </div>
-            <div className="font-mono uppercase tracking-[0.12em] text-[0.68rem] text-ink-mute">
+            <div className="font-mono uppercase tracking-[0.12em] text-[0.82rem] text-ink-mute">
               MP4 · MOV · AVI · max 500 MB
             </div>
           </div>
@@ -199,11 +195,8 @@ export default function EmptyState({ coachName, dateLine }: Props) {
               letterSpacing: '-0.014em',
             }}
           >
-            What you'll see after the first recording.
+            What a processed recording shows.
           </h3>
-          <p className="text-ink-mute text-[0.95rem] max-w-[38ch]">
-            A glimpse of the dashboard. Upload to make it yours.
-          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -211,9 +204,9 @@ export default function EmptyState({ coachName, dateLine }: Props) {
             iconPath={
               <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.5.5 0 0 1-.96 0L9.24 2.18a.5.5 0 0 0-.96 0l-2.35 8.36A2 2 0 0 1 4 12H2" />
             }
-            title="Patterns, in plain English."
-            body={`"Lin wins 71% of service games when she opens with a slice." We extract patterns from at least 2 recordings before surfacing them.`}
-            postLabel="Earned after first recording"
+            title="Patterns in writing"
+            body="A written summary of shot placement, positioning, and errors in the recording, with a suggested practice adjustment."
+            postLabel="Available after processing"
           />
           <EmptyPreviewCard
             iconPath={
@@ -223,8 +216,8 @@ export default function EmptyState({ coachName, dateLine }: Props) {
                 <path d="M9 3.236v15" />
               </>
             }
-            title="Shots, mapped to the court."
-            body="Every bounce, every contact, every stroke type. Overlaid on a court tile so you can see what film won't tell you in 90 minutes."
+            title="Shot map"
+            body="Each bounce and contact, colored by stroke, drawn on a court."
             courtPreview
           />
           <EmptyPreviewCard
@@ -236,9 +229,9 @@ export default function EmptyState({ coachName, dateLine }: Props) {
                 <path d="M8 17v-3" />
               </>
             }
-            title="Spacing, called out."
-            body={`"Squeezed" or "long." Was contact tight or reaching? We flag the technical patterns that matter for Wednesday's drills.`}
-            postLabel="Earned after first recording"
+            title="Contact spacing"
+            body={`How far the player was from the ball at contact: jammed, squeezed, ideal, or reaching.`}
+            postLabel="Available after processing"
           />
         </div>
       </section>
@@ -255,16 +248,14 @@ export default function EmptyState({ coachName, dateLine }: Props) {
             maxWidth: '28ch',
           }}
         >
-          Drop your first recording.
+          Upload your first recording.
         </h2>
-        <p
+        <Prose
           className="text-ink-soft mb-7 mx-auto"
-          style={{ fontSize: '1.05rem', maxWidth: '50ch' }}
+          style={{ fontVariationSettings: '"opsz" 16', maxWidth: '50ch' }}
         >
-          The dashboard fills in with every recording you upload. Patterns get
-          sharper after the second. Spacing diagnostics get useful after the
-          third.
-        </p>
+          Each processed recording adds court maps, stroke counts, and a written report to your dashboard.
+        </Prose>
         <Link
           href="/upload"
           className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-full bg-court text-cream font-medium text-base hover:-translate-y-px transition-transform"
@@ -340,7 +331,7 @@ function EmptyPreviewCard({
           </svg>
         </div>
       ) : (
-        <div className="mt-auto pt-3.5 border-t border-line-soft font-mono uppercase tracking-[0.1em] text-[0.7rem] text-ink-mute">
+        <div className="mt-auto pt-3.5 border-t border-line-soft font-mono uppercase tracking-[0.1em] text-[0.82rem] text-ink-mute">
           {postLabel}
         </div>
       )}

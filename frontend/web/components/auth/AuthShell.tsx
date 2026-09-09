@@ -15,7 +15,7 @@ function AuthShell({ children }: { children: ReactNode }) {
         </div>
       </main>
 
-      <footer className="px-7 sm:px-14 py-7 flex flex-col sm:flex-row gap-1.5 sm:gap-0 sm:justify-between font-mono uppercase text-[0.7rem] tracking-[0.14em] text-ink-mute">
+      <footer className="px-7 sm:px-14 py-7 flex flex-col sm:flex-row gap-1.5 sm:gap-0 sm:justify-between font-mono uppercase text-[0.82rem] tracking-[0.12em] text-ink-mute">
         <span>© 2026 CourtCheck</span>
         <span>v0.1</span>
       </footer>

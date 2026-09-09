@@ -29,21 +29,21 @@ export default function StatsCard({ shotsTracked, tiles }: Props) {
         style={{ borderBottom: '1px solid var(--color-line-soft)' }}
       >
         <div>
-          <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
+          <span className="inline-flex items-center gap-2 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
             Stats
           </span>
           <h2
             className="font-display font-medium mt-2"
             style={{ fontSize: '1.75rem', letterSpacing: '-0.015em' }}
           >
-            The numbers from this recording.
+            Totals
           </h2>
-          <div className="text-ink-soft text-[0.92rem] mt-1">
-            Auto-tracked. Player only. Opponent data shown where comparable.
+          <div className="text-ink-soft text-[1.02rem] mt-1">
+            Tracked for the near player. Opponent figures appear where the tracker has them.
           </div>
         </div>
         {typeof shotsTracked === 'number' && (
-          <span className="font-mono text-[0.7rem] uppercase tracking-[0.14em] text-ink-mute shrink-0">
+          <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute shrink-0">
             {shotsTracked.toLocaleString()} shots
           </span>
         )}
@@ -67,8 +67,8 @@ function Tile({ label, value, unit }: StatTileData) {
       <div
         className="font-mono uppercase mb-3 text-ink-mute group-hover:text-ink-soft"
         style={{
-          fontSize: '0.7rem',
-          letterSpacing: '0.14em',
+          fontSize: '0.82rem',
+          letterSpacing: '0.12em',
           transition: 'color var(--duration-base) var(--ease-out)',
         }}
       >

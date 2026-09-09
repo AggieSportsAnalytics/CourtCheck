@@ -71,7 +71,7 @@ export default function LoginPage() {
           Welcome back.
         </AuthTitle>
         <AuthSub className="text-center">
-          Pick up where you left off.
+          Sign in to open your roster and recordings.
         </AuthSub>
 
         <GoogleButton label="Continue with Google" onClick={handleGoogle} />
@@ -108,7 +108,7 @@ export default function LoginPage() {
             </FieldControl>
           </Field>
 
-          <div className="flex items-center justify-between text-[0.85rem] mt-1 mb-2">
+          <div className="flex items-center justify-between text-[0.95rem] mt-1 mb-2">
             <label className="flex items-center gap-2 text-ink-soft cursor-pointer">
               <input
                 type="checkbox"
@@ -129,7 +129,7 @@ export default function LoginPage() {
           {error && (
             <div
               role="alert"
-              className="rounded-[10px] border border-clay bg-[color-mix(in_srgb,var(--color-clay)_8%,transparent)] text-clay text-[0.88rem] leading-[1.45] px-3.5 py-2.5"
+              className="rounded-[10px] border border-clay bg-[color-mix(in_srgb,var(--color-clay)_8%,transparent)] text-clay text-[0.95rem] leading-[1.45] px-3.5 py-2.5"
             >
               {error}
             </div>

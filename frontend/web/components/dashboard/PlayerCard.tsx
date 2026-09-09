@@ -8,9 +8,7 @@ import { playerPhotoProxyUrl } from '@/lib/utils';
 export type PlayerMetric = {
   key: string;
   label: string;
-  value: number;
-  /** Optional delta in absolute pts (signed). Card lead = metric with biggest |delta|. */
-  delta?: number;
+  value: number | string;
   decimals?: number;
   /** Suffix unit (e.g. "%"). Rendered small inside the number. */
   unitSuffix?: string;
@@ -35,17 +33,13 @@ type Props = {
 };
 
 /**
- * Player card with 5-metric row + dim-siblings hover.
- *
- * The metric with the biggest |delta| is the "lead" metric: it stays at full opacity,
- * shows the signed delta, and non-lead metrics dim to 0.5 at rest.
+ * Player card with 3-metric row + dim-siblings hover.
  *
  * On hovering any single metric, that metric goes to full opacity and ALL siblings
  * (in the same card) drop to 0.35. Implemented with a peer/group pattern via group
  * scoped CSS in styled spans (no global CSS leakage).
  */
 export default function PlayerCard({ player }: Props) {
-  const leadIdx = findLeadIndex(player.metrics);
   const [photoFailed, setPhotoFailed] = useState(false);
   const photoSrc = photoFailed ? null : playerPhotoProxyUrl(player.photoUrl);
 
@@ -91,25 +85,22 @@ export default function PlayerCard({ player }: Props) {
               lineHeight: 1.05,
             }}
           >
-            {player.firstName} <em>{player.lastName}</em>
+            {player.firstName} {player.lastName}
           </span>
-          <span className="text-sm text-ink-soft">{player.meta}</span>
+          <span className="text-[0.95rem] text-ink-soft">{player.meta}</span>
         </div>
       </div>
 
-      {/* 5-metric row (uses peer/sibling hover via group/metric-row) */}
+      {/* 3-metric row (uses peer/sibling hover via group/metric-row) */}
       <div
-        className="grid grid-cols-5 gap-2 p-3.5 rounded-[10px] bg-shade group/metricrow"
+        className="grid grid-cols-3 gap-2 p-3.5 rounded-[10px] bg-shade group/metricrow"
       >
-        {player.metrics.map((m, i) => {
-          const isLead = i === leadIdx;
+        {player.metrics.map((m) => {
           return (
             <div
               key={m.key}
               className={[
                 'flex flex-col gap-px transition-opacity duration-150 ease-out',
-                // Rest state: non-lead metrics dim to 0.5
-                isLead ? 'opacity-100' : 'opacity-50',
                 // Group hover: when any metric in the row is hovered, ALL siblings drop to 0.35.
                 // The hovered one itself overrides back to 1 via hover: below.
                 'group-hover/metricrow:opacity-[0.35]',
@@ -121,42 +112,34 @@ export default function PlayerCard({ player }: Props) {
                 style={{
                   fontFamily: 'var(--font-display)',
                   fontWeight: 500,
-                  fontSize: '1.3rem',
+                  fontSize: typeof m.value === 'string' ? '1.05rem' : '1.3rem',
                   letterSpacing: '-0.012em',
                   fontFeatureSettings: "'tnum'",
                   lineHeight: 1.05,
                 }}
               >
-                <CountUp
-                  to={m.value}
-                  decimals={m.decimals ?? 0}
-                  suffix={
-                    m.unitSuffix ? (
-                      <span
-                        className="text-ink-mute"
-                        style={{ fontSize: '0.62em', marginLeft: 2 }}
-                      >
-                        {m.unitSuffix}
-                      </span>
-                    ) : undefined
-                  }
-                />
+                {typeof m.value === 'string' ? (
+                  m.value
+                ) : (
+                  <CountUp
+                    to={m.value}
+                    decimals={m.decimals ?? 0}
+                    suffix={
+                      m.unitSuffix ? (
+                        <span
+                          className="text-ink-mute"
+                          style={{ fontSize: '0.82rem', marginLeft: 2 }}
+                        >
+                          {m.unitSuffix}
+                        </span>
+                      ) : undefined
+                    }
+                  />
+                )}
               </span>
-              <span className="font-mono uppercase tracking-[0.1em] text-[0.6rem] text-ink-mute">
+              <span className="font-sans text-[0.88rem] text-ink-soft whitespace-nowrap">
                 {m.label}
               </span>
-              {isLead && typeof m.delta === 'number' && (
-                <span
-                  className={[
-                    'font-mono uppercase tracking-[0.1em] text-[0.6rem] mt-0.5',
-                    m.delta >= 0
-                      ? 'text-court'
-                      : 'text-clay',
-                  ].join(' ')}
-                >
-                  {m.delta >= 0 ? '▲' : '▼'} {Math.abs(m.delta).toFixed(0)} pts
-                </span>
-              )}
             </div>
           );
         })}
@@ -164,7 +147,7 @@ export default function PlayerCard({ player }: Props) {
 
       {/* Footer: last clip + arrow */}
       <div className="flex justify-between items-center mt-auto pt-3.5 border-t border-line-soft">
-        <span className="font-mono uppercase tracking-[0.1em] text-[0.7rem] text-ink-mute">
+        <span className="font-mono uppercase tracking-[0.1em] text-[0.82rem] text-ink-mute">
           {player.lastClipDate ? `Last recording · ${player.lastClipDate}` : 'No recordings yet'}
         </span>
         <span
@@ -176,16 +159,4 @@ export default function PlayerCard({ player }: Props) {
       </div>
     </Link>
   );
-}
-
-function findLeadIndex(metrics: PlayerMetric[]): number {
-  let bestIdx = 0;
-  let bestAbs = -Infinity;
-  metrics.forEach((m, i) => {
-    if (typeof m.delta === 'number' && Math.abs(m.delta) > bestAbs) {
-      bestAbs = Math.abs(m.delta);
-      bestIdx = i;
-    }
-  });
-  return bestIdx;
 }

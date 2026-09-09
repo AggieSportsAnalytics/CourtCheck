@@ -62,7 +62,7 @@ function CardEyebrow({ className, ...props }: React.ComponentProps<'div'>) {
       data-slot="card-eyebrow"
       className={cn(
         'inline-flex items-center gap-2 font-mono uppercase',
-        'text-[0.66rem] tracking-[0.18em] text-court',
+        'text-[0.82rem] tracking-[0.12em] text-court',
         "before:content-[''] before:size-[6px] before:rounded-full before:bg-clay",
         className,
       )}

@@ -94,10 +94,10 @@ export default function NotesPanel({
           <h3 className="font-display font-medium text-[1.15rem] leading-tight tracking-tight">
             Timed notes
           </h3>
-          <span className="font-mono text-[0.66rem] uppercase tracking-[0.12em] text-ink-mute">
+          <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
             {saving ? 'Saving' : 'Saved'} ·{' '}
             <span
-              className="font-display font-medium text-[0.85rem] text-ink mx-0.5"
+              className="font-display font-medium text-[0.95rem] text-ink mx-0.5"
               style={{ letterSpacing: 0, textTransform: 'none', fontFeatureSettings: '"tnum"' }}
             >
               {notes.length}
@@ -109,7 +109,7 @@ export default function NotesPanel({
         {/* Input row: now-ts | input | add button */}
         <div className="grid items-center gap-2.5" style={{ gridTemplateColumns: 'auto 1fr auto' }}>
           <span
-            className="inline-flex items-center px-3 py-1.5 rounded-full font-mono text-[0.74rem] font-medium"
+            className="inline-flex items-center px-3 py-1.5 rounded-full font-mono text-[0.82rem] font-medium"
             style={{
               background: 'color-mix(in srgb, var(--color-lime) 24%, var(--color-paper))',
               color: 'var(--color-court-deep)',
@@ -128,7 +128,7 @@ export default function NotesPanel({
             }}
             placeholder="Add a note at the current timestamp"
             aria-label="Add a note"
-            className="w-full px-3.5 py-2.5 rounded-full bg-shade text-ink border border-transparent text-[0.92rem] outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 focus:bg-paper focus:border-ink-mute placeholder:text-ink-mute"
+            className="w-full px-3.5 py-2.5 rounded-full bg-shade text-ink border border-transparent text-[1.02rem] outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 focus:bg-paper focus:border-ink-mute placeholder:text-ink-mute"
             style={{ transition: 'border-color var(--duration-quick) var(--ease-out), background var(--duration-quick) var(--ease-out)' }}
           />
           <button
@@ -149,8 +149,8 @@ export default function NotesPanel({
         {/* Note list */}
         <div className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto -mx-2 px-2">
           {sorted.length === 0 ? (
-            <p className="text-sm text-ink-mute italic">
-              Seek to a moment, write a note, hit enter.
+            <p className="text-[0.95rem] text-ink-mute">
+              Pause the video, write a note, press Enter.
             </p>
           ) : (
             sorted.map((n) => (
@@ -168,7 +168,7 @@ export default function NotesPanel({
                 onClick={() => handleSeek(n.timestamp_sec)}
               >
                 <span
-                  className="inline-flex items-center px-2.5 py-1 rounded-full font-mono text-[0.72rem] font-medium mt-0.5"
+                  className="inline-flex items-center px-2.5 py-1 rounded-full font-mono text-[0.82rem] font-medium mt-0.5"
                   style={{
                     background: 'color-mix(in srgb, var(--color-lime) 24%, var(--color-paper))',
                     color: 'var(--color-court-deep)',
@@ -178,7 +178,7 @@ export default function NotesPanel({
                 >
                   {fmtTs(n.timestamp_sec)}
                 </span>
-                <span className="font-display font-normal text-[0.98rem] leading-snug text-ink">
+                <span className="font-display font-normal text-[1.02rem] leading-snug text-ink">
                   {n.text}
                 </span>
                 <button

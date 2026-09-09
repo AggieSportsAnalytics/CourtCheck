@@ -110,12 +110,12 @@ export default function SignupPage() {
             >
               Check your email.
             </h3>
-            <p className="text-ink-soft text-[0.95rem] leading-[1.5] max-w-[32ch] mx-auto mb-5">
+            <p className="text-ink-soft text-[1.02rem] leading-[1.5] max-w-[32ch] mx-auto mb-5">
               We sent a confirmation link to{' '}
               <span className="text-ink font-medium">{email}</span>. Click it to
               activate your account.
             </p>
-            <p className="text-[0.85rem] text-ink-mute">
+            <p className="text-[0.95rem] text-ink-mute">
               Already confirmed?{' '}
               <Link href="/auth/login" legacyBehavior passHref>
                 <AuthInlineLink>Sign in</AuthInlineLink>
@@ -138,7 +138,7 @@ export default function SignupPage() {
           Create your account.
         </AuthTitle>
         <AuthSub className="text-center">
-          Upload your first recording in under a minute.
+          You will upload your first recording right after this.
         </AuthSub>
 
         <GoogleButton label="Sign up with Google" onClick={handleGoogle} />
@@ -162,7 +162,7 @@ export default function SignupPage() {
                       'px-4 py-3 rounded-[10px] text-center',
                       'border transition-[border-color,background-color,color] duration-[160ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]',
                       'cursor-pointer outline-none',
-                      'font-medium text-[0.98rem]',
+                      'font-medium text-[1.02rem]',
                       'focus-visible:ring-2 focus-visible:ring-court/40 focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
                       selected
                         ? 'border-court bg-[color-mix(in_srgb,var(--color-court)_10%,transparent)] text-ink'
@@ -226,7 +226,7 @@ export default function SignupPage() {
           {error && (
             <div
               role="alert"
-              className="rounded-[10px] border border-clay bg-[color-mix(in_srgb,var(--color-clay)_8%,transparent)] text-clay text-[0.88rem] leading-[1.45] px-3.5 py-2.5"
+              className="rounded-[10px] border border-clay bg-[color-mix(in_srgb,var(--color-clay)_8%,transparent)] text-clay text-[0.95rem] leading-[1.45] px-3.5 py-2.5"
             >
               {error}
             </div>

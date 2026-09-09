@@ -1,5 +1,7 @@
 'use client';
 
+import { Prose } from '@/components/ui/display';
+
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -144,14 +146,14 @@ export default function RecordingDetailPage() {
         setDeleteError(
           message && message !== 'Internal server error'
             ? message
-            : 'Something broke on our side. Try again; if it keeps happening, tell us.',
+            : "Couldn't complete that request. Try again.",
         );
         setDeleting(false);
         return;
       }
       router.push('/recordings');
     } catch {
-      setDeleteError('Something broke on our side. Try again; if it keeps happening, tell us.');
+      setDeleteError("Couldn't complete that request. Try again.");
       setDeleting(false);
     }
   }, [id, router]);
@@ -216,7 +218,7 @@ export default function RecordingDetailPage() {
         setReprocessError(
           message && message !== 'Internal server error'
             ? message
-            : 'Something broke on our side. Try again; if it keeps happening, tell us.',
+            : "Couldn't complete that request. Try again.",
         );
         setReprocessing(false);
         return;
@@ -242,7 +244,7 @@ export default function RecordingDetailPage() {
       setConfirmingReprocess(false);
       setReprocessing(false);
     } catch {
-      setReprocessError('Something broke on our side. Try again; if it keeps happening, tell us.');
+      setReprocessError("Couldn't complete that request. Try again.");
       setReprocessing(false);
     }
   }, [id, fetchRecording]);
@@ -307,7 +309,7 @@ export default function RecordingDetailPage() {
         <p className="font-display font-medium text-[1.15rem]">
           {error ?? "We couldn't load that recording. Go back to Recordings and try again."}
         </p>
-        <Link href="/recordings" className="text-sm text-court hover:opacity-80">
+        <Link href="/recordings" className="text-[0.95rem] text-court hover:opacity-80">
           ← Back to recordings
         </Link>
       </div>
@@ -340,10 +342,9 @@ export default function RecordingDetailPage() {
           <p className="font-display font-medium text-[1.4rem] tracking-[-0.014em] mt-3 mb-1">
             Analyzing your recording.
           </p>
-          <p className="text-[0.92rem] text-ink-soft mb-5">
-            Your court report will be ready shortly. This page updates
-            automatically.
-          </p>
+          <Prose className="text-ink-soft mb-5">
+            This page updates on its own. Processing takes about 15 minutes.
+          </Prose>
           <div className="w-full max-w-[360px]">
             <div className="h-[4px] rounded-full overflow-hidden bg-shade">
               {procPct > 0 ? (
@@ -358,7 +359,7 @@ export default function RecordingDetailPage() {
                 />
               )}
             </div>
-            <div className="mt-2 flex items-center justify-between font-mono text-[0.72rem] uppercase tracking-[0.14em] text-ink-mute">
+            <div className="mt-2 flex items-center justify-between font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
               <span className="truncate pr-2">{stageLabel}</span>
               <span className="font-medium shrink-0">
                 {procPct > 0 ? `${procPct}%` : 'STARTING'}
@@ -392,16 +393,16 @@ export default function RecordingDetailPage() {
           style={{ borderColor: 'color-mix(in srgb, var(--color-clay) 35%, var(--color-line))' }}
         >
           <p className="font-display font-medium text-[1.15rem]">
-            Analysis needs attention.
+            Processing failed.
           </p>
           {recording.error && (
-            <p className="text-xs text-ink-soft italic">{recording.error}</p>
+            <p className="text-[0.82rem] text-ink-soft">{recording.error}</p>
           )}
           <Link
             href="/upload"
-            className="mt-2 text-sm text-court hover:opacity-80"
+            className="mt-2 text-[0.95rem] text-court hover:opacity-80"
           >
-            Try uploading again →
+            Upload it again
           </Link>
         </div>
       </div>
@@ -484,14 +485,14 @@ export default function RecordingDetailPage() {
           {(recording.status === 'done' || recording.status === 'failed') && (
             confirmingReprocess ? (
               <div className="flex items-center gap-2">
-                <span className="text-[0.8rem] text-ink-soft">
-                  Rerun pipeline?
+                <span className="text-[0.88rem] text-ink-soft">
+                  Reprocess this recording?
                 </span>
                 <button
                   type="button"
                   onClick={handleReprocessRecording}
                   disabled={reprocessing}
-                  className="inline-flex items-center px-3 py-1.5 rounded-full bg-court text-cream text-[0.8rem] font-medium transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
+                  className="inline-flex items-center px-3 py-1.5 rounded-full bg-court text-cream text-[0.88rem] font-medium transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
                 >
                   {reprocessing ? 'Starting…' : 'Reprocess'}
                 </button>
@@ -502,7 +503,7 @@ export default function RecordingDetailPage() {
                     setReprocessError(null);
                   }}
                   disabled={reprocessing}
-                  className="inline-flex items-center px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink text-[0.8rem] font-medium transition-colors cursor-pointer disabled:opacity-60"
+                  className="inline-flex items-center px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink text-[0.88rem] font-medium transition-colors cursor-pointer disabled:opacity-60"
                 >
                   Cancel
                 </button>
@@ -511,8 +512,8 @@ export default function RecordingDetailPage() {
               <button
                 type="button"
                 onClick={() => setConfirmingReprocess(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-court hover:text-court text-[0.8rem] font-medium transition-colors cursor-pointer"
-                title="Re-run the pipeline on the original upload"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-court hover:text-court text-[0.88rem] font-medium transition-colors cursor-pointer"
+                title="Process the original recording again"
               >
                 <svg
                   width="14"
@@ -537,14 +538,14 @@ export default function RecordingDetailPage() {
 
           {confirmingDelete ? (
             <div className="flex items-center gap-2">
-              <span className="text-[0.8rem] text-ink-soft">
+              <span className="text-[0.88rem] text-ink-soft">
                 Delete this recording?
               </span>
               <button
                 type="button"
                 onClick={handleDeleteRecording}
                 disabled={deleting}
-                className="inline-flex items-center px-3 py-1.5 rounded-full bg-clay text-cream text-[0.8rem] font-medium transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
+                className="inline-flex items-center px-3 py-1.5 rounded-full bg-clay text-cream text-[0.88rem] font-medium transition-opacity hover:opacity-90 disabled:opacity-60 cursor-pointer"
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>
@@ -555,7 +556,7 @@ export default function RecordingDetailPage() {
                   setDeleteError(null);
                 }}
                 disabled={deleting}
-                className="inline-flex items-center px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink text-[0.8rem] font-medium transition-colors cursor-pointer disabled:opacity-60"
+                className="inline-flex items-center px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink text-[0.88rem] font-medium transition-colors cursor-pointer disabled:opacity-60"
               >
                 Cancel
               </button>
@@ -564,7 +565,7 @@ export default function RecordingDetailPage() {
             <button
               type="button"
               onClick={() => setConfirmingDelete(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-clay hover:text-clay text-[0.8rem] font-medium transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-line text-ink-soft hover:border-clay hover:text-clay text-[0.88rem] font-medium transition-colors cursor-pointer"
             >
               <svg
                 width="14"
@@ -587,12 +588,12 @@ export default function RecordingDetailPage() {
         </div>
       </div>
       {(deleteError || reprocessError) && (
-        <p className="text-[0.8rem] text-clay mb-4">{deleteError || reprocessError}</p>
+        <p className="text-[0.88rem] text-clay mb-4">{deleteError || reprocessError}</p>
       )}
 
       {/* Header */}
       <div className="pb-8">
-        <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
+        <span className="inline-flex items-center gap-2 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
           Recording
         </span>
         <div className="flex items-center gap-3 mt-2.5 flex-wrap">
@@ -608,7 +609,7 @@ export default function RecordingDetailPage() {
             {opponent && (
               <>
                 {' '}
-                <span className="text-ink-mute font-normal italic">vs</span>{' '}
+                <span className="text-ink-mute font-normal">vs</span>{' '}
                 {opponent}
               </>
             )}
@@ -637,16 +638,16 @@ export default function RecordingDetailPage() {
             </svg>
           </button>
         </div>
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-ink-soft text-[0.95rem] mt-3 items-center">
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-ink-soft text-[1.02rem] mt-3 items-center">
           {recording.playerHandedness === 'left' && (
             <span
-              className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[0.72rem] font-mono uppercase tracking-[0.12em]"
+              className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[0.82rem] font-mono uppercase tracking-[0.12em]"
               style={{
                 borderColor: 'color-mix(in srgb, var(--color-clay) 35%, var(--color-line))',
                 color: 'var(--color-clay)',
                 background: 'color-mix(in srgb, var(--color-clay) 6%, var(--color-paper))',
               }}
-              title="Stroke classifier mirrors lefty pose sequences"
+              title="Uses the left-handed stroke setting"
             >
               Left-handed
             </span>
@@ -686,7 +687,7 @@ export default function RecordingDetailPage() {
             <VideoPlayer ref={videoRef} src={recording.videoUrl} />
           ) : (
             <div className="aspect-video flex items-center justify-center bg-shade">
-              <p className="text-sm text-ink-mute italic">No video available.</p>
+              <p className="text-[0.95rem] text-ink-mute">No recording available.</p>
             </div>
           )}
         </div>
@@ -753,15 +754,14 @@ export default function RecordingDetailPage() {
           style={{ padding: '36px 44px', boxShadow: 'var(--shadow-card)' }}
           aria-label="Scouting report unavailable"
         >
-          <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
+          <span className="inline-flex items-center gap-2 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
             Scouting report
           </span>
           <p
             className="font-display font-normal text-ink-mute mt-3 m-0"
             style={{ fontSize: '1.12rem', lineHeight: 1.7 }}
           >
-            No scouting report was generated for this recording. Reprocess the
-            video to generate one.
+            No report was generated. Reprocess the recording to write one.
           </p>
         </article>
       )}
@@ -789,7 +789,7 @@ function Crumb({
 }) {
   return (
     <nav
-      className={`flex items-center gap-2 min-w-0 max-w-full font-mono text-[0.72rem] uppercase tracking-[0.14em] ${
+      className={`flex items-center gap-2 min-w-0 max-w-full font-mono text-[0.82rem] uppercase tracking-[0.12em] ${
         noMargin ? '' : 'mb-4'
       }`}
       aria-label="Breadcrumb"
@@ -809,7 +809,7 @@ function PageStatus({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-2">
       <BounceLoader size={240} />
-      <p className="text-sm text-ink-mute">{message}.</p>
+      <p className="text-[0.95rem] text-ink-mute">{message}.</p>
     </div>
   );
 }

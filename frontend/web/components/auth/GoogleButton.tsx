@@ -22,7 +22,7 @@ function GoogleButton({
         'w-full inline-flex items-center justify-center gap-3',
         'px-5 py-3 rounded-full',
         'bg-surface text-ink border border-line',
-        'font-sans text-[0.95rem] font-medium',
+        'font-sans text-[1.02rem] font-medium',
         'transition-[border-color,background-color] duration-[160ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]',
         'hover:border-ink',
         'disabled:pointer-events-none disabled:opacity-50',
@@ -46,7 +46,7 @@ function GoogleButton({
 function OrDivider() {
   return (
     <div
-      className="flex items-center gap-3.5 my-3 mb-5 font-mono uppercase text-[0.7rem] tracking-[0.18em] text-ink-mute before:content-[''] before:flex-1 before:h-px before:bg-line after:content-[''] after:flex-1 after:h-px after:bg-line"
+      className="flex items-center gap-3.5 my-3 mb-5 font-mono uppercase text-[0.82rem] tracking-[0.12em] text-ink-mute before:content-[''] before:flex-1 before:h-px before:bg-line after:content-[''] after:flex-1 after:h-px after:bg-line"
     >
       or
     </div>

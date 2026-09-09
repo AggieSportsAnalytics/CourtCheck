@@ -1,6 +1,7 @@
 'use client';
 
 import { Fragment, ReactNode } from 'react';
+import { Prose } from '@/components/ui/display';
 
 export type ScoutingSections = {
   matchSnapshot: string;
@@ -63,16 +64,16 @@ type Props = {
 export default function ScoutingReport({ headline, sections, readMinutes }: Props) {
   return (
     <article
-      className="bg-paper border border-line rounded-[14px] mb-8"
-      style={{ padding: '36px 44px', boxShadow: 'var(--shadow-card)' }}
+      className="bg-paper border border-line rounded-[14px] mb-8 p-6 sm:py-9 sm:px-11"
+      style={{ boxShadow: 'var(--shadow-card)' }}
       aria-label="Scouting report"
     >
       <div
-        className="flex items-end justify-between gap-4 mb-6 pb-[18px]"
+        className="flex flex-wrap items-end justify-between gap-4 mb-6 pb-[18px]"
         style={{ borderBottom: '1px solid var(--color-line-soft)' }}
       >
         <div>
-          <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
+          <span className="inline-flex items-center gap-2 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
             Scouting report
           </span>
           <h2
@@ -85,23 +86,23 @@ export default function ScoutingReport({ headline, sections, readMinutes }: Prop
           >
             {headline ?? (
               <>
-                What stood out.
+                Report
               </>
             )}
           </h2>
         </div>
         {typeof readMinutes === 'number' && (
-          <span className="font-mono text-[0.7rem] uppercase tracking-[0.14em] text-ink-mute shrink-0">
+          <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute shrink-0">
             ~ {readMinutes} min read
           </span>
         )}
       </div>
 
-      <Section heading="Match Snapshot" text={sections.matchSnapshot} />
-      <Section heading="Positioning Tendencies" text={sections.positioningTendencies} />
-      <Section heading="Error Patterns" text={sections.errorPatterns} />
+      <Section heading="Snapshot" text={sections.matchSnapshot} />
+      <Section heading="Positioning" text={sections.positioningTendencies} />
+      <Section heading="Errors" text={sections.errorPatterns} />
       <Section heading="Strengths" text={sections.strengths} />
-      <Section heading="Areas to Improve" text={sections.areasToImprove} />
+      <Section heading="Work on" text={sections.areasToImprove} />
 
       <section
         className="rounded-lg mt-2"
@@ -111,15 +112,14 @@ export default function ScoutingReport({ headline, sections, readMinutes }: Prop
           borderLeft: '3px solid var(--color-court)',
         }}
       >
-        <h3 className="font-mono text-[0.72rem] uppercase tracking-[0.18em] font-semibold text-court mb-2">
-          One-Line Coaching Adjustment
+        <h3 className="font-mono text-[0.82rem] uppercase tracking-[0.12em] font-semibold text-court mb-2">
+          Coaching cue
         </h3>
-        <p
-          className="font-display italic font-medium text-ink m-0"
-          style={{ fontSize: '1.18rem', lineHeight: 1.65 }}
+        <Prose
+          className="font-display font-medium text-ink m-0 text-[1.18rem] leading-[1.65]"
         >
           {sections.oneLineAdjustment}
-        </p>
+        </Prose>
       </section>
     </article>
   );
@@ -141,19 +141,13 @@ function Section({ heading, text }: { heading: string; text: string }) {
       >
         {heading}
       </h3>
-      <p
-        className="font-display font-normal text-ink"
-        style={{
-          fontVariationSettings: "'opsz' 18",
-          fontSize: '1.12rem',
-          lineHeight: 1.7,
-          letterSpacing: '-0.005em',
-        }}
+      <Prose
+        className="font-normal tracking-[-0.005em]"
       >
         {parts.map((p, i) => (
           <Fragment key={i}>{p}</Fragment>
         ))}
-      </p>
+      </Prose>
     </section>
   );
 }

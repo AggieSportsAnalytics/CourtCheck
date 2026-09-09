@@ -111,7 +111,7 @@ export default function ShotBars({ data, ariaLabel }: Props) {
           className="grid items-center py-1.5"
           style={{ gridTemplateColumns: '110px 1fr 56px', gap: 14 }}
         >
-          <span className="text-[0.9rem] font-medium text-ink-soft">{d.label}</span>
+          <span className="text-[1.02rem] font-medium text-ink-soft">{d.label}</span>
           <div className="h-5 rounded-full overflow-hidden relative bg-shade">
             <div
               className="h-full rounded-full"
@@ -124,7 +124,7 @@ export default function ShotBars({ data, ariaLabel }: Props) {
             />
           </div>
           <span
-            className="text-right text-[0.98rem] font-display font-medium text-ink"
+            className="text-right text-[1.02rem] font-display font-medium text-ink"
             style={{
               fontFeatureSettings: '"tnum"',
               opacity: shown[i] ? 1 : 0,

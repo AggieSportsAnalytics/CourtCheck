@@ -214,7 +214,7 @@ export default function PlayersPage() {
                   <path d="M5 12h14" />
                   <path d="M12 5v14" />
                 </svg>
-                Upload video
+                Upload
               </Link>
             </Button>
           </div>
@@ -230,7 +230,7 @@ export default function PlayersPage() {
               <button
                 key={f.key}
                 onClick={() => setYearFilter(f.key)}
-                className={`cc-legend-chip inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[0.88rem] font-medium ${
+                className={`cc-legend-chip inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[0.95rem] font-medium ${
                   active
                     ? 'border-ink text-ink font-semibold'
                     : 'border-line text-ink-soft hover:border-ink-mute hover:text-ink'
@@ -262,16 +262,16 @@ export default function PlayersPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name"
-              className="h-9 rounded-full border border-line bg-paper pl-9 pr-4 text-[0.88rem] text-ink placeholder:text-ink-mute focus:border-ink focus:outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20"
+              className="h-9 rounded-full border border-line bg-paper pl-9 pr-4 text-[1.02rem] text-ink placeholder:text-ink-mute focus:border-ink focus:outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20"
             />
           </label>
 
-          <label className="flex items-center gap-2 text-[0.78rem] uppercase tracking-[0.12em] text-ink-mute">
+          <label className="flex items-center gap-2 text-[0.88rem] uppercase tracking-[0.12em] text-ink-mute">
             <span className="sr-only">Sort by</span>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              className="h-9 rounded-full border border-line bg-paper px-3 text-[0.88rem] font-medium text-ink focus:border-ink focus:outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20"
+              className="h-9 rounded-full border border-line bg-paper px-3 text-[1.02rem] font-medium text-ink focus:border-ink focus:outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20"
             >
               <option value="name">Name A–Z</option>
               <option value="recordings">Most recorded</option>
@@ -287,7 +287,7 @@ export default function PlayersPage() {
           className="cc-card mb-6 p-5"
           style={{ borderColor: 'color-mix(in srgb, var(--color-clay) 30%, var(--color-line))' }}
         >
-          <p className="text-sm text-clay">{error}</p>
+          <p className="text-[0.95rem] text-clay">{error}</p>
         </div>
       )}
 
@@ -338,20 +338,19 @@ function EmptyState({ hasPlayers, hasFilter }: { hasPlayers: boolean; hasFilter:
     return (
       <div className="cc-card mb-9 flex flex-col items-center gap-3 px-6 py-16 text-center">
         <p className="font-display text-2xl text-ink">No players match those filters.</p>
-        <p className="text-sm text-ink-soft">Try clearing the search or switching years.</p>
+        <p className="text-[0.95rem] text-ink-soft">Try clearing the search or switching years.</p>
       </div>
     )
   }
   return (
     <div className="cc-card mb-9 flex flex-col items-center gap-4 px-6 py-16 text-center">
       <p className="font-display text-3xl text-ink">No players yet.</p>
-      <p className="max-w-md text-sm text-ink-soft">
-        Add players to your roster, then upload a recording to start tracking
-        per-player analytics.
+      <p className="max-w-md text-[0.95rem] text-ink-soft">
+        Add players, then assign recordings to them.
       </p>
       <div className="mt-2 flex flex-wrap justify-center gap-2.5">
         <Button variant="ink" size="sm" asChild>
-          <Link href="/upload">Upload first video</Link>
+          <Link href="/upload">Upload a recording</Link>
         </Button>
         <Button variant="ghost" size="sm" asChild>
           <Link href="/recordings">Browse recordings</Link>

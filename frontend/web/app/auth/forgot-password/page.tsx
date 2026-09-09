@@ -90,12 +90,12 @@ export default function ForgotPasswordPage() {
             >
               Check your email.
             </h3>
-            <p className="text-ink-soft text-[0.95rem] leading-[1.5] max-w-[32ch] mx-auto mb-5">
+            <p className="text-ink-soft text-[1.02rem] leading-[1.5] max-w-[32ch] mx-auto mb-5">
               We sent a reset link to{' '}
               <span className="text-ink font-medium">{email}</span>. The link
               expires in 15 minutes.
             </p>
-            <p className="text-[0.85rem] text-ink-mute">
+            <p className="text-[0.95rem] text-ink-mute">
               Didn&apos;t get it?{' '}
               <button
                 type="button"
@@ -108,7 +108,7 @@ export default function ForgotPasswordPage() {
             <div className="mt-7">
               <Link
                 href="/auth/login"
-                className="inline-flex items-center gap-1.5 text-[0.88rem] text-ink-mute hover:text-ink transition-colors"
+                className="inline-flex items-center gap-1.5 text-[0.95rem] text-ink-mute hover:text-ink transition-colors"
               >
                 <ArrowLeft className="size-3.5" />
                 Back to sign in
@@ -121,8 +121,7 @@ export default function ForgotPasswordPage() {
               Reset your password.
             </AuthTitle>
             <AuthSub className="text-center">
-              Enter the email tied to your account. We&apos;ll send a secure
-              reset link.
+              Enter your account email. We'll send a reset link.
             </AuthSub>
 
             <form onSubmit={handleSubmit} className="grid gap-3.5 mb-4">
@@ -144,7 +143,7 @@ export default function ForgotPasswordPage() {
               {error && (
                 <div
                   role="alert"
-                  className="rounded-[10px] border border-clay bg-[color-mix(in_srgb,var(--color-clay)_8%,transparent)] text-clay text-[0.88rem] leading-[1.45] px-3.5 py-2.5"
+                  className="rounded-[10px] border border-clay bg-[color-mix(in_srgb,var(--color-clay)_8%,transparent)] text-clay text-[0.95rem] leading-[1.45] px-3.5 py-2.5"
                 >
                   {error}
                 </div>

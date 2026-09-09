@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { CountUp } from '@/components/ui/CountUp'
 import { StrokeBars, type StrokeRow } from '@/components/players/StrokeBars'
 import { Eyebrow } from '@/components/ui/eyebrow'
-import { Display } from '@/components/ui/display'
+import { Display, Prose } from '@/components/ui/display'
 import { Button } from '@/components/ui/button'
 import { playerPhotoProxyUrl } from '@/lib/utils'
 import useSWR from 'swr'
@@ -175,8 +175,8 @@ export default function PlayerDetailPage() {
           className="cc-card p-6"
           style={{ borderColor: 'color-mix(in srgb, var(--color-clay) 30%, var(--color-line))' }}
         >
-          <p className="text-sm text-clay">{error}</p>
-          <Link href="/players" className="mt-3 inline-block text-sm text-court hover:underline">
+          <p className="text-[0.95rem] text-clay">{error}</p>
+          <Link href="/players" className="mt-3 inline-block text-[0.95rem] text-court hover:underline">
             ← Back to roster
           </Link>
         </div>
@@ -190,10 +190,10 @@ export default function PlayerDetailPage() {
         <Crumb name="Not found" />
         <div className="cc-card flex flex-col items-start gap-3 p-8">
           <p className="font-display text-2xl text-ink">Player not found.</p>
-          <p className="text-sm text-ink-soft">
+          <p className="text-[0.95rem] text-ink-soft">
             This player may have been removed, or the link is stale.
           </p>
-          <Link href="/players" className="mt-2 text-sm text-court hover:underline">
+          <Link href="/players" className="mt-2 text-[0.95rem] text-court hover:underline">
             ← Back to roster
           </Link>
         </div>
@@ -239,7 +239,7 @@ export default function PlayerDetailPage() {
             {tail && (
               <>
                 {' '}
-                <em>{tail}</em>
+                {tail}
               </>
             )}
           </Display>
@@ -318,12 +318,12 @@ export default function PlayerDetailPage() {
           <div>
             <Eyebrow>Stroke breakdown</Eyebrow>
             <Display as="h2" size="md" className="mt-3">
-              How <em>{player.name.split(/\s+/)[0]}</em> hits.
+              Stroke mix
             </Display>
           </div>
-          <p className="max-w-[38ch] text-sm text-ink-mute">
-            Counts and share of total tracked shots across every recording.
-          </p>
+          <Prose className="max-w-[38ch] text-ink-mute">
+            Count and share of tracked shots across all recordings.
+          </Prose>
         </header>
 
         <div className="cc-card p-7" data-countup-card>
@@ -338,12 +338,12 @@ export default function PlayerDetailPage() {
             <div>
               <Eyebrow>Recent trend</Eyebrow>
               <Display as="h2" size="md" className="mt-3">
-                Last {last5.length} recording{last5.length === 1 ? '' : 's'}.
+                Recent accuracy
               </Display>
             </div>
-            <p className="max-w-[38ch] text-sm text-ink-mute">
-              In-bounds rate per recording. Higher = cleaner shot selection.
-            </p>
+            <Prose className="max-w-[38ch] text-ink-mute">
+              In-bounds rate per recording.
+            </Prose>
           </header>
 
           <div className="cc-card p-7">
@@ -366,16 +366,16 @@ export default function PlayerDetailPage() {
         {recordings.length === 0 ? (
           <div className="cc-card flex flex-col items-center gap-3 p-12 text-center">
             <p className="font-display text-xl text-ink">No recordings yet.</p>
-            <p className="text-sm text-ink-soft">
+            <p className="text-[0.95rem] text-ink-soft">
               Upload a recording and assign it to {player.name.split(/\s+/)[0]} to see it here.
             </p>
             <Button variant="ink" size="sm" asChild>
-              <Link href="/upload">Upload video</Link>
+              <Link href="/upload">Upload a recording</Link>
             </Button>
           </div>
         ) : (
           <div className="cc-card overflow-hidden p-0">
-            <div className="grid grid-cols-[100px_1fr_120px_120px_60px] items-center gap-4 border-b border-line-soft bg-shade px-6 py-3.5 font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute">
+            <div className="hidden md:grid grid-cols-[80px_minmax(0,1fr)_70px_90px_20px] items-center gap-4 border-b border-line-soft bg-shade px-6 py-3.5 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
               <span>Date</span>
               <span>Recording</span>
               <span>Shots</span>
@@ -388,15 +388,15 @@ export default function PlayerDetailPage() {
                 href={`/recordings/${r.id}`}
                 className="cc-match-row block border-b border-line-soft last:border-b-0"
               >
-                <div className="grid grid-cols-[100px_1fr_120px_120px_60px] items-center gap-4 px-6 py-4">
-                  <span className="font-mono text-[0.78rem] tabular-nums text-ink-mute">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[80px_minmax(0,1fr)_70px_90px_20px] items-center gap-x-4 gap-y-2 px-6 py-4">
+                  <span className="col-span-2 md:col-span-1 font-mono text-[0.88rem] tabular-nums text-ink-mute">
                     {formatDateShort(r.createdAt)}
                   </span>
                   <div className="min-w-0">
                     <div className="truncate font-display text-[1.05rem] font-medium tracking-[-0.01em] text-ink">
                       {r.name}
                     </div>
-                    <div className="text-[0.85rem] text-ink-mute">
+                    <div className="text-[0.95rem] text-ink-mute">
                       {r.status === 'done'
                         ? r.shotCount != null
                           ? `${r.shotCount} shots · ${r.bounceCount ?? 0} bounces`
@@ -406,12 +406,17 @@ export default function PlayerDetailPage() {
                           : r.status === 'failed'
                             ? 'Failed'
                             : 'Pending'}
+                      {r.status === 'done' && inPct(r.inBoundsBounces, r.outBoundsBounces) != null && (
+                        <span className="md:hidden">
+                          {' · '}{inPct(r.inBoundsBounces, r.outBoundsBounces)}% in bounds
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <span className="font-display text-[1rem] font-medium tabular-nums text-ink">
+                  <span className="hidden md:block font-display text-[1rem] font-medium tabular-nums text-ink">
                     {r.shotCount != null ? r.shotCount.toLocaleString() : '–'}
                   </span>
-                  <span className="font-display text-[1rem] font-medium tabular-nums text-ink">
+                  <span className="hidden md:block font-display text-[1rem] font-medium tabular-nums text-ink">
                     {(() => {
                       const a = inPct(r.inBoundsBounces, r.outBoundsBounces)
                       return a == null ? (
@@ -419,7 +424,7 @@ export default function PlayerDetailPage() {
                       ) : (
                         <>
                           {a}
-                          <span className="ml-0.5 text-[0.62em] text-ink-mute">%</span>
+                          <span className="ml-0.5 text-[0.82rem] text-ink-mute">%</span>
                         </>
                       )
                     })()}
@@ -437,7 +442,7 @@ export default function PlayerDetailPage() {
 
 function Crumb({ name }: { name: string }) {
   return (
-    <nav className="flex items-center gap-2.5 pt-1 font-mono text-[0.72rem] uppercase tracking-[0.14em] text-ink-mute">
+    <nav className="flex items-center gap-2.5 pt-1 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
       <Link href="/players" className="hover:text-ink">
         Players
       </Link>
@@ -462,7 +467,7 @@ function StatCard({
 }) {
   return (
     <div className="cc-stat-tile" data-countup-card>
-      <div className="font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute">
+      <div className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
         {label}
       </div>
       <div className="mt-2 font-display text-[2.4rem] font-medium leading-none tabular-nums tracking-[-0.018em] text-ink">
@@ -493,9 +498,9 @@ function RecentTrendBars({ recordings }: { recordings: ApiRecording[] }) {
           <Link
             key={r.id}
             href={`/recordings/${r.id}`}
-            className="group flex flex-1 flex-col items-center justify-end gap-2"
+            className="group flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-2"
           >
-            <div className="relative flex w-full flex-1 items-end">
+            <div className="relative flex min-h-0 w-full flex-1 items-end">
               <div
                 className="w-full rounded-t-md transition-[height,background] duration-[480ms] ease-[cubic-bezier(0.2,0.8,0.2,1)]"
                 style={{
@@ -504,11 +509,11 @@ function RecentTrendBars({ recordings }: { recordings: ApiRecording[] }) {
                     'color-mix(in srgb, var(--color-court) 70%, transparent)',
                 }}
               />
-              <div className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-paper px-2 py-1 text-[0.7rem] font-medium text-ink opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
+              <div className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-paper px-2 py-1 text-[0.82rem] font-medium text-ink opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
                 {acc == null ? '–' : `${acc}%`}
               </div>
             </div>
-            <span className="font-mono text-[0.62rem] uppercase tracking-[0.12em] text-ink-mute">
+            <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
               {formatDateShort(r.createdAt)}
             </span>
           </Link>
@@ -554,7 +559,7 @@ function HandednessControl({
         setError(
           message && message !== 'Internal server error'
             ? message
-            : 'Something broke on our side. Try again; if it keeps happening, tell us.',
+            : "Couldn't complete that request. Try again.",
         )
         onChange(value) // rollback
       }
@@ -568,7 +573,7 @@ function HandednessControl({
 
   return (
     <div className="flex items-center gap-3">
-      <span className="font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute">
+      <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
         Handedness
       </span>
       <div
@@ -587,7 +592,7 @@ function HandednessControl({
               aria-checked={active}
               disabled={isSaving}
               onClick={() => update(opt)}
-              className={`rounded-full px-3.5 py-1 text-[0.82rem] font-medium transition-colors duration-150 ${
+              className={`rounded-full px-3.5 py-1 text-[0.88rem] font-medium transition-colors duration-150 ${
                 active
                   ? 'bg-ink text-cream'
                   : 'text-ink-soft hover:text-ink'
@@ -598,7 +603,7 @@ function HandednessControl({
           )
         })}
       </div>
-      {error && <span className="text-[0.78rem] text-clay">{error}</span>}
+      {error && <span className="text-[0.88rem] text-clay">{error}</span>}
     </div>
   )
 }

@@ -89,27 +89,14 @@
 
   body {
     @apply bg-cream text-ink font-sans antialiased;
-    font-size: 16px;
-    line-height: 1.55;
+    font-size: 17px;
+    line-height: 1.6;
     letter-spacing: -0.005em;
     background-image:
       radial-gradient(1400px 900px at 88% -10%, color-mix(in srgb, var(--color-clay) 8%, transparent), transparent 55%),
       radial-gradient(900px 800px at -10% 80%, color-mix(in srgb, var(--color-court) 9%, transparent), transparent 60%);
     background-attachment: fixed;
     transition: background-color var(--duration-base) var(--ease-out), color var(--duration-base) var(--ease-out);
-  }
-
-  /* Brand law: italic = clay. Locked exceptions opt in via .italic-lime. */
-  em,
-  i,
-  .italic-clay {
-    color: var(--color-clay);
-    font-style: italic;
-  }
-
-  .italic-lime {
-    color: var(--color-lime);
-    font-style: italic;
   }
 
   ::selection {

@@ -24,7 +24,7 @@ function Eyebrow({
       className={cn(
         'inline-flex items-center gap-2',
         'font-mono uppercase',
-        'text-[0.72rem] tracking-[0.18em]',
+        'text-[0.82rem] tracking-[0.12em]',
         toneClass,
         showDot &&
           "before:content-[''] before:size-[6px] before:rounded-full before:bg-clay",

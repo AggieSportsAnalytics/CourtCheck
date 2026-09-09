@@ -26,7 +26,7 @@ export default class ErrorBoundary extends Component<Props, State> {
       return (
         this.props.fallback ?? (
           <div
-            className="rounded-xl px-4 py-3 text-xs"
+            className="rounded-xl px-4 py-3 text-[0.82rem]"
             style={{
               background: "rgba(255,255,255,0.02)",
               border: "1px solid rgba(255,255,255,0.07)",

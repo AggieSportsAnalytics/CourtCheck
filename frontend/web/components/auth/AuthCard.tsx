@@ -26,7 +26,7 @@ function AuthCard({
 
 function AuthEyebrow({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2 font-mono uppercase text-[0.7rem] tracking-[0.18em] text-court before:content-[''] before:size-[6px] before:rounded-full before:bg-clay">
+    <span className="inline-flex items-center gap-2 font-mono uppercase text-[0.82rem] tracking-[0.12em] text-court before:content-[''] before:size-[6px] before:rounded-full before:bg-clay">
       {children}
     </span>
   )
@@ -64,7 +64,7 @@ function AuthSub({
   return (
     <p
       className={cn(
-        'text-ink-soft text-[0.98rem] leading-[1.5] mb-7',
+        'text-ink-soft text-[1.02rem] leading-[1.5] mb-7',
         className,
       )}
     >
@@ -75,7 +75,7 @@ function AuthSub({
 
 function AuthFoot({ children }: { children: ReactNode }) {
   return (
-    <div className="text-center text-[0.92rem] text-ink-soft pt-4 mt-5 border-t border-line-soft">
+    <div className="text-center text-[1.02rem] text-ink-soft pt-4 mt-5 border-t border-line-soft">
       {children}
     </div>
   )
