@@ -108,9 +108,10 @@ export default function Sidebar({ user, onSignOut }: Props) {
   }
 
   return (
+    <>
     <aside
       aria-label="Primary navigation"
-      className="app-sidebar fixed top-0 left-0 z-50 flex flex-col bg-paper border-r border-line-soft box-border"
+      className="app-sidebar fixed top-0 left-0 z-50 hidden md:flex flex-col bg-paper border-r border-line-soft box-border"
       style={{
         width: collapsed ? 72 : 200,
         height: '100vh',
@@ -124,7 +125,7 @@ export default function Sidebar({ user, onSignOut }: Props) {
         onClick={toggleCollapse}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className="sidebar-collapse absolute z-[51] size-[22px] rounded-full border border-line bg-paper text-ink-mute hover:border-ink hover:text-ink flex items-center justify-center transition-colors cursor-pointer shadow-sm"
+        className="sidebar-collapse absolute z-[51] size-[22px] before:absolute before:-inset-[12px] before:content-[''] rounded-full border border-line bg-paper text-ink-mute hover:border-ink hover:text-ink flex items-center justify-center transition-colors cursor-pointer shadow-sm"
         style={{
           top: '50%',
           right: -11,
@@ -215,7 +216,7 @@ export default function Sidebar({ user, onSignOut }: Props) {
             onClick={() => setMenuOpen((s) => !s)}
             aria-label="Account menu"
             aria-expanded={menuOpen}
-            className="size-9 rounded-full bg-court text-cream font-display text-[0.95rem] font-medium inline-flex items-center justify-center transition-transform hover:-translate-y-[1px] cursor-pointer"
+            className="relative size-9 before:absolute before:-inset-[5px] before:content-[''] rounded-full bg-court text-cream font-display text-[0.95rem] font-medium inline-flex items-center justify-center transition-transform hover:-translate-y-[1px] cursor-pointer"
           >
             {user.initials || 'U'}
           </button>
@@ -276,5 +277,25 @@ export default function Sidebar({ user, onSignOut }: Props) {
         <ThemeToggle />
       </div>
     </aside>
+    <nav className="app-bottom-nav" aria-label="Primary navigation">
+      {NAV_ITEMS.map((item) => {
+        const active = item.match(pathname)
+        return (
+          <Link
+            key={item.name}
+            href={item.href}
+            aria-current={active ? 'page' : undefined}
+            className={`relative flex flex-1 flex-col items-center justify-center gap-1 min-h-[44px] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-court ${
+              active ? 'bg-shade text-ink font-semibold' : 'text-ink-soft hover:bg-shade hover:text-ink'
+            }`}
+          >
+            {active && <span aria-hidden="true" className="absolute top-0 h-[3px] w-6 rounded-b bg-court" />}
+            {item.icon}
+            <span className="font-mono text-[10px]">{item.name}</span>
+          </Link>
+        )
+      })}
+    </nav>
+    </>
   )
 }

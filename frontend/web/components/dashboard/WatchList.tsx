@@ -32,11 +32,11 @@ export default function WatchList({ items }: Props) {
             Watch list
           </h2>
           <div className="text-ink-mute text-sm mt-1.5">
-            Three players who moved the most this week.
+            Players with the newest footage.
           </div>
         </div>
         <div className="font-mono uppercase tracking-[0.14em] text-[0.7rem] text-ink-mute hidden md:block">
-          Last 7 days
+          Latest recordings
         </div>
       </div>
 

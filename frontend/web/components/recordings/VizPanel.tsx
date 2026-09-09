@@ -7,7 +7,7 @@ import Coverage from '../viz/Coverage';
 import Legend from '../viz/Legend';
 import { StrokeKey, STROKE_COLOR_BY_KEY } from '../viz/CourtSVG';
 import { PositionTile, type PositionSummary } from './CoachInsights';
-import CountUp from '../viz/CountUp';
+import CountUp from '@/components/ui/CountUp';
 import { useEntranceReveal } from '../viz/useEntranceReveal';
 
 type VizMode = 'shotMap' | 'spacing' | 'coverage';
@@ -37,6 +37,7 @@ type Props = {
   positionSummary?: PositionSummary | null;
   /** Recording status — drives the Coverage empty state vs sample fallback. */
   recordingStatus?: string;
+  handedness?: 'right' | 'left' | null;
   /** Source video fps — fallback for seeking when a shot has no time_s. */
   fps?: number | null;
   /** Optional. When provided, clicking a bounce on the shot map opens a
@@ -151,7 +152,7 @@ function buildSpacingShots(shots: ApiShot[]): SpacingShot[] {
   return out;
 }
 
-export default function VizPanel({ shots = [], coverageGrid, positionSummary, recordingStatus, fps, videoRef }: Props) {
+export default function VizPanel({ shots = [], coverageGrid, positionSummary, recordingStatus, handedness, fps, videoRef }: Props) {
   const [mode, setMode] = useState<VizMode>('shotMap');
   const [shotFilter, setShotFilter] = useState<StrokeKey | null>(null);
   const [spacingFilter, setSpacingFilter] = useState<StrokeKey | null>(null);
@@ -289,6 +290,11 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
           {head.title}
         </h3>
         <div className="text-ink-soft text-[0.95rem] mt-1">{head.sub}</div>
+        {mode === 'shotMap' && handedness == null && (
+          <p className="font-mono text-[0.72rem] text-ink-mute mt-2">
+            Assuming right-handed. Set handedness on the player profile if this player is a lefty; forehand and backhand labels depend on it.
+          </p>
+        )}
 
         <div
           className="inline-flex gap-1 p-1 bg-shade dark:bg-surface border border-line-soft rounded-[10px] mt-3.5"
@@ -683,7 +689,7 @@ function BouncePanel({
       ? 'Forehand'
       : shot.stroke === 'backhand'
         ? 'Backhand'
-        : 'Serve / Overhead';
+        : 'Serve/Overhead';
   const strokeColor = isUnknown
     ? 'var(--color-ink-mute)'
     : STROKE_COLOR_BY_KEY[shot.stroke as StrokeKey];
@@ -839,7 +845,7 @@ function StrokeBarsMini({
         <span className="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-ink-mute mr-2">
           {eyebrow}
         </span>
-        Unlocks once the recording finishes processing.
+        Fills in once the recording finishes processing.
       </div>
     );
   }
@@ -898,7 +904,7 @@ function StrokeBarsMini({
                 {value !== null ? (
                   <CountUp value={value} play={shown} suffix="%" />
                 ) : (
-                  '—'
+                  '–'
                 )}
                 <span className="text-ink-mute font-normal text-[0.7rem] ml-1">
                   ({row.n})
@@ -936,7 +942,7 @@ function SpacingBarsMini({
         <span className="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-ink-mute mr-2">
           Spacing
         </span>
-        Unlocks once the recording finishes processing.
+        Fills in once the recording finishes processing.
       </div>
     );
   }

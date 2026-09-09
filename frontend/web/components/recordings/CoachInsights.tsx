@@ -2,7 +2,7 @@
 
 import { RefObject } from 'react';
 import { useEntranceReveal } from '../viz/useEntranceReveal';
-import CountUp from '../viz/CountUp';
+import CountUp from '@/components/ui/CountUp';
 
 /**
  * Coach Insights — three metrics surfaced per `coach-insights-spec.md`:
@@ -131,7 +131,7 @@ export function PositionTile({ data }: { data: PositionSummary | null }) {
   if (!data || data.n_frames === 0) {
     return (
       <div className="cc-coach-tile">
-        <TileHead eyebrow="Court position" headline="—" />
+        <TileHead eyebrow="Court position" headline="–" />
         <p className="text-[0.88rem] text-ink-mute italic">No position data.</p>
       </div>
     );
@@ -139,7 +139,7 @@ export function PositionTile({ data }: { data: PositionSummary | null }) {
   const zones: { label: string; pct: number; color: string }[] = [
     { label: 'Inside baseline', pct: data.inside_pct, color: 'var(--color-court)' },
     { label: 'On baseline', pct: data.on_pct, color: 'var(--color-court-light, var(--color-court))' },
-    { label: '1–10 ft behind', pct: data.behind_5_10_pct, color: 'var(--color-amber)' },
+    { label: '5–10 ft behind', pct: data.behind_5_10_pct, color: 'var(--color-amber)' },
     { label: '10+ ft behind', pct: data.behind_10_plus_pct, color: 'var(--color-clay)' },
   ];
   const headline = (() => {
@@ -241,7 +241,7 @@ function ErrorTile({
   const missed = data.missed_return ?? 0;
   const oob = data.long + data.wide + data.net_err;
   const rows: { label: string; n: number; color: string }[] = [
-    { label: 'Missed return', n: missed, color: 'var(--color-court)' },
+    { label: 'Unreturned balls', n: missed, color: 'var(--color-court)' },
     { label: 'Long', n: data.long, color: 'var(--color-amber)' },
     { label: 'Wide', n: data.wide, color: 'var(--color-plum)' },
     { label: 'Net', n: data.net_err, color: 'var(--color-clay)' },
@@ -251,19 +251,17 @@ function ErrorTile({
     <div className="cc-coach-tile">
       <TileHead
         eyebrow="Your errors"
-        headline={`${data.total} total · ${missed} missed return${missed === 1 ? '' : 's'} + ${oob} OOB.`}
+        headline={`${data.total} total · ${missed} unreturned ball${missed === 1 ? '' : 's'} + ${oob} OOB.`}
       />
       <p className="text-[0.78rem] text-ink-soft mb-3 -mt-1.5 leading-snug">
-        <em>Missed return</em> = opponent's ball landed in your half and you
-        didn't swing.{' '}
-        <em>OOB</em> = your shot landed out (long / wide / net).
+        Unreturned = the opponent's ball landed in your half and you did not swing. Counts placements against you, not only your errors.
       </p>
       <div className="space-y-1.5 mb-3">
         {rows.map((r, i) => (
           <div
             key={r.label}
             className="grid items-center"
-            style={{ gridTemplateColumns: '60px 1fr 28px', gap: 10 }}
+            style={{ gridTemplateColumns: '112px 1fr 28px', gap: 10 }}
           >
             <span className="text-[0.82rem] text-ink-soft">{r.label}</span>
             <div className="h-2 rounded-full overflow-hidden bg-shade dark:bg-surface">
@@ -289,7 +287,9 @@ function ErrorTile({
         items={data.events.map((e) => ({
           frame: e.frame,
           time_s: e.time_s,
-          label: e.direction[0].toUpperCase() + e.direction.slice(1),
+          label: e.direction === 'missed return'
+            ? 'Unreturned balls'
+            : e.direction[0].toUpperCase() + e.direction.slice(1),
           tone: 'neutral',
         }))}
         videoRef={videoRef}

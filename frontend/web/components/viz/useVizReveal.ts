@@ -37,13 +37,11 @@ export function useVizReveal<T extends SVGElement>(
       '(prefers-reduced-motion: reduce)',
     ).matches;
     if (reduceMotion) {
-      console.log('[viz-reveal] reduced-motion ON — skipping animation');
       return;
     }
 
     const targets = Array.from(node.querySelectorAll<SVGElement>(selector));
     if (!targets.length) {
-      console.log(`[viz-reveal] no children matched "${selector}" inside`, node);
       return;
     }
 
@@ -59,16 +57,12 @@ export function useVizReveal<T extends SVGElement>(
     targets.forEach((el) => {
       el.style.opacity = '0';
     });
-    console.log(
-      `[viz-reveal] hidden ${targets.length} "${selector}" children, awaiting scroll-in`,
-    );
 
     let triggered = false;
     const anims: Animation[] = [];
     const reveal = () => {
       if (triggered) return;
       triggered = true;
-      console.log(`[viz-reveal] revealing ${targets.length} "${selector}" children`);
       targets.forEach((el, i) => {
         const target = targetOpacities[i];
         const anim = el.animate(
@@ -95,7 +89,6 @@ export function useVizReveal<T extends SVGElement>(
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            console.log(`[viz-reveal] intersect → revealing "${selector}"`);
             obs.disconnect();
             requestAnimationFrame(reveal);
             return;

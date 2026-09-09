@@ -64,7 +64,12 @@ export default function EditableName({ recordingId, initialName, variant = 'titl
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error || 'Failed to rename');
+        const message = typeof body?.error === 'string' ? body.error.trim() : '';
+        throw new Error(
+          message && message !== 'Internal server error'
+            ? message
+            : 'Something broke on our side. Try again; if it keeps happening, tell us.',
+        );
       }
       onSaved?.(trimmed);
       setEditing(false);
@@ -86,8 +91,8 @@ export default function EditableName({ recordingId, initialName, variant = 'titl
         aria-label="Rename recording"
         className={
           variant === 'title'
-            ? 'inline-flex items-center justify-center w-8 h-8 rounded-full border border-line bg-paper text-ink-mute hover:text-ink hover:border-ink-mute cursor-pointer'
-            : 'inline-flex items-center justify-center w-7 h-7 rounded-full border border-line bg-paper text-ink-mute hover:text-court hover:border-court cursor-pointer'
+            ? 'relative before:absolute before:-inset-[7px] before:content-[""] inline-flex items-center justify-center w-8 h-8 rounded-full border border-line bg-paper text-ink-mute hover:text-ink hover:border-ink-mute cursor-pointer'
+            : 'relative before:absolute before:-inset-[9px] before:content-[""] inline-flex items-center justify-center w-7 h-7 rounded-full border border-line bg-paper text-ink-mute hover:text-court hover:border-court cursor-pointer'
         }
         style={{ transition: 'border-color var(--duration-quick) var(--ease-out), color var(--duration-quick) var(--ease-out)' }}
       >
@@ -120,8 +125,8 @@ export default function EditableName({ recordingId, initialName, variant = 'titl
         disabled={saving}
         className={
           variant === 'title'
-            ? 'w-[min(420px,60vw)] rounded-[10px] border border-line bg-paper px-3 py-2 text-[0.95rem] text-ink outline-none focus:border-ink'
-            : 'w-[220px] rounded-[10px] border border-line bg-paper px-3 py-1.5 text-[0.9rem] text-ink outline-none focus:border-ink'
+            ? 'w-[min(420px,60vw)] rounded-[10px] border border-line bg-paper px-3 py-2 text-[0.95rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20'
+            : 'w-[220px] rounded-[10px] border border-line bg-paper px-3 py-1.5 text-[0.9rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20'
         }
         aria-label="Recording name"
       />

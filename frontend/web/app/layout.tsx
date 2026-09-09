@@ -66,6 +66,21 @@ export default function RootLayout({
       className={`${newsreader.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `
+          (() => {
+            let theme = null;
+            try {
+              theme = localStorage.getItem('cc-theme');
+            } catch (error) {
+              console.error('Could not read saved theme.', error);
+            }
+            const dark = theme === 'dark' ||
+              (theme !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.classList.toggle('dark', dark);
+          })();
+        ` }} />
+      </head>
       <body className="bg-cream text-ink font-sans antialiased" suppressHydrationWarning>
         <Providers>
           <ConditionalLayout>{children}</ConditionalLayout>

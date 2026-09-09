@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
-import { CountUp } from '@/components/players/CountUp'
+import { CountUp } from '@/components/ui/CountUp'
 import { StrokeBars, type StrokeRow } from '@/components/players/StrokeBars'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Display } from '@/components/ui/display'
@@ -384,7 +384,7 @@ export default function PlayerDetailPage() {
           <div className="cc-card flex flex-col items-center gap-3 p-12 text-center">
             <p className="font-display text-xl text-ink">No recordings yet.</p>
             <p className="text-sm text-ink-soft">
-              Upload match footage and assign it to {player.name.split(/\s+/)[0]} to see it here.
+              Upload a recording and assign it to {player.name.split(/\s+/)[0]} to see it here.
             </p>
             <Button variant="ink" size="sm" asChild>
               <Link href="/upload">Upload video</Link>
@@ -426,13 +426,13 @@ export default function PlayerDetailPage() {
                     </div>
                   </div>
                   <span className="font-display text-[1rem] font-medium tabular-nums text-ink">
-                    {r.shotCount != null ? r.shotCount.toLocaleString() : '—'}
+                    {r.shotCount != null ? r.shotCount.toLocaleString() : '–'}
                   </span>
                   <span className="font-display text-[1rem] font-medium tabular-nums text-ink">
                     {(() => {
                       const a = inPct(r.inBoundsBounces, r.outBoundsBounces)
                       return a == null ? (
-                        <span className="text-ink-mute">—</span>
+                        <span className="text-ink-mute">–</span>
                       ) : (
                         <>
                           {a}
@@ -484,7 +484,7 @@ function StatCard({
       </div>
       <div className="mt-2 font-display text-[2.4rem] font-medium leading-none tabular-nums tracking-[-0.018em] text-ink">
         {missing ? (
-          <span className="text-ink-mute">—</span>
+          <span className="text-ink-mute">–</span>
         ) : (
           <>
             <CountUp to={value} format={format} />
@@ -522,7 +522,7 @@ function RecentTrendBars({ recordings }: { recordings: ApiRecording[] }) {
                 }}
               />
               <div className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-paper px-2 py-1 text-[0.7rem] font-medium text-ink opacity-0 shadow-sm transition-opacity group-hover:opacity-100">
-                {acc == null ? '—' : `${acc}%`}
+                {acc == null ? '–' : `${acc}%`}
               </div>
             </div>
             <span className="font-mono text-[0.62rem] uppercase tracking-[0.12em] text-ink-mute">
@@ -567,7 +567,12 @@ function HandednessControl({
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        setError(body?.error || 'Failed to save')
+        const message = typeof body?.error === 'string' ? body.error.trim() : ''
+        setError(
+          message && message !== 'Internal server error'
+            ? message
+            : 'Something broke on our side. Try again; if it keeps happening, tell us.',
+        )
         onChange(value) // rollback
       }
     } catch (e) {

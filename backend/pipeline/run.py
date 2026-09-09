@@ -2161,7 +2161,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 )
                 _probs, label = pose_stroke_classifier.predict(seq)
                 event["label"] = label
-            print(f"[Stroke] {len(swing_events)} swings detected (pre-gate)")
 
         update_progress(0.5, "Detecting bounce points and stroke types")
 
@@ -2220,11 +2219,9 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
 
                 pose_stroke_counts = {"Forehand": 0, "Backhand": 0, "Serve/Overhead": 0}
                 frame_stroke_labels = {}
-                p1_valid = 0
                 for ev in p1_swings:
                     if not ev.get("contact_ok", True):
                         continue
-                    p1_valid += 1
                     label = ev.get("label")
                     if not label:
                         continue
@@ -2232,29 +2229,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                     display_end = min(total_frames - 1, int(ev["peak_frame"]) + 30)
                     for f in range(int(ev["peak_frame"]), display_end + 1):
                         frame_stroke_labels.setdefault(f, {})[ev["track_id"]] = label
-                print(
-                    f"[Stroke] P1 {p1_valid}/{len(p1_swings)} pose swings passed ball-side gate "
-                    f"(FH={pose_stroke_counts.get('Forehand', 0)} "
-                    f"BH={pose_stroke_counts.get('Backhand', 0)} "
-                    f"Srv={pose_stroke_counts.get('Serve/Overhead', 0)}) "
-                    f"+ P2 {len(p2_contacts)} ball-contacts"
-                )
-                # Diagnostic: per-stroke gate pass/fail (is the gate eating backhands?)
-                _gate = {}
-                for ev in p1_swings:
-                    lbl = ev.get("label", "?")
-                    p, t = _gate.get(lbl, (0, 0))
-                    _gate[lbl] = (p + (1 if ev.get("contact_ok") else 0), t + 1)
-                print("[Diag] P1 gate by stroke (pass/total): "
-                      + ", ".join(f"{k}={p}/{t}" for k, (p, t) in sorted(_gate.items())))
-                # Diagnostic: WHERE do P1 swings + drawn labels fall in time?
-                _all_pf = sorted(int(e["peak_frame"]) for e in p1_swings)
-                _pass_pf = sorted(int(e["peak_frame"]) for e in p1_swings if e.get("contact_ok"))
-                _lbl_frames = sorted(frame_stroke_labels.keys())
-                def _fr(lst):
-                    return f"{lst[0]}..{lst[-1]} (n={len(lst)})" if lst else "none"
-                print(f"[Diag] P1 swing peak_frames: all={_fr(_all_pf)} passed={_fr(_pass_pf)} "
-                      f"| label frames drawn={_fr(_lbl_frames)} of total={total_frames}")
             else:
                 for ev in swing_events:
                     ev["contact_ok"] = True
@@ -2290,18 +2264,6 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 bidx: ev.get("label", "")
                 for bidx, ev in bounce_to_swing_render.items()
             }
-            print(
-                f"[Minimap] showing {len(bounces_for_minimap)}/{len(sorted_render_bounces)} "
-                f"bounces (ball crossed the net to reach them)"
-            )
-            # Diagnostic: near (P2 lands) vs far (P1 lands) — detected vs shown.
-            def _side_counts(idxs):
-                c = {"near": 0, "far": 0, "net": 0}
-                for b in idxs:
-                    c[bounce_positions_render[b].get("side", "net")] = c.get(bounce_positions_render[b].get("side", "net"), 0) + 1
-                return c
-            print(f"[Diag] bounces detected by side={_side_counts(sorted_render_bounces)} "
-                  f"shown by side={_side_counts(bounces_for_minimap)}")
         else:
             bounces_for_minimap = set(bounces_all)
 

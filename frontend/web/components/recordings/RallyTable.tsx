@@ -48,14 +48,27 @@ function outcomeLabel(rally: Rally): { text: string; tone: 'win' | 'loss' | 'neu
   // winner is null when the rally end couldn't be classified (clipped rally,
   // no swing before the last bounce, projection gap). The Errors tile is an
   // independent codepath (build_error_summary) so it can still count an error
-  // on a bounce whose rally we couldn't resolve — surface "—" here rather than
+  // on a bounce whose rally we couldn't resolve — surface "Not classified" here rather than
   // a jarring "Unknown" that reads as a bug next to that count.
-  return { text: '—', tone: 'neutral' };
+  return { text: 'Not classified', tone: 'neutral' };
 }
 
-function reasonLabel(endReason: string): string {
-  if (!endReason || endReason === 'unknown') return '—';
-  return endReason.replace(/_/g, ' ');
+const REASON_LABELS = new Map([
+  ['p1_winner', 'Your winner'],
+  ['p2_winner', 'Opponent winner'],
+  ['p1_long', 'You: long'],
+  ['p1_wide', 'You: wide'],
+  ['p1_net', 'You: net'],
+  ['p2_long', 'Opponent: long'],
+  ['p2_wide', 'Opponent: wide'],
+  ['p2_net', 'Opponent: net'],
+  ['p1_missed_return', 'Unreturned (opponent placement)'],
+  ['p2_missed_return', 'Unreturned by opponent'],
+  ['unknown', 'Not classified'],
+]);
+
+function reasonLabel(endReason?: string | null): string {
+  return REASON_LABELS.get(endReason ?? 'unknown') ?? 'Not classified';
 }
 
 function fmtTs(sec: number): string {
@@ -120,16 +133,26 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
               return (
                 <tr
                   key={r.rally_idx}
-                  className={`border-t border-line cursor-pointer transition-colors ${
+                  tabIndex={0}
+                  role="button"
+                  aria-expanded={isOpen}
+                  className={`border-t border-line cursor-pointer transition-colors focus-visible:bg-shade ${
                     isOpen ? 'bg-shade/60' : 'hover:bg-shade/40'
                   }`}
                   onClick={() => setOpenIdx(isOpen ? null : r.rally_idx)}
+                  onKeyDown={(e) => {
+                    if (e.target !== e.currentTarget) return;
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setOpenIdx(isOpen ? null : r.rally_idx);
+                    }
+                  }}
                 >
                   <td className="py-2 pr-3 text-ink-mute font-mono tabular-nums">
                     {r.rally_idx + 1}
                   </td>
                   <td className="py-2 pr-3">
-                    {r.server === 1 ? 'You' : r.server === 2 ? 'Opp' : '—'}
+                    {r.server === 1 ? 'You' : r.server === 2 ? 'Opponent' : 'Not classified'}
                   </td>
                   <td className="py-2 pr-3 font-display tabular-nums">{r.shot_count}</td>
                   <td className="py-2 pr-3">
@@ -192,8 +215,8 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
                     <span className="text-ink-mute font-mono tabular-nums w-6">
                       {i + 1}.
                     </span>
-                    <span className="w-12 text-ink-soft">
-                      {s.player === 1 ? 'You' : 'Opp'}
+                    <span className="w-20 shrink-0 text-ink-soft">
+                      {s.player === 1 ? 'You' : 'Opponent'}
                     </span>
                     <span className="w-20 capitalize">{s.stroke}</span>
                     <button
@@ -210,8 +233,7 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
                     </button>
                     {s.bounce_x !== null && s.bounce_y !== null && (
                       <span className="text-ink-mute text-[0.78rem]">
-                        bounce {s.in ? 'in' : 'out'} · ({s.bounce_x.toFixed(1)},{' '}
-                        {s.bounce_y.toFixed(1)})
+                        bounce {s.in ? 'in' : 'out'}
                       </span>
                     )}
                   </li>

@@ -304,6 +304,9 @@
       justify-self: end;
       margin-right: -56px; /* bleed past the container edge */
     }
+    /* 981-1300px: the -56px bleed pushes .card-heat past the viewport (body clips it,
+       so a quarter of the card was cut off on 1280/1024 laptops). Drop the bleed there. */
+    @media (max-width: 1300px) { .hero-stage { margin-right: 0; --card-heat-right: 0; } }
     @media (max-width: 980px) {
       .hero-stage {
         max-width: 560px;

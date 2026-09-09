@@ -90,7 +90,7 @@ function fmtTs(sec: number): string {
 
 function parsePlayers(name: string): { player: string; opponent: string | null } {
   const cleaned = name.replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' ').trim();
-  const match = cleaned.match(/^(.*?)(?:\s+vs\.?\s+|\s*\/\s*|\s*—\s*)(.+)$/i);
+  const match = cleaned.match(/^(.*?)(?:\s+vs\.?\s+|\s*\/\s*|\s*\u2014\s*)(.+)$/i);
   if (match) {
     return { player: match[1].trim(), opponent: match[2].trim() };
   }
@@ -118,13 +118,19 @@ export default function RecordingDetailPage() {
     try {
       const res = await fetch(`/api/recordings/${id}`, { method: 'DELETE' });
       if (!res.ok) {
-        setDeleteError('Failed to delete recording.');
+        const body = await res.json().catch(() => ({}));
+        const message = typeof body?.error === 'string' ? body.error.trim() : '';
+        setDeleteError(
+          message && message !== 'Internal server error'
+            ? message
+            : 'Something broke on our side. Try again; if it keeps happening, tell us.',
+        );
         setDeleting(false);
         return;
       }
       router.push('/recordings');
     } catch {
-      setDeleteError('Failed to delete recording.');
+      setDeleteError('Something broke on our side. Try again; if it keeps happening, tell us.');
       setDeleting(false);
     }
   }, [id, router]);
@@ -185,7 +191,12 @@ export default function RecordingDetailPage() {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        setReprocessError(body?.error || 'Failed to start reprocess.');
+        const message = typeof body?.error === 'string' ? body.error.trim() : '';
+        setReprocessError(
+          message && message !== 'Internal server error'
+            ? message
+            : 'Something broke on our side. Try again; if it keeps happening, tell us.',
+        );
         setReprocessing(false);
         return;
       }
@@ -210,7 +221,7 @@ export default function RecordingDetailPage() {
       setConfirmingReprocess(false);
       setReprocessing(false);
     } catch {
-      setReprocessError('Failed to start reprocess.');
+      setReprocessError('Something broke on our side. Try again; if it keeps happening, tell us.');
       setReprocessing(false);
     }
   }, [id, fetchRecording]);
@@ -265,7 +276,7 @@ export default function RecordingDetailPage() {
 
   // ── Loading ──
   if (loading) {
-    return <PageStatus message="Loading match" />;
+    return <PageStatus message="Loading recording" />;
   }
 
   // ── Error ──
@@ -273,7 +284,7 @@ export default function RecordingDetailPage() {
     return (
       <div className="max-w-[1280px] mx-auto px-6 py-12 text-center flex flex-col items-center gap-4 min-h-[60vh] justify-center">
         <p className="font-display font-medium text-[1.15rem]">
-          {error ?? 'Something went wrong.'}
+          {error ?? "We couldn't load that recording. Go back to Recordings and try again."}
         </p>
         <Link href="/recordings" className="text-sm text-court hover:opacity-80">
           ← Back to recordings
@@ -306,7 +317,7 @@ export default function RecordingDetailPage() {
         >
           <BounceLoader size={300} />
           <p className="font-display font-medium text-[1.4rem] tracking-[-0.014em] mt-3 mb-1">
-            <em>Analysing</em> your recording.
+            <em>Analyzing</em> your recording.
           </p>
           <p className="text-[0.92rem] text-ink-soft mb-5">
             Your court report will be ready shortly. This page updates
@@ -609,7 +620,7 @@ export default function RecordingDetailPage() {
           <span>
             Recording length{' '}
             <span className="font-display font-medium" style={{ fontFeatureSettings: '"tnum"', fontSize: '1em' }}>
-              {durationStr ?? '—'}
+              {durationStr ?? '–'}
             </span>
           </span>
           {opponent && (
@@ -673,6 +684,7 @@ export default function RecordingDetailPage() {
         coverageGrid={recording.coverageGrid ?? []}
         positionSummary={recording.positionSummary}
         recordingStatus={recording.status}
+        handedness={recording.playerHandedness}
         fps={recording.fps}
         videoRef={videoRef}
       />
@@ -722,10 +734,10 @@ export default function RecordingDetailPage() {
       <StatsCard
         shotsTracked={realShotCount > 0 ? realShotCount : undefined}
         tiles={[
-          { label: 'Winners', value: winners ?? '—' },
-          { label: 'Unforced errors', value: unforced ?? '—' },
-          { label: 'Avg rally length', value: avgRally ?? '—' },
-          { label: 'Rallies won', value: ralliesWonTotal ?? '—' },
+          { label: 'Winners', value: winners ?? '–' },
+          { label: 'Unforced errors', value: unforced ?? '–' },
+          { label: 'Avg rally length', value: avgRally ?? '–' },
+          { label: 'Rallies won', value: ralliesWonTotal ?? '–' },
         ]}
       />
     </div>

@@ -203,8 +203,7 @@ export default function DashboardPage() {
 
   const clipsThisSeason = recordings.length;
   const totalPlayers = players.length;
-  // "Patterns surfaced": no backend column yet. Conservative proxy: done recordings.
-  // A real patterns table will replace this in a future iteration.
+  // Completed recordings with analysis available.
   const patternsSurfaced = recordings.filter((r) => r.status === 'done').length;
   const hoursRecorded = summary
     ? Math.round((summary.totalGameplaySeconds / 3600) * 10) / 10
@@ -238,27 +237,19 @@ export default function DashboardPage() {
       const baseline = safePct(totals.inB, totals.inB + totals.outB);
       const clips = playerRecs.length;
 
-      // Placeholder deltas: deterministic-but-varied by player index so the lead-metric
-      // visualization is exercisable without a deltas table.
-      const seed = (idx * 17 + p.id.charCodeAt(0)) % 10;
-      const deltas = [
-        seed - 4,
-        (seed % 5) - 2,
-        (seed % 6) - 3,
-        (seed % 4) - 1,
-        (seed % 3) - 1,
-      ];
-
       const metrics: PlayerMetric[] = [
-        { key: 'fh', label: 'FH acc', value: fhAcc, unitSuffix: '%', delta: deltas[0] },
-        { key: 'bh', label: 'BH acc', value: bhAcc, unitSuffix: '%', delta: deltas[1] },
-        { key: 'sv', label: 'Serve in', value: serveIn, unitSuffix: '%', delta: deltas[2] },
-        { key: 'bl', label: 'Baseline', value: baseline, unitSuffix: '%', delta: deltas[3] },
-        { key: 'cl', label: 'Clips', value: clips, delta: deltas[4] },
+        { key: 'fh', label: 'FH acc', value: fhAcc, unitSuffix: '%' },
+        { key: 'bh', label: 'BH acc', value: bhAcc, unitSuffix: '%' },
+        { key: 'sv', label: 'Serve in', value: serveIn, unitSuffix: '%' },
+        { key: 'bl', label: 'Baseline', value: baseline, unitSuffix: '%' },
+        { key: 'cl', label: 'Recordings', value: clips },
       ];
 
       const { first, last } = splitName(p.name);
-      const lastClipISO = playerRecs[0]?.createdAt ?? null;
+      const lastClipISO = recordings
+        .filter((r) => r.player_id === p.id)
+        .map((r) => r.createdAt)
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
 
       return {
         id: p.id,
@@ -270,6 +261,7 @@ export default function DashboardPage() {
         avatarGradient: AVATAR_GRADIENTS[idx % AVATAR_GRADIENTS.length],
         photoUrl: p.photo_url ?? null,
         lastClipDate: lastClipISO ? formatDate(lastClipISO) : null,
+        lastClipISO,
         metrics,
       };
     });
@@ -284,18 +276,17 @@ export default function DashboardPage() {
           tag: 'Awaiting data',
           line: (
             <>
-              No deltas yet. Upload a recording to start surfacing{' '}
-              <em>weekly movers</em>.
+              Upload a recording to start reviewing your <em>players</em>.
             </>
           ),
           href: '/upload',
-          cta: 'Upload film',
+          cta: 'Upload a recording',
         },
         {
           tag: 'Awaiting data',
           line: (
             <>
-              Patterns will appear after your <em>second recording</em>.
+              Assign a recording to a player to see it on their <em>profile</em>.
             </>
           ),
           href: '/upload',
@@ -305,64 +296,34 @@ export default function DashboardPage() {
           tag: 'Awaiting data',
           line: (
             <>
-              Spacing diagnostics start at the <em>third recording</em>.
+              Review the shot map once a recording finishes <em>processing</em>.
             </>
           ),
           href: '/upload',
-          cta: 'Get there faster',
+          cta: 'Upload a recording',
         },
       ];
     }
 
-    // Top 3 movers by |lead-metric delta|
+    // Players with the most recent recording first; no-recording players last.
     const ranked = [...playerCards]
-      .map((pc) => {
-        const leadDelta = pc.metrics.reduce<number>((max, m) => {
-          if (typeof m.delta !== 'number') return max;
-          return Math.abs(m.delta) > Math.abs(max) ? m.delta : max;
-        }, 0);
-        const leadMetric = pc.metrics
-          .filter((m) => typeof m.delta === 'number')
-          .reduce<PlayerMetric | null>((best, m) => {
-            if (!best) return m;
-            return Math.abs(m.delta ?? 0) > Math.abs(best.delta ?? 0) ? m : best;
-          }, null);
-        return { pc, leadDelta, leadMetric };
-      })
-      .sort((a, b) => Math.abs(b.leadDelta) - Math.abs(a.leadDelta))
+      .sort((a, b) =>
+        (b.lastClipISO ? new Date(b.lastClipISO).getTime() : 0) -
+        (a.lastClipISO ? new Date(a.lastClipISO).getTime() : 0),
+      )
       .slice(0, 3);
 
-    return ranked.map(({ pc, leadDelta, leadMetric }) => {
-      const sign = leadDelta >= 0 ? '+' : '';
-      const tag =
-        leadDelta >= 0 ? 'Trending up' : leadDelta < -2 ? 'Needs a look' : 'Watching';
-      const metricLabel = leadMetric?.label ?? 'movement';
-      return {
-        tag,
-        line: (
-          <>
-            <em>{pc.lastName || pc.firstName}</em>'s {metricLabel.toLowerCase()}{' '}
-            moved{' '}
-            <span
-              className="font-medium"
-              style={{
-                fontFeatureSettings: "'tnum'",
-                color:
-                  leadDelta >= 0
-                    ? 'var(--color-court)'
-                    : 'var(--color-clay)',
-              }}
-            >
-              {sign}
-              {leadDelta} pts
-            </span>{' '}
-            this week.
-          </>
-        ),
-        href: `/players/${pc.id}`,
-        cta: 'See breakdown',
-      };
-    });
+    return ranked.map((pc) => ({
+      tag: pc.lastClipISO ? 'Latest recording' : 'Awaiting a recording',
+      line: (
+        <>
+          <em>{pc.lastName || pc.firstName}</em>
+          {pc.lastClipDate ? ` · Last recording ${pc.lastClipDate}.` : ' has no recordings yet.'}
+        </>
+      ),
+      href: `/players/${pc.id}`,
+      cta: 'View player',
+    }));
   }, [playerCards]);
 
   // === Render ===
@@ -433,9 +394,6 @@ export default function DashboardPage() {
                 >
                   Roster
                 </h2>
-                <div className="text-ink-mute text-sm mt-1.5">
-                  Deltas compare last 7 days to the prior 7.
-                </div>
               </div>
               <div className="font-mono uppercase tracking-[0.14em] text-[0.7rem] text-ink-mute">
                 {playerCards.length} {playerCards.length === 1 ? 'player' : 'players'} · Spring 2026

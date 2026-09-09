@@ -163,7 +163,6 @@ class PlayerTracker:
     _NEAR_RECOVERY_ID_OFFSET = 9000  # synthetic POSITIVE IDs for predict-recovered near players
     _NEAR_RECOVERY_MIN_H = 100  # near player is large; smaller dets are far/noise
     _NEAR_RECOVERY_FOOT_FRAC = 0.45  # near player's feet sit in the lower frame
-    _near_recovery_logged = False
 
     def detect_frame_with_far_roi(
         self,
@@ -269,7 +268,6 @@ class PlayerTracker:
             pred_kps = None
             if pred.keypoints is not None and pred.keypoints.data is not None:
                 pred_kps = pred.keypoints.data.cpu().numpy()  # (N, 17, 3)
-            added = 0
             for det_idx, box in enumerate(pred.boxes or []):
                 if pred.names[int(box.cls.item())] != "person":
                     continue
@@ -282,10 +280,6 @@ class PlayerTracker:
                 keypoints_dict[recovery_id] = (
                     pred_kps[det_idx] if pred_kps is not None and det_idx < len(pred_kps) else None
                 )
-                added += 1
-            if added and not self._near_recovery_logged:
-                print(f"[Recovery] near-player recovery active (predict added {added} candidate(s))")
-                self._near_recovery_logged = True
 
         return player_dict, keypoints_dict
 
@@ -361,8 +355,6 @@ class PlayerTracker:
 
         all_tids = {tid for frame in player_detections for tid in frame}
         print(f"[Player] IDs seen: {len(all_tids)} unique {sorted(all_tids)[:10]}")
-        _top_votes = sorted(near_votes.items(), key=lambda kv: -kv[1])[:6]
-        print(f"[Player] near_votes (top): {_top_votes}")
 
         near_info = f"near={near_id} ({near_votes[near_id]} frames)" if near_id else "near=none"
 

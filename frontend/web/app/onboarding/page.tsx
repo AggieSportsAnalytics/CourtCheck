@@ -45,7 +45,12 @@ export default function OnboardingPage() {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        throw new Error(data.error || 'Failed to save selection')
+        const message = typeof data?.error === 'string' ? data.error.trim() : ''
+        throw new Error(
+          message && message !== 'Internal server error'
+            ? message
+            : 'Something broke on our side. Try again; if it keeps happening, tell us.',
+        )
       }
       // Full reload so middleware reads the updated user_metadata.onboarded
       // on the next request rather than the stale session it currently has.

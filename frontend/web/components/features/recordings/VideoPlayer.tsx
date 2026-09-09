@@ -221,7 +221,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(function Vide
   return (
     <div
       ref={containerRef}
-      className="relative bg-black rounded-[10px] overflow-hidden aspect-video focus:outline-none group"
+      className="relative bg-black rounded-[10px] overflow-hidden aspect-video focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-court group"
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onMouseMove={resetHideTimer}

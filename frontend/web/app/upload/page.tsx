@@ -221,7 +221,7 @@ export default function UploadPage() {
               value={selectedPlayerId ?? ''}
               onChange={(e) => setSelectedPlayerId(e.target.value || null)}
               disabled={fieldsLocked}
-              className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none transition-colors duration-150 focus:border-ink focus:bg-surface disabled:cursor-not-allowed"
+              className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 transition-colors duration-150 focus:bg-surface disabled:cursor-not-allowed"
             >
               <option value="">Unknown / not assigned</option>
               {players.map((p) => (
@@ -247,7 +247,7 @@ export default function UploadPage() {
                 onChange={(e) => setRecordingTitle(e.target.value)}
                 disabled={fieldsLocked}
                 placeholder="e.g. Lin vs Stanford · Set 1"
-                className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none transition-colors duration-150 placeholder:text-ink-mute focus:border-ink focus:bg-surface disabled:cursor-not-allowed"
+                className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 transition-colors duration-150 placeholder:text-ink-mute focus:bg-surface disabled:cursor-not-allowed"
               />
             </div>
             <div className="grid gap-1.5">
@@ -263,7 +263,7 @@ export default function UploadPage() {
                 value={matchDate}
                 onChange={(e) => setMatchDate(e.target.value)}
                 disabled={fieldsLocked}
-                className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none transition-colors duration-150 focus:border-ink focus:bg-surface disabled:cursor-not-allowed"
+                className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 transition-colors duration-150 focus:bg-surface disabled:cursor-not-allowed"
               />
             </div>
           </div>

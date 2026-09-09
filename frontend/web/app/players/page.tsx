@@ -97,14 +97,13 @@ function buildCards(
       sv += r.serveCount ?? 0
     }
 
-    // Baseline % = in-bounds rate (proxy until we have a real baseline stat).
+    // In-bounds rate across recorded bounces.
     const baselinePct = inPct(inB, outB)
-    // Net win % — no backend field yet. Surface dominant-stroke share as the
-    // "non-baseline" proxy so the slot isn't dead.
+    // Forehand share of classified strokes.
     const totalStrokes = fh + bh + sv
     const netPct =
-      totalStrokes > 0 ? Math.round(((bh + sv) / totalStrokes) * 100) : null
-    // 1st serve % — no first-serve-in field yet. Use serve share as best proxy.
+      totalStrokes > 0 ? Math.round((fh / totalStrokes) * 100) : null
+    // Serve share of classified strokes.
     const firstServePct =
       totalStrokes > 0 ? Math.round((sv / totalStrokes) * 100) : null
 
@@ -124,7 +123,7 @@ function buildCards(
         label: r.name,
         date: r.createdAt,
         // No win/loss field on recordings yet. Leave null so the pill renders
-        // an em-dash instead of fabricating a result.
+        // "Not recorded" instead of fabricating a result.
         result: null,
       })),
     }
@@ -283,7 +282,7 @@ export default function PlayersPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by name"
-              className="h-9 rounded-full border border-line bg-paper pl-9 pr-4 text-[0.88rem] text-ink placeholder:text-ink-mute focus:border-ink focus:outline-none"
+              className="h-9 rounded-full border border-line bg-paper pl-9 pr-4 text-[0.88rem] text-ink placeholder:text-ink-mute focus:border-ink focus:outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20"
             />
           </label>
 
@@ -292,7 +291,7 @@ export default function PlayersPage() {
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
-              className="h-9 rounded-full border border-line bg-paper px-3 text-[0.88rem] font-medium text-ink focus:border-ink focus:outline-none"
+              className="h-9 rounded-full border border-line bg-paper px-3 text-[0.88rem] font-medium text-ink focus:border-ink focus:outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20"
             >
               <option value="name">Name A–Z</option>
               <option value="recordings">Most recorded</option>
@@ -367,7 +366,7 @@ function EmptyState({ hasPlayers, hasFilter }: { hasPlayers: boolean; hasFilter:
     <div className="cc-card mb-9 flex flex-col items-center gap-4 px-6 py-16 text-center">
       <p className="font-display text-3xl text-ink">No players yet.</p>
       <p className="max-w-md text-sm text-ink-soft">
-        Add players to your roster, then upload match footage to start tracking
+        Add players to your roster, then upload a recording to start tracking
         per-player analytics.
       </p>
       <div className="mt-2 flex flex-wrap justify-center gap-2.5">

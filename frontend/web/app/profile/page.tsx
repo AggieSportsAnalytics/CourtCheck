@@ -22,7 +22,7 @@ type Summary = {
 const STROKES = [
   { key: 'forehand', label: 'Forehand', tokenColor: 'var(--color-court)' },
   { key: 'backhand', label: 'Backhand', tokenColor: 'var(--color-plum)' },
-  { key: 'serve', label: 'Serve / smash', tokenColor: 'var(--color-amber)' },
+  { key: 'serve', label: 'Serve/Overhead', tokenColor: 'var(--color-amber)' },
 ] as const
 
 export default function ProfilePage() {
@@ -71,7 +71,7 @@ export default function ProfilePage() {
   const inPct = totalBounced > 0 ? Math.round((ts!.totalInBounds / totalBounced) * 100) : 0
 
   const stats = [
-    { label: 'Sessions analyzed', value: summary?.totals?.done ?? 0 },
+    { label: 'Recordings analyzed', value: summary?.totals?.done ?? 0 },
     { label: 'Total shots', value: ts?.totalShots ?? 0 },
     { label: 'Total bounces', value: ts?.totalBounces ?? 0 },
     { label: 'Total rallies', value: ts?.totalRallies ?? 0 },

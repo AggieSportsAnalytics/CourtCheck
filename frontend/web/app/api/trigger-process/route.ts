@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     if (!file_key) {
       if (!match.input_path) {
         return Response.json(
-          { error: 'Raw video no longer in storage — re-upload to reprocess.' },
+          { error: 'The original upload is no longer available. Upload the video again to reprocess.' },
           { status: 409 },
         );
       }
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
 
     if (match.status === 'processing') {
       return Response.json(
-        { error: 'Already processing — wait for the current run to finish.' },
+        { error: 'Already processing. Wait for the current run to finish.' },
         { status: 409 },
       );
     }
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       const exists = !listErr && Array.isArray(listing) && listing.some((f) => f.name === name);
       if (!exists) {
         return Response.json(
-          { error: 'Raw video no longer in storage — re-upload to reprocess.' },
+          { error: 'The original upload is no longer available. Upload the video again to reprocess.' },
           { status: 409 },
         );
       }

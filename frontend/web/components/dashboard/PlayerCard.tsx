@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import CountUp from './CountUp';
+import CountUp from '@/components/ui/CountUp';
 
 export type PlayerMetric = {
   key: string;
@@ -25,6 +25,7 @@ export type PlayerCardData = {
   avatarGradient: string;
   photoUrl: string | null;
   lastClipDate: string | null;
+  lastClipISO: string | null;
   metrics: PlayerMetric[];
 };
 
@@ -166,7 +167,7 @@ export default function PlayerCard({ player }: Props) {
       {/* Footer: last clip + arrow */}
       <div className="flex justify-between items-center mt-auto pt-3.5 border-t border-line-soft">
         <span className="font-mono uppercase tracking-[0.1em] text-[0.7rem] text-ink-mute">
-          {player.lastClipDate ? `Last clip · ${player.lastClipDate}` : 'No clips yet'}
+          {player.lastClipDate ? `Last recording · ${player.lastClipDate}` : 'No recordings yet'}
         </span>
         <span
           className="text-ink-mute group-hover/card:translate-x-1 group-hover/card:text-ink transition-all duration-200"
