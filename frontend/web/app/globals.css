@@ -219,6 +219,27 @@
       padding-left: 72px;
     }
   }
+  .app-bottom-nav {
+    display: none;
+  }
+  @media (width < 768px) {
+    body.has-sidebar,
+    body.has-sidebar.sidebar-collapsed {
+      padding-left: 0;
+      padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    }
+    .app-bottom-nav {
+      display: flex;
+      position: fixed;
+      inset-inline: 0;
+      bottom: 0;
+      z-index: 50;
+      height: calc(56px + env(safe-area-inset-bottom));
+      padding-bottom: env(safe-area-inset-bottom);
+      background: var(--color-paper);
+      border-top: 1px solid var(--color-line);
+    }
+  }
 
   /* Lock scroll while splash overlay is up */
   body.splash-locked {
@@ -386,6 +407,9 @@
     outline: none !important;
     box-shadow: none !important;
     background: transparent !important;
+  }
+  .shot-dot:focus-visible > .shot-dot-ring {
+    opacity: 1;
   }
 
   /* Coach Insights tile + timestamp chip — hoisted from CoachInsights.tsx so

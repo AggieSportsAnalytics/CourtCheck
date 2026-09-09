@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     if (!file_key) {
       if (!match.input_path) {
         return Response.json(
-          { error: 'Raw video no longer in storage — re-upload to reprocess.' },
+          { error: 'The original upload is no longer available. Upload the video again to reprocess.' },
           { status: 409 },
         );
       }
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
 
     if (match.status === 'processing') {
       return Response.json(
-        { error: 'Already processing — wait for the current run to finish.' },
+        { error: 'Already processing. Wait for the current run to finish.' },
         { status: 409 },
       );
     }
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       const exists = !listErr && Array.isArray(listing) && listing.some((f) => f.name === name);
       if (!exists) {
         return Response.json(
-          { error: 'Raw video no longer in storage — re-upload to reprocess.' },
+          { error: 'The original upload is no longer available. Upload the video again to reprocess.' },
           { status: 409 },
         );
       }
@@ -142,6 +142,27 @@ export async function POST(req: Request) {
     // The pre-write above (progress=0.005, stage='Queueing compute') is
     // already in the DB, so polling has something to read the moment we
     // return.
+    //
+    // CRITICAL — do NOT mark the row `failed` just because this fetch
+    // resolves non-ok or rejects. Because process_video holds the connection
+    // open for the WHOLE pipeline, this fetch never resolves cleanly within
+    // the Vercel function's lifetime on the happy path: when Vercel freezes /
+    // kills the function after we return the response (~function timeout, no
+    // maxDuration set → ~15-30s), the still-pending socket to Modal is torn
+    // down. That teardown previously surfaced as a non-ok / abort and the
+    // handler stamped status='failed' ~30s in — which the detail page renders
+    // as "Analysis needs attention." That is the "reprocess cancels itself"
+    // bug: the pipeline kept running on Modal, but the row was already failed.
+    //
+    // run_pipeline (backend/pipeline/run.py) is the SINGLE source of truth for
+    // terminal status and writes `failed` itself on a real pipeline error. So
+    // here we only flag failure when Modal returns a FAST, definitive
+    // rejection (an HTTP status arrives within the abort window — e.g. 401
+    // auth, 4xx bad request, queue-full 5xx) BEFORE the pipeline started. A
+    // timeout / socket teardown is expected and must be ignored.
+    const TRIGGER_PROBE_MS = 8000; // release well before Vercel kills the fn
+    const probe = new AbortController();
+    const probeTimer = setTimeout(() => probe.abort(), TRIGGER_PROBE_MS);
     fetch(process.env.MODAL_FUNCTION_URL!, {
       method: 'POST',
       headers: {
@@ -149,19 +170,37 @@ export async function POST(req: Request) {
         'Authorization': `Bearer ${process.env.MODAL_WEBHOOK_SECRET}`,
       },
       body: JSON.stringify({ file_key, match_id }),
+      signal: probe.signal,
     })
       .then(async (res) => {
+        clearTimeout(probeTimer);
+        // A definitive HTTP status came back fast → the trigger itself was
+        // rejected before the pipeline ran. Safe to mark failed.
         if (!res.ok) {
           const errorText = await res.text().catch(() => '');
-          console.error('Modal returned non-ok', res.status, errorText.slice(0, 200));
+          console.error('Modal rejected trigger', res.status, errorText.slice(0, 200));
           await supabaseAdmin
             .from('matches')
             .update({ status: 'failed', error: 'Failed to start compute' })
             .eq('id', match_id);
         }
+        // res.ok within the probe window is unusual (Modal blocks for the
+        // whole run) but harmless — leave status as 'processing'.
       })
       .catch((err) => {
-        console.error('Modal fetch threw', err);
+        clearTimeout(probeTimer);
+        // AbortError (probe window elapsed) is the EXPECTED happy path: Modal
+        // is still holding the connection because the pipeline is running.
+        // Do NOT touch status — the pipeline owns it from here.
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return;
+        }
+        // A pre-connection network error (DNS, refused) means the trigger
+        // never landed; log it but still don't override status — the row is
+        // already 'processing' and run_pipeline will never write, so the user
+        // can reprocess again. Marking failed here risks the same teardown
+        // false-positive, so we stay conservative and log only.
+        console.error('Modal trigger fetch error (status left as processing)', err);
       });
 
     return Response.json({ status: 'ok' });

@@ -142,17 +142,26 @@ export default function ShotMap({ dots, activeFilter, onSelect, selectedFrame = 
           ? UNKNOWN_STROKE_COLOR
           : STROKE_COLOR_BY_KEY[d.stroke as StrokeKey];
         const interactive = Boolean(onSelect);
+        const dotRadius = isOut ? 0.95 : isUnknown ? 0.7 : 0.85;
         const handleClick = interactive
-          ? (e: React.MouseEvent<SVGGElement>) => {
+          ? (e: React.MouseEvent<SVGGElement> | React.KeyboardEvent<SVGGElement>) => {
               e.stopPropagation();
               onSelect!(d, i);
+            }
+          : undefined;
+        const handleKeyDown = interactive
+          ? (e: React.KeyboardEvent<SVGGElement>) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleClick?.(e);
+              }
             }
           : undefined;
         if (isOut) {
           // OOB: render an X. Stroke color matches the stroke type so the
           // legend still narrows by stroke; an outer white halo keeps it
           // legible on the green court.
-          const arm = 0.95;
+          const arm = dotRadius;
           return (
             <g
               key={i}
@@ -160,9 +169,13 @@ export default function ShotMap({ dots, activeFilter, onSelect, selectedFrame = 
               data-stroke={d.stroke}
               data-in="false"
               onClick={handleClick}
+              tabIndex={interactive ? 0 : undefined}
+              role={interactive ? 'button' : undefined}
+              onKeyDown={handleKeyDown}
               aria-label={interactive ? `Bounce at ${(d.time_s ?? 0).toFixed(1)}s, out` : undefined}
               style={interactive ? { cursor: 'pointer' } : undefined}
             >
+              <circle className="shot-dot-ring" cx={d.x} cy={d.y} r={dotRadius + 3} fill="none" stroke="var(--color-court)" strokeWidth={1.5} opacity={0} pointerEvents="none" />
               {/* Invisible hitbox so the small marker is easy to click. */}
               {interactive && (
                 <circle
@@ -223,9 +236,13 @@ export default function ShotMap({ dots, activeFilter, onSelect, selectedFrame = 
             data-stroke={d.stroke}
             data-in="true"
             onClick={handleClick}
+            tabIndex={interactive ? 0 : undefined}
+            role={interactive ? 'button' : undefined}
+            onKeyDown={handleKeyDown}
             aria-label={interactive ? `Bounce at ${(d.time_s ?? 0).toFixed(1)}s, in` : undefined}
             style={interactive ? { cursor: 'pointer' } : undefined}
           >
+            <circle className="shot-dot-ring" cx={d.x} cy={d.y} r={dotRadius + 3} fill="none" stroke="var(--color-court)" strokeWidth={1.5} opacity={0} pointerEvents="none" />
             {interactive && (
               <circle
                 cx={d.x}
@@ -246,7 +263,7 @@ export default function ShotMap({ dots, activeFilter, onSelect, selectedFrame = 
             <circle
               cx={d.x}
               cy={d.y}
-              r={isUnknown ? 0.7 : 0.85}
+              r={dotRadius}
               fill={color}
               opacity={isUnknown ? 0.65 : 0.95}
             />

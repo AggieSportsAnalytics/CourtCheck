@@ -274,7 +274,7 @@ export default function EmptyState({ coachName, dateLine }: Props) {
             <path d="M12 12v9" />
             <path d="m16 16-4-4-4 4" />
           </svg>
-          Upload a match
+          Upload a recording
         </Link>
       </section>
     </>

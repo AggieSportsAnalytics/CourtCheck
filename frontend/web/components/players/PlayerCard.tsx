@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useState } from 'react'
-import { CountUp } from './CountUp'
+import { CountUp } from '@/components/ui/CountUp'
 import { playerPhotoProxyUrl } from '@/lib/utils'
 
 export interface PlayerCardData {
@@ -120,9 +120,9 @@ export function PlayerCard({ player }: { player: PlayerCardData }) {
 
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-2 rounded-[10px] bg-shade px-4 py-3.5 dark:bg-surface">
-          <Stat label="Baseline" pct={player.baselinePct} />
-          <Stat label="Net win" pct={player.netPct} />
-          <Stat label="1st serve" pct={player.firstServePct} />
+          <Stat label="In bounds" pct={player.baselinePct} />
+          <Stat label="Forehand" pct={player.netPct} />
+          <Stat label="Serve" pct={player.firstServePct} />
         </div>
 
         {/* Recent recordings */}
@@ -173,7 +173,7 @@ function Stat({ label, pct }: { label: string; pct: number | null }) {
     <div className="flex flex-col gap-px">
       <span className="font-display text-[1.3rem] font-medium leading-[1.05] tabular-nums tracking-[-0.012em] text-ink">
         {pct == null ? (
-          <span className="text-ink-mute">—</span>
+          <span className="text-ink-mute">–</span>
         ) : (
           <>
             <CountUp to={pct} />
@@ -192,7 +192,7 @@ function ResultPill({ result }: { result: 'W' | 'L' | null }) {
   if (!result) {
     return (
       <span className="font-mono text-[0.66rem] uppercase tracking-[0.12em] text-ink-mute">
-        —
+        Not recorded
       </span>
     )
   }

@@ -176,8 +176,9 @@ export async function PATCH(
 
     if (error) {
       if (typeof error.message === 'string' && error.message.includes('does not exist')) {
+        console.error('Handedness column missing. Apply 20260513_add_player_handedness.sql', error);
         return NextResponse.json(
-          { error: 'handedness column missing — apply 20260513_add_player_handedness.sql' },
+          { error: 'Could not save handedness. Try again in a moment.' },
           { status: 500 },
         );
       }

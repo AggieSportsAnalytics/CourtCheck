@@ -3,6 +3,13 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  async redirects() {
+    return [
+      { source: '/match-stats/:path*', destination: '/', permanent: true },
+      { source: '/opponents', destination: '/', permanent: true },
+      { source: '/overall-stats', destination: '/', permanent: true },
+    ];
+  },
   async headers() {
     return [
       // /api/* — also disable caching so signed URLs + user data never cache

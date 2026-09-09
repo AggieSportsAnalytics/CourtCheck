@@ -1,6 +1,6 @@
 'use client';
 
-import CountUp from './CountUp';
+import CountUp from '@/components/ui/CountUp';
 
 type Stat = {
   label: string;
@@ -19,9 +19,9 @@ type Props = {
 
 export default function TeamStrip({ clips, players, patterns, hours }: Props) {
   const stats: Stat[] = [
-    { label: 'Clips this season', value: clips },
+    { label: 'Recordings this season', value: clips },
     { label: 'Players', value: players },
-    { label: 'Patterns surfaced', value: patterns },
+    { label: 'Recordings analyzed', value: patterns },
     {
       label: 'Hours recorded',
       value: hours,

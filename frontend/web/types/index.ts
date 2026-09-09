@@ -9,14 +9,8 @@ export interface User {
 export type NavigationItem =
   | 'Dashboard'
   | 'Upload Video'
-  | 'Match Stats'
-  | 'Overall Stats'
-  | 'Opponents'
   | 'Recordings'
   | 'Settings';
-
-// Game types
-export type GameId = 'Game_01' | 'Game_02' | 'Game_03';
 
 // Video processing types
 export interface VideoProcessingStatus {
@@ -46,9 +40,3 @@ export interface CourtKeypoint {
   y: number;
   visible: boolean;
 }
-
-// Set selection types
-export type SetSelection = 'set1' | 'set2' | 'set3' | 'overall';
-
-// Tab types
-export type TabSelection = 'shots' | 'player';

@@ -57,6 +57,7 @@ function FieldControl({
         '[&>input]:duration-[160ms] [&>select]:duration-[160ms]',
         '[&>input]:ease-[cubic-bezier(0.2,0.8,0.2,1)] [&>select]:ease-[cubic-bezier(0.2,0.8,0.2,1)]',
         '[&>input]:outline-none [&>select]:outline-none',
+        '[&>input]:focus-visible:ring-2 [&>input]:focus-visible:ring-court/20 [&>select]:focus-visible:ring-2 [&>select]:focus-visible:ring-court/20',
         '[&>input:focus]:border-ink [&>input:focus]:bg-paper',
         '[&>select:focus]:border-ink [&>select:focus]:bg-paper',
         'dark:[&>input:focus]:bg-surface dark:[&>select:focus]:bg-surface',

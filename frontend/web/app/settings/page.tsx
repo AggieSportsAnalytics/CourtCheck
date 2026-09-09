@@ -142,7 +142,7 @@ export default function SettingsPage() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your name"
-              className="flex-1 rounded-md px-3 py-2.5 text-sm bg-cream text-ink placeholder:text-ink-mute border border-line focus:border-court focus:outline-none focus:ring-1 focus:ring-court transition-colors"
+              className="flex-1 rounded-md px-3 py-2.5 text-sm bg-cream text-ink placeholder:text-ink-mute border border-line focus:border-court focus:outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 focus:ring-1 focus:ring-court transition-colors"
             />
             <button
               type="button"

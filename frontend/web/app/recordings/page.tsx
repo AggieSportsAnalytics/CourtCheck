@@ -352,12 +352,14 @@ export default function RecordingsPage() {
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
           </svg>
+          <label className="sr-only" htmlFor="recordings-search">Search recordings</label>
           <input
+            id="recordings-search"
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by title or filename"
-            className="flex-1 min-w-0 bg-transparent border-none text-[0.94rem] text-ink py-1 outline-none placeholder:text-ink-mute"
+            className="flex-1 min-w-0 bg-transparent border-none text-[0.94rem] text-ink py-1 outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 placeholder:text-ink-mute"
           />
         </div>
         {/* Divider (desktop only) + thin rule (mobile only) between the two rows */}

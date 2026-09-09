@@ -111,8 +111,8 @@ export default function NotesPanel({
           <span
             className="inline-flex items-center px-3 py-1.5 rounded-full font-mono text-[0.74rem] font-medium"
             style={{
-              background: '#E1E7A6',
-              color: '#6E7522',
+              background: 'color-mix(in srgb, var(--color-lime) 24%, var(--color-paper))',
+              color: 'var(--color-court-deep)',
               letterSpacing: '0.06em',
               fontFeatureSettings: '"tnum"',
             }}
@@ -128,7 +128,7 @@ export default function NotesPanel({
             }}
             placeholder="Add a note at the current timestamp"
             aria-label="Add a note"
-            className="w-full px-3.5 py-2.5 rounded-full bg-shade dark:bg-surface text-ink border border-transparent text-[0.92rem] outline-none focus:bg-paper focus:border-ink-mute placeholder:text-ink-mute"
+            className="w-full px-3.5 py-2.5 rounded-full bg-shade dark:bg-surface text-ink border border-transparent text-[0.92rem] outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 focus:bg-paper focus:border-ink-mute placeholder:text-ink-mute"
             style={{ transition: 'border-color var(--duration-quick) var(--ease-out), background var(--duration-quick) var(--ease-out)' }}
           />
           <button
@@ -170,8 +170,8 @@ export default function NotesPanel({
                 <span
                   className="inline-flex items-center px-2.5 py-1 rounded-full font-mono text-[0.72rem] font-medium mt-0.5"
                   style={{
-                    background: '#E1E7A6',
-                    color: '#6E7522',
+                    background: 'color-mix(in srgb, var(--color-lime) 24%, var(--color-paper))',
+                    color: 'var(--color-court-deep)',
                     letterSpacing: '0.06em',
                     fontFeatureSettings: '"tnum"',
                   }}

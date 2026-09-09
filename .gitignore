@@ -79,3 +79,10 @@ docs/superpowers/
 frontend/web/scripts/audit/storageState.json
 frontend/web/scripts/audit/screenshots/
 frontend/web/scripts/audit/sign-in-failed.png
+
+# Local-only bulk artifacts (models, legacy code, media) — never push
+2026 model/
+catboost_info/
+legacy/
+media/
+.codegraph/
