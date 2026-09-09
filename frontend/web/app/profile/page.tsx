@@ -88,7 +88,7 @@ export default function ProfilePage() {
       <section className="pt-6 pb-7">
         <span
           aria-hidden
-          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court"
+          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.12em] text-[0.82rem] text-court"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-clay" />
           Profile
@@ -146,8 +146,8 @@ export default function ProfilePage() {
           >
             {displayName}
           </h2>
-          <p className="text-ink-soft font-mono text-[0.78rem] mt-1 truncate">{email}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-mute font-mono uppercase tracking-[0.14em] text-[0.66rem]">
+          <p className="text-ink-soft font-mono text-[0.88rem] mt-1 truncate">{email}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-ink-mute font-mono uppercase tracking-[0.12em] text-[0.82rem]">
             <span className="text-court">{role}</span>
             {joined && (
               <>
@@ -159,7 +159,7 @@ export default function ProfilePage() {
         </div>
         <Link
           href="/settings"
-          className="self-stretch sm:self-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink transition-colors font-medium text-sm"
+          className="self-stretch sm:self-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink transition-colors font-medium text-[0.95rem]"
         >
           Edit profile
           <span aria-hidden>→</span>
@@ -173,7 +173,7 @@ export default function ProfilePage() {
       >
         {stats.map((s) => (
           <div key={s.label} className="cc-stat-tile">
-            <div className="font-mono uppercase tracking-[0.14em] text-[0.7rem] text-ink-mute mb-3">
+            <div className="font-mono uppercase tracking-[0.12em] text-[0.82rem] text-ink-mute mb-3">
               {s.label}
             </div>
             <div
@@ -196,7 +196,7 @@ export default function ProfilePage() {
       {/* Stroke breakdown */}
       {!loading && summary?.hasTennisStats && totalStrokes > 0 && (
         <section className="cc-card p-7 mb-6">
-          <h3 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court mb-5">
+          <h3 className="font-mono uppercase tracking-[0.12em] text-[0.82rem] text-court mb-5">
             Stroke breakdown
           </h3>
           <div className="flex flex-col gap-4">
@@ -210,7 +210,7 @@ export default function ProfilePage() {
               const pct = totalStrokes > 0 ? Math.round((count / totalStrokes) * 100) : 0
               return (
                 <div key={s.key} className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-[0.95rem]">
                     <span className="inline-flex items-center gap-2 text-ink-soft">
                       <span
                         aria-hidden
@@ -250,7 +250,7 @@ export default function ProfilePage() {
       {/* Court accuracy */}
       {!loading && totalBounced > 0 && (
         <section className="cc-card p-7 mb-6">
-          <h3 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court mb-5">
+          <h3 className="font-mono uppercase tracking-[0.12em] text-[0.82rem] text-court mb-5">
             Court accuracy
           </h3>
           <div className="flex items-center gap-7 flex-wrap">
@@ -288,7 +288,7 @@ export default function ProfilePage() {
               </span>
             </div>
             <div className="min-w-0">
-              <p className="font-mono uppercase tracking-[0.14em] text-[0.66rem] text-ink-mute mb-1">
+              <p className="font-mono uppercase tracking-[0.12em] text-[0.82rem] text-ink-mute mb-1">
                 In-bounds bounces
               </p>
               <p
@@ -304,7 +304,7 @@ export default function ProfilePage() {
               >
                 {ts!.totalInBounds.toLocaleString()}
               </p>
-              <p className="text-ink-mute text-sm mt-1">
+              <p className="text-ink-mute text-[0.95rem] mt-1">
                 of {totalBounced.toLocaleString()} tracked bounces
               </p>
             </div>
@@ -319,20 +319,20 @@ export default function ProfilePage() {
       >
         <Link
           href="/upload"
-          className="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-court text-cream font-medium text-sm hover:-translate-y-px transition-transform"
+          className="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-court text-cream font-medium text-[0.95rem] hover:-translate-y-px transition-transform"
         >
           New recording
           <span aria-hidden>→</span>
         </Link>
         <Link
           href="/recordings"
-          className="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink transition-colors font-medium text-sm"
+          className="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink transition-colors font-medium text-[0.95rem]"
         >
           View recordings
         </Link>
         <Link
           href="/settings"
-          className="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink transition-colors font-medium text-sm"
+          className="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-full border border-line text-ink-soft hover:border-ink hover:text-ink transition-colors font-medium text-[0.95rem]"
         >
           Settings
         </Link>

@@ -68,7 +68,7 @@ export default function EditableName({ recordingId, initialName, variant = 'titl
         throw new Error(
           message && message !== 'Internal server error'
             ? message
-            : 'Something broke on our side. Try again; if it keeps happening, tell us.',
+            : "Couldn't complete that request. Try again.",
         );
       }
       onSaved?.(trimmed);
@@ -125,8 +125,8 @@ export default function EditableName({ recordingId, initialName, variant = 'titl
         disabled={saving}
         className={
           variant === 'title'
-            ? 'w-[min(420px,60vw)] rounded-[10px] border border-line bg-paper px-3 py-2 text-[0.95rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20'
-            : 'w-[220px] rounded-[10px] border border-line bg-paper px-3 py-1.5 text-[0.9rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20'
+            ? 'w-[min(420px,60vw)] rounded-[10px] border border-line bg-paper px-3 py-2 text-[1.02rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20'
+            : 'w-[220px] rounded-[10px] border border-line bg-paper px-3 py-1.5 text-[1.02rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20'
         }
         aria-label="Recording name"
       />
@@ -134,7 +134,7 @@ export default function EditableName({ recordingId, initialName, variant = 'titl
         type="button"
         onClick={() => void submit()}
         disabled={saving}
-        className="inline-flex items-center px-3 py-1.5 rounded-full bg-ink text-cream text-[0.82rem] font-medium hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+        className="inline-flex items-center px-3 py-1.5 rounded-full bg-ink text-cream text-[0.88rem] font-medium hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
         style={{ transition: 'transform var(--duration-quick) var(--ease-spring)' }}
       >
         {saving ? 'Saving…' : 'Save'}
@@ -143,11 +143,11 @@ export default function EditableName({ recordingId, initialName, variant = 'titl
         type="button"
         onClick={() => setEditing(false)}
         disabled={saving}
-        className="inline-flex items-center px-3 py-1.5 rounded-full border border-line bg-paper text-ink-soft hover:text-ink hover:border-ink-mute text-[0.82rem] font-medium cursor-pointer"
+        className="inline-flex items-center px-3 py-1.5 rounded-full border border-line bg-paper text-ink-soft hover:text-ink hover:border-ink-mute text-[0.88rem] font-medium cursor-pointer"
       >
         Cancel
       </button>
-      {err && <span className="text-[0.78rem] text-clay">{err}</span>}
+      {err && <span className="text-[0.88rem] text-clay">{err}</span>}
     </div>
   );
 }

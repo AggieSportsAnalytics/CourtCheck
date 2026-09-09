@@ -333,7 +333,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(function Vide
               style={{ accentColor: 'rgba(255, 255, 255, 0.95)' }}
             />
             <span
-              className="text-white/85 text-[0.78rem] font-mono tabular-nums whitespace-nowrap"
+              className="text-white/85 text-[0.88rem] font-mono tabular-nums whitespace-nowrap"
               style={{ fontFeatureSettings: '"tnum"' }}
             >
               {formatTime(currentTime)} / {formatTime(duration)}
@@ -341,7 +341,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(function Vide
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {title && (
-              <span className="text-white/65 text-sm truncate max-w-[200px] hidden md:inline">
+              <span className="text-white/65 text-[0.95rem] truncate max-w-[200px] hidden md:inline">
                 {title}
               </span>
             )}
@@ -353,7 +353,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(function Vide
                 onClick={() => setSpeedOpen((v) => !v)}
                 aria-label="Playback speed"
                 aria-expanded={speedOpen}
-                className="text-white/90 hover:text-white transition-colors inline-flex items-center gap-1 font-mono text-[0.72rem] tabular-nums"
+                className="text-white/90 hover:text-white transition-colors inline-flex items-center gap-1 font-mono text-[0.82rem] tabular-nums"
               >
                 <Gauge className="w-[18px] h-[18px]" />
                 <span>{speedLabel}</span>
@@ -378,7 +378,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(function Vide
                         role="menuitemradio"
                         aria-checked={active}
                         onClick={() => applySpeed(rate)}
-                        className={`w-full text-left px-3 py-1.5 text-[0.82rem] font-mono tabular-nums transition-colors ${
+                        className={`w-full text-left px-3 py-1.5 text-[0.88rem] font-mono tabular-nums transition-colors ${
                           active ? 'text-white' : 'text-white/70 hover:text-white'
                         }`}
                         style={{

@@ -29,7 +29,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <div className="fixed inset-0 flex items-center justify-center bg-cream">
         <div className="text-center">
           <BounceLoader size={260} />
-          <p className="mt-2 text-sm text-ink-mute">Loading.</p>
+          <p className="mt-2 text-[0.95rem] text-ink-mute">Loading.</p>
         </div>
       </div>
     )

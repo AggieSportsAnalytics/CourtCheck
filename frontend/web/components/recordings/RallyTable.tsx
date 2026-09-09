@@ -103,21 +103,21 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
       style={{ padding: '26px 30px' }}
     >
       <div className="mb-3.5">
-        <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
+        <span className="inline-flex items-center gap-2 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
           Rallies
         </span>
         <h3 className="font-display font-medium text-[1.25rem] tracking-tight mt-3">
-          Every rally, broken down.
+          Rally by rally
         </h3>
-        <div className="text-ink-soft text-[0.95rem] mt-1">
-          Click a row to inspect the shot sequence. Click the timestamp to jump.
+        <div className="text-ink-soft text-[1.02rem] mt-1">
+          Open a row for the shot sequence. Timestamps jump to the video.
         </div>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-[0.88rem]" style={{ borderCollapse: 'collapse' }}>
+        <table className="w-full text-[0.95rem]" style={{ borderCollapse: 'collapse' }}>
           <thead>
-            <tr className="text-ink-mute font-mono text-[0.7rem] uppercase tracking-[0.12em]">
+            <tr className="text-ink-mute font-mono text-[0.82rem] uppercase tracking-[0.12em]">
               <th className="text-left py-2 pr-3 font-normal">#</th>
               <th className="text-left py-2 pr-3 font-normal">Server</th>
               <th className="text-left py-2 pr-3 font-normal">Length</th>
@@ -168,7 +168,7 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
                       {outcome.text}
                     </span>
                   </td>
-                  <td className="py-2 pr-3 text-ink-soft text-[0.82rem]">
+                  <td className="py-2 pr-3 text-ink-soft text-[0.88rem]">
                     {reasonLabel(r.end_reason)}
                   </td>
                   <td className="py-2">
@@ -182,7 +182,7 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
                       title={`Jump to ${fmtTs(r.start_frame / fpsSafe)}`}
                     >
                       <span
-                        className="font-mono text-[0.7rem] tabular-nums"
+                        className="font-mono text-[0.82rem] tabular-nums"
                         style={{ fontFeatureSettings: '"tnum"' }}
                       >
                         {fmtTs(r.start_frame / fpsSafe)}
@@ -202,7 +202,7 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
           if (!rally) return null;
           return (
             <div className="mt-4 pt-4 border-t border-line">
-              <div className="font-mono text-[0.72rem] uppercase tracking-[0.16em] text-ink-mute mb-2">
+              <div className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute mb-2">
                 Rally {rally.rally_idx + 1} · {rally.shot_count} shots ·{' '}
                 {rally.duration_s.toFixed(1)}s
               </div>
@@ -210,7 +210,7 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
                 {rally.shots.map((s, i) => (
                   <li
                     key={`${rally.rally_idx}-${i}`}
-                    className="flex items-center gap-3 text-[0.85rem]"
+                    className="flex items-center gap-3 text-[0.95rem]"
                   >
                     <span className="text-ink-mute font-mono tabular-nums w-6">
                       {i + 1}.
@@ -225,14 +225,14 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
                       onClick={() => seekToFrame(s.frame)}
                     >
                       <span
-                        className="font-mono text-[0.7rem] tabular-nums"
+                        className="font-mono text-[0.82rem] tabular-nums"
                         style={{ fontFeatureSettings: '"tnum"' }}
                       >
                         {fmtTs(s.time_s)}
                       </span>
                     </button>
                     {s.bounce_x !== null && s.bounce_y !== null && (
-                      <span className="text-ink-mute text-[0.78rem]">
+                      <span className="text-ink-mute text-[0.88rem]">
                         bounce {s.in ? 'in' : 'out'}
                       </span>
                     )}

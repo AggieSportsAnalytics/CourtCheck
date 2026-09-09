@@ -8,8 +8,8 @@ const sizeClasses: Record<DisplaySize, string> = {
   hero: 'text-[clamp(56px,9vw,142px)] leading-[0.98] tracking-[-0.025em]',
   xl: 'text-[clamp(48px,7.5vw,108px)] leading-[1.0] tracking-[-0.025em]',
   lg: 'text-[clamp(40px,5.6vw,76px)] leading-[1.0] tracking-[-0.022em]',
-  md: 'text-[clamp(28px,3.6vw,48px)] leading-[1.2] tracking-[-0.014em]',
-  sm: 'text-[1.7rem] leading-[1.15] tracking-[-0.014em]',
+  md: 'text-[clamp(32px,3.8vw,52px)] leading-[1.15] tracking-[-0.014em]',
+  sm: 'text-[2rem] leading-[1.15] tracking-[-0.012em]',
 }
 
 const opszMap: Record<DisplaySize, number> = {
@@ -77,14 +77,15 @@ function Num({
   )
 }
 
-function Italic({ className, ...props }: React.ComponentProps<'span'>) {
+function Prose({ className, ...props }: React.ComponentProps<'p'>) {
   return (
-    <span
-      data-slot="italic"
-      className={cn('italic font-normal', className)}
+    <p
+      data-slot="prose"
+      className={cn('font-display text-[1.12rem] leading-[1.6] text-ink', className)}
+      style={{ fontVariationSettings: '"opsz" 16' }}
       {...props}
     />
   )
 }
 
-export { Display, Num, Italic }
+export { Display, Num, Prose }

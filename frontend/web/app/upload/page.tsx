@@ -1,5 +1,7 @@
 'use client';
 
+import { Prose } from '@/components/ui/display';
+
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
@@ -117,7 +119,7 @@ export default function UploadPage() {
     console.log(`[Upload] status=${status} progress=${procPct}% stage=${stage ?? 'null'}`);
   }, [status, procPct, stage]);
 
-  // Processing phase headline — italics on the verb, clay via the global em rule.
+  // Processing phase headline.
   // The backend-reported `stage` is authoritative when present; the percent
   // buckets are only a fallback for the brief window before the pipeline has
   // written its first stage label.
@@ -126,12 +128,12 @@ export default function UploadPage() {
       procPct < 5
         ? { verb: 'Loading', rest: ' the recording.', stage: 'Calibrating the court' }
         : procPct < 45
-          ? { verb: 'Tracking', rest: ' every shot, frame by frame.', stage: 'Following the ball and players' }
+          ? { verb: 'Tracking', rest: ' the ball and players.', stage: 'Following the ball and players' }
           : procPct < 50
             ? { verb: 'Identifying', rest: ' bounces and strokes.', stage: 'Detecting bounce points and stroke types' }
             : procPct < 95
               ? { verb: 'Drawing', rest: ' your recording overlay.', stage: 'Rendering your annotated recording' }
-              : { verb: 'Reading', rest: ' your tendencies.', stage: 'Generating heatmaps and scouting report' };
+              : { verb: 'Generating', rest: ' the report.', stage: 'Generating heatmaps and scouting report' };
     return stage ? { ...derived, stage } : derived;
   }, [procPct, stage]);
 
@@ -170,10 +172,10 @@ export default function UploadPage() {
   );
 
   const features: { title: string; desc: string; Icon: FeatureIcon }[] = [
-    { title: 'Every shot',         desc: 'Tracked and labeled. Forehand, backhand, serve, volley.', Icon: ShotIcon },
-    { title: 'Every bounce',       desc: 'Exact landing point on the court. In and out calls included.', Icon: BounceIcon },
-    { title: 'Every movement',     desc: 'Where your player covered the court. And where they didn’t.', Icon: MovementIcon },
-    { title: 'Repeating patterns', desc: 'Sequences that show up more than once. Called out for you.', Icon: PatternIcon },
+    { title: 'Shots',         desc: 'Each one tracked and labeled forehand, backhand, or serve.', Icon: ShotIcon },
+    { title: 'Bounces',       desc: 'Landing point on the court, with the in or out call.', Icon: BounceIcon },
+    { title: 'Coverage',     desc: 'Where the player stood, and where they did not.', Icon: MovementIcon },
+    { title: 'Patterns', desc: 'Sequences that show up more than once.', Icon: PatternIcon },
   ];
 
   // Compact head/grid in every pane — including idle — so the page height
@@ -185,7 +187,7 @@ export default function UploadPage() {
     <div className={`mx-auto max-w-[760px] px-6 ${compact ? 'py-6' : 'py-10'}`}>
       {/* Page head — compact during processing */}
       <div className={compact ? 'pb-4' : 'pb-8'}>
-        <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:size-[6px] before:rounded-full before:bg-clay before:content-['']">
+        <span className="inline-flex items-center gap-2 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-court before:size-[6px] before:rounded-full before:bg-clay before:content-['']">
           Analyze
         </span>
         <h1
@@ -197,9 +199,9 @@ export default function UploadPage() {
           Upload a recording.
         </h1>
         {!compact && (
-          <p className="max-w-[56ch] text-[1.1rem] text-ink-soft">
-            Drop in your recording. We read every shot, every bounce, every pattern. You stop rewinding.
-          </p>
+          <Prose className="max-w-[56ch] text-ink-soft">
+            One MP4 from behind the baseline. Processing takes about 15 minutes.
+          </Prose>
         )}
       </div>
 
@@ -212,7 +214,7 @@ export default function UploadPage() {
           <div className="grid gap-1.5">
             <label
               htmlFor="player"
-              className="font-mono text-[0.7rem] uppercase tracking-[0.14em] text-ink-mute"
+              className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute"
             >
               Near-side player
             </label>
@@ -221,7 +223,7 @@ export default function UploadPage() {
               value={selectedPlayerId ?? ''}
               onChange={(e) => setSelectedPlayerId(e.target.value || null)}
               disabled={fieldsLocked}
-              className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 transition-colors duration-150 focus:bg-surface disabled:cursor-not-allowed"
+              className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[1.02rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 transition-colors duration-150 focus:bg-surface disabled:cursor-not-allowed"
             >
               <option value="">Unknown / not assigned</option>
               {players.map((p) => (
@@ -236,7 +238,7 @@ export default function UploadPage() {
             <div className="grid gap-1.5">
               <label
                 htmlFor="clip-title"
-                className="font-mono text-[0.7rem] uppercase tracking-[0.14em] text-ink-mute"
+                className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute"
               >
                 Recording title
               </label>
@@ -247,13 +249,13 @@ export default function UploadPage() {
                 onChange={(e) => setRecordingTitle(e.target.value)}
                 disabled={fieldsLocked}
                 placeholder="e.g. Lin vs Stanford · Set 1"
-                className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 transition-colors duration-150 placeholder:text-ink-mute focus:bg-surface disabled:cursor-not-allowed"
+                className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[1.02rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 transition-colors duration-150 placeholder:text-ink-mute focus:bg-surface disabled:cursor-not-allowed"
               />
             </div>
             <div className="grid gap-1.5">
               <label
                 htmlFor="match-date"
-                className="font-mono text-[0.7rem] uppercase tracking-[0.14em] text-ink-mute"
+                className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute"
               >
                 Match date
               </label>
@@ -263,7 +265,7 @@ export default function UploadPage() {
                 value={matchDate}
                 onChange={(e) => setMatchDate(e.target.value)}
                 disabled={fieldsLocked}
-                className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[0.95rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 transition-colors duration-150 focus:bg-surface disabled:cursor-not-allowed"
+                className="w-full rounded-[10px] border border-line bg-paper px-3.5 py-3 text-[1.02rem] text-ink outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 transition-colors duration-150 focus:bg-surface disabled:cursor-not-allowed"
               />
             </div>
           </div>
@@ -303,8 +305,8 @@ export default function UploadPage() {
                 <circle cx="12" cy="12" r="10" />
               </svg>
             </div>
-            <p className="font-mono text-[0.68rem] uppercase tracking-[0.14em] text-ink-mute">
-              Ready to analyze
+            <p className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
+              Ready
             </p>
             <h3
               className="mx-auto mt-1.5 mb-1 max-w-[34ch] truncate font-display text-[1.2rem] font-medium tracking-[-0.012em]"
@@ -313,8 +315,8 @@ export default function UploadPage() {
             >
               {pendingFile.name}
             </h3>
-            <p className="mb-5 text-[0.82rem] text-ink-soft">
-              {formatMB(pendingFile.size)} MB · confirm the details above, then start.
+            <p className="mb-5 text-[0.88rem] text-ink-soft">
+              {formatMB(pendingFile.size)} MB. Check the details above, then upload.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <button
@@ -323,9 +325,9 @@ export default function UploadPage() {
                   e.stopPropagation();
                   confirmUpload();
                 }}
-                className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[0.95rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px"
+                className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[1.02rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px"
               >
-                Upload &amp; analyze
+                Upload and process
                 <span aria-hidden>→</span>
               </button>
               <button
@@ -334,7 +336,7 @@ export default function UploadPage() {
                   e.stopPropagation();
                   open();
                 }}
-                className="inline-flex items-center gap-2.5 rounded-full border border-line bg-paper px-[22px] py-3 text-[0.95rem] font-medium text-ink transition-colors duration-200 ease-out hover:border-ink"
+                className="inline-flex items-center gap-2.5 rounded-full border border-line bg-paper px-[22px] py-3 text-[1.02rem] font-medium text-ink transition-colors duration-200 ease-out hover:border-ink"
               >
                 Choose a different file
               </button>
@@ -362,9 +364,9 @@ export default function UploadPage() {
               className="mb-1.5 font-display text-[1.25rem] font-medium tracking-[-0.012em]"
               style={{ fontVariationSettings: '"opsz" 60' }}
             >
-              Drop in your recording.
+              Drop a file here
             </h3>
-            <p className="mb-3 text-[0.88rem] text-ink-soft">
+            <p className="mb-3 text-[0.95rem] text-ink-soft">
               or{' '}
               <button
                 type="button"
@@ -377,7 +379,7 @@ export default function UploadPage() {
                 browse files
               </button>
             </p>
-            <p className="font-mono text-[0.68rem] uppercase tracking-[0.14em] text-ink-mute">
+            <p className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
               MP4 · MOV · AVI · max {MAX_MB} MB
             </p>
           </div>
@@ -386,7 +388,7 @@ export default function UploadPage() {
         {pane === 'uploading' && (
           <div className="px-6 py-6 text-center">
             <BounceLoader size={180} />
-            <p className="mb-4 font-mono text-[0.72rem] uppercase tracking-[0.14em] text-ink-mute">
+            <p className="mb-4 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
               Uploading
             </p>
             <h3
@@ -396,10 +398,10 @@ export default function UploadPage() {
               Uploading your recording.
             </h3>
             {filename && (
-              <div className="mx-auto mb-7 inline-flex max-w-full items-center gap-2.5 rounded-full bg-shade px-3.5 py-2 text-[0.85rem]">
+              <div className="mx-auto mb-7 inline-flex max-w-full items-center gap-2.5 rounded-full bg-shade px-3.5 py-2 text-[0.95rem]">
                 <span className="max-w-[280px] truncate font-medium">{filename}</span>
                 {bytesTotal > 0 && (
-                  <span className="font-mono text-[0.74rem] text-ink-mute">
+                  <span className="font-mono text-[0.82rem] text-ink-mute">
                     {formatMB(bytesTotal)} MB
                   </span>
                 )}
@@ -411,7 +413,7 @@ export default function UploadPage() {
                 style={{ width: `${Math.max(0, Math.min(100, uploadPct))}%` }}
               />
             </div>
-            <div className="mx-auto mt-2.5 flex max-w-[360px] justify-between text-[0.78rem] text-ink-mute">
+            <div className="mx-auto mt-2.5 flex max-w-[360px] justify-between text-[0.88rem] text-ink-mute">
               <span>
                 {bytesTotal > 0
                   ? `${formatMB(bytesUploaded)} MB / ${formatMB(bytesTotal)} MB`
@@ -430,7 +432,7 @@ export default function UploadPage() {
               style={{ fontVariationSettings: '"opsz" 72' }}
               key={phase.verb}
             >
-              <em>{phase.verb}</em>
+              {phase.verb}
               {phase.rest}
             </h3>
 
@@ -448,7 +450,7 @@ export default function UploadPage() {
                 />
               )}
             </div>
-            <div className="mx-auto mt-2 flex max-w-[360px] items-center justify-between font-mono text-[0.72rem] uppercase tracking-[0.14em] text-ink-mute">
+            <div className="mx-auto mt-2 flex max-w-[360px] items-center justify-between font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
               <span>{phase.stage}</span>
               <span className="font-medium">
                 {progress > 0 ? `${procPct}%` : 'STARTING'}
@@ -456,7 +458,7 @@ export default function UploadPage() {
             </div>
 
             {match_id && (
-              <p className="mt-5 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-ink-mute">
+              <p className="mt-5 font-mono text-[0.82rem] uppercase tracking-[0.1em] text-ink-mute">
                 Recording · {match_id.slice(0, 8).toUpperCase()}
               </p>
             )}
@@ -483,16 +485,16 @@ export default function UploadPage() {
               className="mt-3 mb-2 font-display text-[1.6rem] font-medium tracking-[-0.018em]"
               style={{ fontVariationSettings: '"opsz" 72' }}
             >
-              Recording analyzed.
+              Processing finished.
             </h3>
-            <p className="mb-5 text-[0.95rem] text-ink-soft">
-              Open the recording to see the read.
+            <p className="mb-5 text-[1.02rem] text-ink-soft">
+              Open the recording to see the results.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={() => match_id && router.push(`/recordings/${match_id}`)}
-                className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[0.95rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px"
+                className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[1.02rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px"
               >
                 Open recording
                 <span aria-hidden>→</span>
@@ -500,7 +502,7 @@ export default function UploadPage() {
               <button
                 type="button"
                 onClick={handleReset}
-                className="inline-flex items-center gap-2.5 rounded-full border border-line bg-paper px-[22px] py-3 text-[0.95rem] font-medium text-ink transition-colors duration-200 ease-out hover:border-ink"
+                className="inline-flex items-center gap-2.5 rounded-full border border-line bg-paper px-[22px] py-3 text-[1.02rem] font-medium text-ink transition-colors duration-200 ease-out hover:border-ink"
               >
                 Upload another
               </button>
@@ -531,26 +533,26 @@ export default function UploadPage() {
             >
               Upload didn{'’'}t finish.
             </h3>
-            <p className="mx-auto mb-6 max-w-[42ch] text-[0.95rem] text-ink-soft">
-              {error || 'Something went wrong on our end. Try the upload again.'}
+            <p className="mx-auto mb-6 max-w-[42ch] text-[1.02rem] text-ink-soft">
+              {error || 'The upload failed. Upload the recording again.'}
             </p>
             <button
               type="button"
               onClick={handleReset}
-              className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[0.95rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px"
+              className="inline-flex items-center gap-2.5 rounded-full bg-ink px-[22px] py-3 text-[1.02rem] font-medium text-cream transition-transform duration-150 ease-out hover:-translate-y-px"
             >
-              Try again
+              Upload again
             </button>
           </div>
         )}
       </div>
 
-      {/* What we analyze — always shown. Tighter padding + smaller icons in
+      {/* What gets tracked — always shown. Tighter padding + smaller icons in
           compact mode so both the processing card and this section fit in one
           viewport without scrolling. */}
       <div className={`rounded-[14px] border border-line bg-paper ${compact ? 'mt-4 p-4' : 'mt-9 p-7'}`}>
-        <p className={`font-mono uppercase tracking-[0.14em] text-ink-mute ${compact ? 'mb-3 text-[0.66rem]' : 'mb-5 text-[0.72rem]'}`}>
-          What we analyze
+        <p className={`font-mono uppercase tracking-[0.12em] text-ink-mute ${compact ? 'mb-3 text-[0.82rem]' : 'mb-5 text-[0.82rem]'}`}>
+          What gets tracked
         </p>
         <div className={`grid grid-cols-1 sm:grid-cols-2 ${compact ? 'gap-2.5' : 'gap-5'}`}>
           {features.map((f) => (
@@ -562,12 +564,12 @@ export default function UploadPage() {
               </div>
               <div>
                 <h5
-                  className={`font-display font-medium tracking-[-0.01em] ${compact ? 'text-[0.92rem] leading-tight' : 'text-[1.05rem]'}`}
+                  className={`font-display font-medium tracking-[-0.01em] ${compact ? 'text-[1.02rem] leading-tight' : 'text-[1.05rem]'}`}
                   style={{ fontVariationSettings: '"opsz" 60' }}
                 >
                   {f.title}
                 </h5>
-                <p className={`text-ink-soft ${compact ? 'text-[0.78rem] leading-snug mt-0.5' : 'text-[0.88rem] leading-[1.5]'}`}>{f.desc}</p>
+                <p className={`text-ink-soft ${compact ? 'text-[0.88rem] leading-snug mt-0.5' : 'text-[0.95rem] leading-[1.5]'}`}>{f.desc}</p>
               </div>
             </div>
           ))}

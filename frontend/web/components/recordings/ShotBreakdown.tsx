@@ -21,14 +21,14 @@ export default function ShotBreakdown({ mix }: Props) {
       style={{ padding: '26px 28px' }}
     >
       <div className="mb-4">
-        <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
+        <span className="inline-flex items-center gap-2 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
           Shot mix
         </span>
         <h3 className="font-display font-medium text-[1.25rem] tracking-tight mt-3">
-          How often each stroke fires.
+          Stroke mix
         </h3>
-        <div className="text-ink-soft text-[0.95rem] mt-1">
-          Per-stroke accuracy lives in the Shot Map rail above.
+        <div className="text-ink-soft text-[1.02rem] mt-1">
+          Per-stroke accuracy is in the shot map panel.
         </div>
       </div>
 

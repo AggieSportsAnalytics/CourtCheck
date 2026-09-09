@@ -1,5 +1,7 @@
 'use client';
 
+import { Prose } from '@/components/ui/display';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -11,7 +13,6 @@ import { useRecordingsData } from '@/lib/hooks/useApiData';
  * Recordings list. Ported from docs/brand-drop/mocks/matches-list.html.
  *
  * Layout:
- *   - h1 "Every recording, scrubbable." (clay italic on "scrubbable.")
  *   - Mono meta line: results count ("12 recordings.")
  *   - Filter bar: search + date/filter chips
  *   - Match table: .cc-match-row grid (checkbox? | 110px date | 1fr title | actions)
@@ -285,7 +286,7 @@ export default function RecordingsPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-2">
         <BounceLoader size={240} />
-        <p className="text-sm text-ink-mute">Loading recordings.</p>
+        <p className="text-[0.95rem] text-ink-mute">Loading recordings.</p>
       </div>
     );
   }
@@ -293,7 +294,7 @@ export default function RecordingsPage() {
   if (error) {
     return (
       <div className="max-w-[1280px] mx-auto px-6 py-12">
-        <p className="text-sm text-clay">Could not load recordings: {error}</p>
+        <p className="text-[0.95rem] text-clay">Could not load recordings: {error}</p>
       </div>
     );
   }
@@ -311,7 +312,7 @@ export default function RecordingsPage() {
       {/* Page head */}
       <div className="flex items-end justify-between gap-6 flex-wrap" style={{ paddingTop: 52, paddingBottom: 28 }}>
         <div>
-          <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
+          <span className="inline-flex items-center gap-2 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
             Library
           </span>
           <h1
@@ -322,7 +323,7 @@ export default function RecordingsPage() {
               letterSpacing: '-0.022em',
             }}
           >
-            Every recording.
+            Recordings.
           </h1>
           <p className="text-ink-soft text-base mt-2">
             <span className="font-display" style={{ fontFeatureSettings: '"tnum"' }}>
@@ -334,14 +335,14 @@ export default function RecordingsPage() {
 
         <Link
           href="/upload"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ink text-cream font-medium text-[0.95rem] hover:-translate-y-px"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ink text-cream font-medium text-[1.02rem] hover:-translate-y-px"
           style={{ transition: 'transform var(--duration-quick) var(--ease-spring), background var(--duration-base) var(--ease-out)' }}
         >
           <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 12h14" />
             <path d="M12 5v14" />
           </svg>
-          Upload video
+          Upload
         </Link>
       </div>
 
@@ -359,7 +360,7 @@ export default function RecordingsPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by title or filename"
-            className="flex-1 min-w-0 bg-transparent border-none text-[0.94rem] text-ink py-1 outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 placeholder:text-ink-mute"
+            className="flex-1 min-w-0 bg-transparent border-none text-[1.02rem] text-ink py-1 outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 placeholder:text-ink-mute"
           />
         </div>
         {/* Divider (desktop only) + thin rule (mobile only) between the two rows */}
@@ -420,7 +421,7 @@ export default function RecordingsPage() {
             </div>
           )}
         </div>
-        <span className="hidden md:inline ml-auto font-mono text-[0.72rem] uppercase tracking-[0.12em] text-ink-mute">
+        <span className="hidden md:inline ml-auto font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
           {filtered.length} {filtered.length === 1 ? 'recording' : 'recordings'}
         </span>
         </div>
@@ -433,7 +434,7 @@ export default function RecordingsPage() {
         <div className="bg-paper border border-line rounded-[14px] overflow-hidden mb-9">
           {/* Header — hidden on mobile (rows become stacked cards there) */}
           <div
-            className={`hidden md:grid items-center px-6 py-3.5 bg-shade font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute gap-4 ${mdGridCols}`}
+            className={`hidden md:grid items-center px-6 py-3.5 bg-shade font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute gap-4 ${mdGridCols}`}
             style={{ borderBottom: '1px solid var(--color-line-soft)' }}
           >
             {/* Select-all checkbox — always in col 1 */}
@@ -467,7 +468,7 @@ export default function RecordingsPage() {
           </div>
 
           {filtered.length === 0 ? (
-            <div className="px-6 py-10 text-center text-ink-soft text-sm">
+            <div className="px-6 py-10 text-center text-ink-soft text-[0.95rem]">
               No recordings match your filters.
             </div>
           ) : (
@@ -492,7 +493,7 @@ export default function RecordingsPage() {
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setConfirmDelete(null); }}
-                          className="inline-flex items-center px-4 py-1.5 rounded-full border border-line bg-paper text-ink-soft hover:text-ink hover:border-ink-mute text-[0.85rem] font-medium cursor-pointer"
+                          className="inline-flex items-center px-4 py-1.5 rounded-full border border-line bg-paper text-ink-soft hover:text-ink hover:border-ink-mute text-[0.95rem] font-medium cursor-pointer"
                           style={{ transition: 'border-color var(--duration-quick) var(--ease-out), color var(--duration-quick) var(--ease-out)' }}
                         >
                           Cancel
@@ -501,7 +502,7 @@ export default function RecordingsPage() {
                           type="button"
                           disabled={isDeleting}
                           onClick={(e) => { e.stopPropagation(); deleteRecording(rec.id); }}
-                          className="inline-flex items-center px-4 py-1.5 rounded-full bg-clay text-cream text-[0.85rem] font-medium hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                          className="inline-flex items-center px-4 py-1.5 rounded-full bg-clay text-cream text-[0.95rem] font-medium hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                           style={{ transition: 'transform var(--duration-quick) var(--ease-spring)' }}
                         >
                           {isDeleting ? 'Deleting...' : 'Delete'}
@@ -509,7 +510,7 @@ export default function RecordingsPage() {
                       </div>
                     </div>
                     {deleteError && (
-                      <p className="mt-2 text-[0.82rem] text-clay">{deleteError}</p>
+                      <p className="mt-2 text-[0.88rem] text-clay">{deleteError}</p>
                     )}
                   </div>
                 );
@@ -569,7 +570,7 @@ export default function RecordingsPage() {
                   {/* Date — its own column on desktop only */}
                   <span
                     className="hidden md:block font-mono text-ink-mute uppercase"
-                    style={{ fontSize: '0.78rem', fontFeatureSettings: '"tnum"' }}
+                    style={{ fontSize: '0.88rem', fontFeatureSettings: '"tnum"' }}
                   >
                     {fmtDate(rec.createdAt)}
                   </span>
@@ -577,7 +578,7 @@ export default function RecordingsPage() {
                   {/* Title column (flex-1 on mobile so it never gets squeezed) */}
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div
-                      className="w-9 h-9 md:w-8 md:h-8 rounded-full shrink-0 flex items-center justify-center text-cream font-display font-medium text-[0.9rem] md:text-[0.85rem]"
+                      className="w-9 h-9 md:w-8 md:h-8 rounded-full shrink-0 flex items-center justify-center text-cream font-display font-medium text-[1.02rem] md:text-[0.95rem]"
                       style={{ background: hashColor(titleSeed) }}
                     >
                       {initials(titleSeed) || '·'}
@@ -588,17 +589,17 @@ export default function RecordingsPage() {
                       </span>
                       {/* Mobile meta: date (+ status). Replaces the hidden date column. */}
                       <span
-                        className="md:hidden font-mono text-[0.7rem] uppercase tracking-[0.08em] text-ink-mute"
+                        className="md:hidden font-mono text-[0.82rem] uppercase tracking-[0.08em] text-ink-mute"
                         style={{ fontFeatureSettings: '"tnum"' }}
                       >
                         {fmtDate(rec.createdAt)}
                         {rec.status !== 'done' &&
-                          ` · ${rec.status === 'failed' ? 'Needs attention' : 'Processing'}`}
+                          ` · ${rec.status === 'failed' ? 'Processing failed' : 'Processing'}`}
                       </span>
                       {/* Desktop status line */}
                       {rec.status !== 'done' && (
-                        <span className="hidden md:block text-[0.78rem] text-ink-mute">
-                          {rec.status === 'failed' ? 'Needs attention' : 'Processing'}
+                        <span className="hidden md:block text-[0.88rem] text-ink-mute">
+                          {rec.status === 'failed' ? 'Processing failed' : 'Processing'}
                         </span>
                       )}
                     </div>
@@ -695,18 +696,18 @@ export default function RecordingsPage() {
         >
           {bulkState === 'confirming' ? (
             <>
-              <span className="flex-1 pl-3 text-[0.9rem] font-medium" style={{ color: 'var(--color-clay)' }}>
+              <span className="flex-1 pl-3 text-[1.02rem] font-medium" style={{ color: 'var(--color-clay)' }}>
                 Delete {selectedIds.size} {selectedIds.size === 1 ? 'recording' : 'recordings'}?
               </span>
               {bulkError && (
-                <span className="text-[0.78rem] shrink-0" style={{ color: 'var(--color-clay)' }}>
+                <span className="text-[0.88rem] shrink-0" style={{ color: 'var(--color-clay)' }}>
                   {bulkError}
                 </span>
               )}
               <button
                 type="button"
                 onClick={() => { setBulkState('idle'); setBulkError(null); }}
-                className="px-3.5 py-1.5 rounded-full text-[0.85rem] font-medium shrink-0"
+                className="px-3.5 py-1.5 rounded-full text-[0.95rem] font-medium shrink-0"
                 style={{ color: 'var(--color-cream)', opacity: 0.6 }}
               >
                 Cancel
@@ -714,27 +715,27 @@ export default function RecordingsPage() {
               <button
                 type="button"
                 onClick={bulkDelete}
-                className="px-4 py-1.5 rounded-full text-[0.85rem] font-semibold shrink-0"
+                className="px-4 py-1.5 rounded-full text-[0.95rem] font-semibold shrink-0"
                 style={{ background: 'var(--color-clay)', color: 'var(--color-cream)' }}
               >
-                Confirm
+                Delete
               </button>
             </>
           ) : bulkState === 'deleting' ? (
-            <span className="flex-1 pl-3 text-[0.9rem] font-medium" style={{ opacity: 0.7 }}>
+            <span className="flex-1 pl-3 text-[1.02rem] font-medium" style={{ opacity: 0.7 }}>
               Deleting {selectedIds.size}…
             </span>
           ) : (
             <>
               {/* Count badge */}
               <span
-                className="ml-1 px-2.5 py-1 rounded-full font-mono text-[0.78rem] font-semibold shrink-0"
+                className="ml-1 px-2.5 py-1 rounded-full font-mono text-[0.88rem] font-semibold shrink-0"
                 style={{ background: 'var(--color-clay)', color: 'var(--color-cream)' }}
               >
                 {selectedIds.size}
               </span>
 
-              <span className="flex-1 pl-1.5 text-[0.9rem] font-medium" style={{ opacity: 0.85 }}>
+              <span className="flex-1 pl-1.5 text-[1.02rem] font-medium" style={{ opacity: 0.85 }}>
                 {selectedIds.size === 1 ? 'recording selected' : 'recordings selected'}
               </span>
 
@@ -743,7 +744,7 @@ export default function RecordingsPage() {
                 <button
                   type="button"
                   onClick={selectAllFiltered}
-                  className="px-3.5 py-1.5 rounded-full text-[0.82rem] font-medium shrink-0 hover:opacity-80"
+                  className="px-3.5 py-1.5 rounded-full text-[0.88rem] font-medium shrink-0 hover:opacity-80"
                   style={{ color: 'var(--color-cream)', opacity: 0.6 }}
                 >
                   Select all {filtered.length}
@@ -771,7 +772,7 @@ export default function RecordingsPage() {
               <button
                 type="button"
                 onClick={() => setBulkState('confirming')}
-                className="px-4 py-1.5 rounded-full text-[0.88rem] font-semibold shrink-0 hover:-translate-y-px"
+                className="px-4 py-1.5 rounded-full text-[0.95rem] font-semibold shrink-0 hover:-translate-y-px"
                 style={{
                   background: 'var(--color-clay)',
                   color: 'var(--color-cream)',
@@ -801,7 +802,7 @@ function PlayerOption({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left px-4 py-2 text-[0.88rem] flex items-center justify-between gap-3 ${
+      className={`w-full text-left px-4 py-2 text-[0.95rem] flex items-center justify-between gap-3 ${
         active ? 'text-ink font-medium' : 'text-ink-soft hover:text-ink'
       }`}
     >
@@ -828,7 +829,7 @@ function Chip({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-[0.85rem] font-medium ${
+      className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-[0.95rem] font-medium ${
         active
           ? 'border-ink text-ink bg-shade font-semibold'
           : 'border-line bg-transparent text-ink-soft hover:text-ink hover:border-ink-mute'
@@ -856,18 +857,18 @@ function EmptyState() {
       <p className="font-display font-medium text-[1.15rem] mb-1">
         Upload your first recording.
       </p>
-      <p className="text-sm text-ink-soft mb-6">
-        A match goes in, every shot and pattern comes out.
-      </p>
+      <Prose className="text-ink-soft mb-6">
+        Processed recordings show up here.
+      </Prose>
       <Link
         href="/upload"
-        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ink text-cream font-medium text-[0.95rem]"
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-ink text-cream font-medium text-[1.02rem]"
       >
         <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
           <path d="M5 12h14" />
           <path d="M12 5v14" />
         </svg>
-        Upload video
+        Upload
       </Link>
     </div>
   );

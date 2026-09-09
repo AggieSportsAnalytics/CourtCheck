@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Prose } from '@/components/ui/display';
 
 export type WatchItem = {
   tag: string;
@@ -31,11 +32,11 @@ export default function WatchList({ items }: Props) {
           >
             Watch list
           </h2>
-          <div className="text-ink-mute text-sm mt-1.5">
-            Players with the newest footage.
+          <div className="text-ink-mute text-[0.95rem] mt-1.5">
+            Players with the newest recordings.
           </div>
         </div>
-        <div className="font-mono uppercase tracking-[0.14em] text-[0.7rem] text-ink-mute hidden md:block">
+        <div className="font-mono uppercase tracking-[0.12em] text-[0.82rem] text-ink-mute hidden md:block">
           Latest recordings
         </div>
       </div>
@@ -47,31 +48,22 @@ export default function WatchList({ items }: Props) {
             className="cc-insight flex flex-col gap-3.5"
             style={{ padding: '20px 22px' }}
           >
-            <div className="font-mono uppercase tracking-[0.16em] text-[0.66rem] text-ink-mute">
+            <div className="font-mono uppercase tracking-[0.12em] text-[0.82rem] text-ink-mute">
               {item.tag}
             </div>
-            <div
-              className="text-ink"
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontWeight: 500,
-                fontSize: '1.04rem',
-                letterSpacing: '-0.012em',
-                lineHeight: 1.35,
-              }}
-            >
+            <Prose className="font-medium tracking-[-0.012em]">
               {item.line}
-            </div>
+            </Prose>
             {item.href ? (
               <Link
                 href={item.href}
-                className="mt-auto inline-flex items-center gap-1.5 text-court text-[0.82rem] font-medium transition-[gap] duration-150"
+                className="mt-auto inline-flex items-center gap-1.5 text-court text-[0.88rem] font-medium transition-[gap] duration-150"
               >
                 <span>{item.cta ?? 'See breakdown'}</span>
                 <span aria-hidden>→</span>
               </Link>
             ) : (
-              <span className="mt-auto inline-flex items-center gap-1.5 text-court text-[0.82rem] font-medium">
+              <span className="mt-auto inline-flex items-center gap-1.5 text-court text-[0.88rem] font-medium">
                 <span>{item.cta ?? 'See breakdown'}</span>
                 <span aria-hidden>→</span>
               </span>

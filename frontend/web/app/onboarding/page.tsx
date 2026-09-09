@@ -48,7 +48,7 @@ export default function OnboardingPage() {
         throw new Error(
           message && message !== 'Internal server error'
             ? message
-            : 'Something broke on our side. Try again; if it keeps happening, tell us.',
+            : "Couldn't complete that request. Try again.",
         )
       }
       // Full reload so middleware reads the updated user_metadata.onboarded
@@ -81,7 +81,7 @@ export default function OnboardingPage() {
           >
             Pick your starting roster.
           </h1>
-          <p className="text-ink-soft text-[0.95rem] text-center mt-2 mb-7">
+          <p className="text-ink-soft text-[1.02rem] text-center mt-2 mb-7">
             You can edit, delete, and add players any time after.
           </p>
 
@@ -89,7 +89,7 @@ export default function OnboardingPage() {
             <RosterCard
               title="UC Davis Tennis"
               subtitle={ucDavis ? `${ucDavis.players.length} players` : 'Loading...'}
-              body="Start with the UC Davis women's tennis roster. Every player becomes yours to rename, edit, or remove."
+              body="Start with the UC Davis women's roster. Rename, edit, or remove any player later."
               preview={ucDavis?.players.slice(0, 6).map((p) => p.name) ?? []}
               cta="Use UC Davis"
               busy={picking === 'uc-davis'}
@@ -99,7 +99,7 @@ export default function OnboardingPage() {
             <RosterCard
               title="Empty roster"
               subtitle="Start from scratch"
-              body="Build your own roster from zero. Add players one at a time as you upload matches."
+              body="Add players one at a time as you upload recordings."
               preview={[]}
               cta="Start empty"
               busy={picking === 'empty'}
@@ -111,7 +111,7 @@ export default function OnboardingPage() {
           {error && (
             <div
               role="alert"
-              className="rounded-[10px] border border-clay bg-[color-mix(in_srgb,var(--color-clay)_8%,transparent)] text-clay text-[0.88rem] leading-[1.45] px-3.5 py-2.5"
+              className="rounded-[10px] border border-clay bg-[color-mix(in_srgb,var(--color-clay)_8%,transparent)] text-clay text-[0.95rem] leading-[1.45] px-3.5 py-2.5"
             >
               {error}
             </div>
@@ -119,7 +119,7 @@ export default function OnboardingPage() {
         </div>
       </main>
 
-      <footer className="px-7 sm:px-14 py-7 flex flex-col sm:flex-row gap-1.5 sm:gap-0 sm:justify-between font-mono uppercase text-[0.7rem] tracking-[0.14em] text-ink-mute">
+      <footer className="px-7 sm:px-14 py-7 flex flex-col sm:flex-row gap-1.5 sm:gap-0 sm:justify-between font-mono uppercase text-[0.82rem] tracking-[0.12em] text-ink-mute">
         <span>© 2026 CourtCheck</span>
         <span>v0.1</span>
       </footer>
@@ -162,11 +162,11 @@ function RosterCard({
     >
       <div>
         <div className="font-display font-medium text-[1.18rem] tracking-[-0.012em]">{title}</div>
-        <div className="text-ink-mute text-[0.85rem] mt-0.5">{subtitle}</div>
+        <div className="text-ink-mute text-[0.95rem] mt-0.5">{subtitle}</div>
       </div>
-      <p className="text-ink-soft text-[0.92rem] leading-[1.5]">{body}</p>
+      <p className="text-ink-soft text-[1.02rem] leading-[1.5]">{body}</p>
       {preview.length > 0 && (
-        <ul className="text-[0.82rem] text-ink-mute leading-[1.55] grid grid-cols-2 gap-x-3">
+        <ul className="text-[0.88rem] text-ink-mute leading-[1.55] grid grid-cols-2 gap-x-3">
           {preview.map((n) => (
             <li key={n}>· {n}</li>
           ))}

@@ -29,7 +29,7 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: { default: 'CourtCheck', template: '%s | CourtCheck' },
   description:
-    'Tennis analytics for college coaches. Upload a match, get every shot, pattern, and percentage worth knowing.',
+    'Tennis analytics for college coaches. Upload a recording for shot tracking, court maps, stroke breakdown, and a written report.',
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -40,9 +40,9 @@ export const metadata: Metadata = {
     apple: { url: '/apple-icon.png', sizes: '180x180' },
   },
   openGraph: {
-    title: 'CourtCheck. See every shot. Know every move.',
+    title: 'CourtCheck. Tennis recording analysis.',
     description:
-      'Tennis analytics for college coaches. Upload a match, get every shot, pattern, and percentage worth knowing.',
+      'Tennis analytics for college coaches. Upload a recording for shot tracking, court maps, stroke breakdown, and a written report.',
     url: 'https://courtcheck-rho.vercel.app',
     siteName: 'CourtCheck',
     images: [

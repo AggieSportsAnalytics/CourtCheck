@@ -1,5 +1,7 @@
 'use client'
 
+import { Prose } from '@/components/ui/display'
+
 import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
@@ -53,7 +55,7 @@ export default function SettingsPage() {
       <section className="pt-6 pb-7">
         <span
           aria-hidden
-          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court"
+          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.12em] text-[0.82rem] text-court"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-clay" />
           Account
@@ -71,22 +73,22 @@ export default function SettingsPage() {
         >
           Settings.
         </h1>
-        <p className="text-ink-soft text-base mt-3">
-          Manage your account, display, and signed-in sessions.
-        </p>
+        <Prose className="text-ink-soft mt-3">
+          Your name, email, and sign-out.
+        </Prose>
       </section>
 
       {/* Profile section */}
       <section className="cc-card p-7 mb-6">
         <header className="flex items-center justify-between gap-4 mb-5">
-          <h2 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court">
+          <h2 className="font-mono uppercase tracking-[0.12em] text-[0.82rem] text-court">
             Profile
           </h2>
           <Link
             href="/profile"
-            className="font-mono uppercase tracking-[0.14em] text-[0.66rem] text-ink-mute hover:text-ink transition-colors"
+            className="font-mono uppercase tracking-[0.12em] text-[0.82rem] text-ink-mute hover:text-ink transition-colors"
           >
-            View profile →
+            View profile
           </Link>
         </header>
 
@@ -117,10 +119,10 @@ export default function SettingsPage() {
             >
               {currentName}
             </p>
-            <p className="text-ink-mute font-mono text-[0.72rem] tracking-[0.04em] mt-0.5">
+            <p className="text-ink-mute font-mono text-[0.82rem] tracking-[0.04em] mt-0.5">
               {email}
             </p>
-            <p className="text-court font-mono uppercase tracking-[0.14em] text-[0.62rem] mt-1">
+            <p className="text-court font-mono uppercase tracking-[0.12em] text-[0.82rem] mt-1">
               {role}
             </p>
           </div>
@@ -130,7 +132,7 @@ export default function SettingsPage() {
         <div className="pt-5 pb-5 border-b border-line-soft">
           <label
             htmlFor="displayName"
-            className="block font-mono uppercase tracking-[0.14em] text-[0.66rem] text-ink-mute mb-2"
+            className="block font-mono uppercase tracking-[0.12em] text-[0.82rem] text-ink-mute mb-2"
           >
             Display name
           </label>
@@ -141,20 +143,20 @@ export default function SettingsPage() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your name"
-              className="flex-1 rounded-md px-3 py-2.5 text-sm bg-cream text-ink placeholder:text-ink-mute border border-line focus:border-court focus:outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 focus:ring-1 focus:ring-court transition-colors"
+              className="flex-1 rounded-md px-3 py-2.5 text-[1.02rem] bg-cream text-ink placeholder:text-ink-mute border border-line focus:border-court focus:outline-none focus-visible:border-court focus-visible:ring-2 focus-visible:ring-court/20 focus:ring-1 focus:ring-court transition-colors"
             />
             <button
               type="button"
               onClick={handleSaveName}
               disabled={saving || !displayName.trim() || displayName.trim() === currentName}
-              className="px-4 py-2.5 rounded-md text-sm font-medium bg-court text-cream hover:-translate-y-px transition-transform disabled:opacity-50 disabled:translate-y-0 disabled:cursor-not-allowed"
+              className="px-4 py-2.5 rounded-md text-[0.95rem] font-medium bg-court text-cream hover:-translate-y-px transition-transform disabled:opacity-50 disabled:translate-y-0 disabled:cursor-not-allowed"
             >
               {saving ? 'Saving.' : 'Save'}
             </button>
           </div>
           {saveMsg && (
             <p
-              className={`text-xs mt-2 ${
+              className={`text-[0.82rem] mt-2 ${
                 saveMsg.kind === 'ok'
                   ? 'text-court'
                   : 'text-clay'
@@ -169,7 +171,7 @@ export default function SettingsPage() {
         <div className="pt-5">
           <label
             htmlFor="email"
-            className="block font-mono uppercase tracking-[0.14em] text-[0.66rem] text-ink-mute mb-2"
+            className="block font-mono uppercase tracking-[0.12em] text-[0.82rem] text-ink-mute mb-2"
           >
             Email <span className="text-ink-mute/70">(read only)</span>
           </label>
@@ -178,14 +180,14 @@ export default function SettingsPage() {
             type="email"
             value={email}
             readOnly
-            className="w-full rounded-md px-3 py-2.5 text-sm bg-shade text-ink-soft border border-line cursor-not-allowed"
+            className="w-full rounded-md px-3 py-2.5 text-[1.02rem] bg-shade text-ink-soft border border-line cursor-not-allowed"
           />
         </div>
       </section>
 
       {/* Account */}
       <section className="cc-card p-7">
-        <h2 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court mb-5">
+        <h2 className="font-mono uppercase tracking-[0.12em] text-[0.82rem] text-court mb-5">
           Account
         </h2>
 
@@ -193,14 +195,14 @@ export default function SettingsPage() {
           <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-ink text-base font-medium">Sign out</p>
-              <p className="text-ink-soft text-sm mt-0.5">
+              <p className="text-ink-soft text-[0.95rem] mt-0.5">
                 End your session on this device.
               </p>
             </div>
             <button
               type="button"
               onClick={() => setConfirmSignOut(true)}
-              className="px-4 py-2.5 rounded-md text-sm font-medium border border-clay text-clay hover:bg-clay hover:text-cream transition-colors"
+              className="px-4 py-2.5 rounded-md text-[0.95rem] font-medium border border-clay text-clay hover:bg-clay hover:text-cream transition-colors"
             >
               Sign out
             </button>
@@ -214,14 +216,14 @@ export default function SettingsPage() {
               <button
                 type="button"
                 onClick={() => signOut()}
-                className="px-4 py-2.5 rounded-md text-sm font-medium bg-clay text-cream hover:-translate-y-px transition-transform"
+                className="px-4 py-2.5 rounded-md text-[0.95rem] font-medium bg-clay text-cream hover:-translate-y-px transition-transform"
               >
-                Yes, sign me out
+                Sign out
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmSignOut(false)}
-                className="px-4 py-2.5 rounded-md text-sm font-medium border border-line text-ink-soft hover:border-ink hover:text-ink transition-colors"
+                className="px-4 py-2.5 rounded-md text-[0.95rem] font-medium border border-line text-ink-soft hover:border-ink hover:text-ink transition-colors"
               >
                 Cancel
               </button>

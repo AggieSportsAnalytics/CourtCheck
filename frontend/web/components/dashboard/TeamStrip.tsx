@@ -42,7 +42,7 @@ export default function TeamStrip({ clips, players, patterns, hours }: Props) {
           data-count-card
         >
           <div
-            className="font-mono uppercase tracking-[0.14em] text-[0.7rem] text-ink-mute mb-3"
+            className="font-mono uppercase tracking-[0.12em] text-[0.82rem] text-ink-mute mb-3"
           >
             {s.label}
           </div>

@@ -8,6 +8,7 @@ import Legend from '../viz/Legend';
 import { StrokeKey, STROKE_COLOR_BY_KEY } from '../viz/CourtSVG';
 import { PositionTile, type PositionSummary } from './CoachInsights';
 import CountUp from '@/components/ui/CountUp';
+import { isDemoMode } from '@/lib/demo/demoData';
 import { useEntranceReveal } from '../viz/useEntranceReveal';
 
 type VizMode = 'shotMap' | 'spacing' | 'coverage';
@@ -54,20 +55,20 @@ const MODES: { key: VizMode; label: string }[] = [
 const HEAD: Record<VizMode, { eyebrow: string; title: string; sub: string; halfLabel: string }> = {
   shotMap: {
     eyebrow: 'Shot map',
-    title: 'Every bounce, by stroke.',
-    sub: 'Tap a stroke to isolate. Hover for detail.',
+    title: 'Where shots landed',
+    sub: 'Select a stroke to filter. Hover a bounce for its time.',
     halfLabel: "Opponent's half · where shots land",
   },
   spacing: {
     eyebrow: 'Spacing',
-    title: 'Contact spacing, by quality.',
-    sub: 'Lines connect player to ball. Color encodes extension.',
+    title: 'Contact spacing',
+    sub: 'Each line runs from the player to the ball at contact. Color shows how far the reach was.',
     halfLabel: "Player's half · contact spacing",
   },
   coverage: {
     eyebrow: 'Coverage',
-    title: 'Where she stood.',
-    sub: 'Density of time-at-position over the recording.',
+    title: 'Court coverage',
+    sub: 'Where the player spent time.',
     halfLabel: "Player's half · time at position",
   },
 };
@@ -153,6 +154,7 @@ function buildSpacingShots(shots: ApiShot[]): SpacingShot[] {
 }
 
 export default function VizPanel({ shots = [], coverageGrid, positionSummary, recordingStatus, handedness, fps, videoRef }: Props) {
+  const demoMode = isDemoMode();
   const [mode, setMode] = useState<VizMode>('shotMap');
   const [shotFilter, setShotFilter] = useState<StrokeKey | null>(null);
   const [spacingFilter, setSpacingFilter] = useState<StrokeKey | null>(null);
@@ -265,17 +267,15 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
     return [compute('forehand'), compute('backhand'), compute('serve')];
   }, [realDots, usingReal]);
 
-  // Read from the SAME array that feeds the map + legend so the three never
-  // disagree. Previous version read realSpacing only, so when zero real shots
-  // survived filtering and the map fell back to sample data, the insight kept
-  // showing "0 / 0 / 0" while the map + chips showed mock numbers.
+  // Sample spacing can describe the demo, but never a real recording.
   const spacingInsight = useMemo(() => {
+    if (realSpacing.length === 0 && !demoMode) return null;
     const jammed = spacingShots.filter((s) => s.q === 'jammed').length;
     const squeezed = spacingShots.filter((s) => s.q === 'squeezed').length;
     const ideal = spacingShots.filter((s) => s.q === 'ideal').length;
     const long = spacingShots.filter((s) => s.q === 'long').length;
     return { jammed, squeezed, ideal, long };
-  }, [spacingShots]);
+  }, [spacingShots, realSpacing, demoMode]);
 
   return (
     <div
@@ -283,15 +283,15 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
       style={{ padding: '26px 30px' }}
     >
       <div className="mb-3.5">
-        <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
+        <span className="inline-flex items-center gap-2 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
           {head.eyebrow}
         </span>
         <h3 className="font-display font-medium text-[1.25rem] tracking-tight mt-3">
           {head.title}
         </h3>
-        <div className="text-ink-soft text-[0.95rem] mt-1">{head.sub}</div>
+        <div className="text-ink-soft text-[1.02rem] mt-1">{head.sub}</div>
         {mode === 'shotMap' && handedness == null && (
-          <p className="font-mono text-[0.72rem] text-ink-mute mt-2">
+          <p className="font-mono text-[0.82rem] text-ink-mute mt-2">
             Assuming right-handed. Set handedness on the player profile if this player is a lefty; forehand and backhand labels depend on it.
           </p>
         )}
@@ -310,7 +310,7 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
                 role="tab"
                 aria-selected={active}
                 onClick={() => setMode(key)}
-                className={`appearance-none border font-mono text-[0.72rem] uppercase tracking-[0.1em] px-3.5 py-2 rounded-[7px] cursor-pointer ${
+                className={`appearance-none border font-mono text-[0.82rem] uppercase tracking-[0.1em] px-3.5 py-2 rounded-[7px] cursor-pointer ${
                   active
                     ? 'bg-ink text-cream border-ink'
                     : 'bg-transparent text-ink-soft border-transparent hover:text-ink hover:border-line'
@@ -358,7 +358,7 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
                 <Coverage grid={realCoverageGrid ?? undefined} />
               ))}
           </div>
-          <div className="text-center font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute mt-2">
+          <div className="text-center font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute mt-2">
             {head.halfLabel}
             {(() => {
               // What "is sample" means per mode:
@@ -439,59 +439,62 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
               <QualityLegend />
               <MarkerLegend />
               <SpacingBarsMini counts={spacingInsight} />
-              <CoachingInsight>
-                {spacingInsight ? (
-                  <>
-                    <strong>{spacingInsight.ideal}</strong> shots at ideal
-                    extension. <strong>{spacingInsight.squeezed}</strong>{' '}
-                    squeezed,{' '}
-                    <strong>{spacingInsight.jammed}</strong> jammed (ball on
-                    top), <strong>{spacingInsight.long}</strong> reaching.
-                  </>
-                ) : (
-                  <>
-                    <strong>23</strong> shots at ideal extension.{' '}
-                    <strong>8</strong> squeezed, <strong>2</strong> jammed
-                    (ball on top), <strong>4</strong> reaching. Step back a
-                    half-step on returns to clean up the squeezed shots.
-                  </>
-                )}
-              </CoachingInsight>
+              {(spacingInsight || demoMode) && (
+                <CoachingInsight>
+                  {spacingInsight ? (
+                    <>
+                      <strong>{spacingInsight.ideal}</strong> shots at ideal
+                      extension. <strong>{spacingInsight.squeezed}</strong>{' '}
+                      squeezed,{' '}
+                      <strong>{spacingInsight.jammed}</strong> jammed (ball on
+                      top), <strong>{spacingInsight.long}</strong> reaching.
+                    </>
+                  ) : (
+                    <>
+                      <strong>23</strong> shots at ideal extension.{' '}
+                      <strong>8</strong> squeezed, <strong>2</strong> jammed
+                      (ball on top), <strong>4</strong> reaching. Step back a
+                      half-step on returns to clean up the squeezed shots.
+                    </>
+                  )}
+                </CoachingInsight>
+              )}
             </>
           )}
 
           {mode === 'coverage' && (
             <>
-              <div className="text-[0.88rem] text-ink-soft leading-relaxed">
-                Density of where she stood over the recording. Brighter zones =
-                more time spent at that position.
+              <div className="text-[0.95rem] text-ink-soft leading-relaxed">
+                Brighter zones are where the player spent more time.
               </div>
               {positionSummary && positionSummary.n_frames > 0 && (
                 <PositionTile data={positionSummary} />
               )}
-              <CoachingInsight>
-                {coverageInsight ? (
-                  <>
-                    <strong>{coverageInsight.baselinePct}%</strong> of the
-                    recording was spent at the baseline third of the court.
-                    {coverageInsight.sideBias && coverageInsight.sidePct && (
-                      <>
-                        {' '}
-                        Lateral bias toward the{' '}
-                        <strong>{coverageInsight.sideBias}</strong> (
-                        <strong>{coverageInsight.sidePct}%</strong> of time).
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <strong>82%</strong> of your recording was within 2 feet of
-                    the baseline. Only <strong>9%</strong> inside the service
-                    boxes. Stepping in on second-serve returns could shorten
-                    points.
-                  </>
-                )}
-              </CoachingInsight>
+              {(coverageInsight || demoMode) && (
+                <CoachingInsight>
+                  {coverageInsight ? (
+                    <>
+                      <strong>{coverageInsight.baselinePct}%</strong> of the
+                      recording was spent at the baseline third of the court.
+                      {coverageInsight.sideBias && coverageInsight.sidePct && (
+                        <>
+                          {' '}
+                          Lateral bias toward the{' '}
+                          <strong>{coverageInsight.sideBias}</strong> (
+                          <strong>{coverageInsight.sidePct}%</strong> of time).
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <strong>82%</strong> of your recording was within 2 feet of
+                      the baseline. Only <strong>9%</strong> inside the service
+                      boxes. Stepping in on second-serve returns could shorten
+                      points.
+                    </>
+                  )}
+                </CoachingInsight>
+              )}
             </>
           )}
         </div>
@@ -527,13 +530,13 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
 function CoachingInsight({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className="rounded-lg flex gap-3 items-start text-[0.92rem] leading-relaxed text-ink-soft"
+      className="rounded-lg flex gap-3 items-start text-[1.02rem] leading-relaxed text-ink-soft"
       style={{
         padding: '14px 16px',
         background: 'color-mix(in srgb, var(--color-court) 6%, transparent)',
       }}
     >
-      <span className="text-clay font-display italic font-semibold shrink-0">→</span>
+      <span className="text-ink font-display font-semibold shrink-0">→</span>
       <span className="[&_strong]:text-ink [&_strong]:font-display [&_strong]:font-medium [&_strong]:tracking-[-0.005em]" style={{ fontFeatureSettings: '"tnum"' }}>
         {children}
       </span>
@@ -544,7 +547,7 @@ function CoachingInsight({ children }: { children: React.ReactNode }) {
 function QualityLegend() {
   return (
     <div
-      className="flex flex-wrap gap-x-6 gap-y-2.5 pt-3.5 text-[0.82rem] text-ink-soft"
+      className="flex flex-wrap gap-x-6 gap-y-2.5 pt-3.5 text-[0.88rem] text-ink-soft"
       style={{ borderTop: '1px solid var(--color-line-soft)' }}
     >
       <QualityKey color="var(--color-plum)" label="Jammed (< 1 ft)" width={10} />
@@ -573,7 +576,7 @@ function QualityKey({ color, label, width }: { color: string; label: string; wid
 function ShotInOutKey() {
   return (
     <div
-      className="flex flex-wrap gap-x-5 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-ink-soft"
+      className="flex flex-wrap gap-x-5 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-soft"
       aria-label="Bounce in/out key"
     >
       <span className="inline-flex items-center gap-2">
@@ -598,7 +601,7 @@ function ShotInOutKey() {
 function MarkerLegend() {
   return (
     <div
-      className="flex flex-wrap gap-x-5 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-ink-soft"
+      className="flex flex-wrap gap-x-5 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-soft"
       aria-label="Marker key"
     >
       <span className="inline-flex items-center gap-2">
@@ -648,9 +651,8 @@ function CoverageEmpty() {
       <p className="font-display text-[1.1rem] text-ink leading-snug">
         No coverage data for this recording.
       </p>
-      <p className="max-w-[300px] text-[0.85rem] text-ink-soft leading-relaxed">
-        Coverage came online after this recording was processed. Reprocess it
-        to generate the heatmap.
+      <p className="max-w-[300px] text-[0.95rem] text-ink-soft leading-relaxed">
+        Reprocess this recording to generate the coverage heatmap.
       </p>
     </div>
   );
@@ -731,7 +733,7 @@ function BouncePanel({
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <span className="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-ink-mute">
+          <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
             Selected bounce
           </span>
           <p
@@ -757,7 +759,7 @@ function BouncePanel({
 
       <div className="flex flex-wrap gap-1.5">
         <span
-          className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[0.7rem] font-mono uppercase tracking-[0.12em]"
+          className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[0.82rem] font-mono uppercase tracking-[0.12em]"
           style={{
             background: `color-mix(in srgb, ${strokeColor} 14%, var(--color-paper))`,
             color: strokeColor,
@@ -768,7 +770,7 @@ function BouncePanel({
           {strokeLabel}
         </span>
         <span
-          className="inline-flex items-center rounded-full px-2 py-0.5 text-[0.7rem] font-mono uppercase tracking-[0.12em]"
+          className="inline-flex items-center rounded-full px-2 py-0.5 text-[0.82rem] font-mono uppercase tracking-[0.12em]"
           style={{
             background: isOut
               ? 'color-mix(in srgb, var(--color-clay) 12%, var(--color-paper))'
@@ -785,7 +787,7 @@ function BouncePanel({
         type="button"
         onClick={playFromHere}
         disabled={!videoRef?.current}
-        className="inline-flex items-center justify-center gap-2 rounded-full bg-ink text-cream px-4 py-2 text-[0.85rem] font-medium transition-transform duration-150 ease-out hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
+        className="inline-flex items-center justify-center gap-2 rounded-full bg-ink text-cream px-4 py-2 text-[0.95rem] font-medium transition-transform duration-150 ease-out hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
           <path d="M5 4l14 8-14 8V4z" />
@@ -836,16 +838,16 @@ function StrokeBarsMini({
   if (!byStroke || overallText === null) {
     return (
       <div
-        className="rounded-lg text-[0.85rem] leading-snug text-ink-soft"
+        className="rounded-lg text-[0.95rem] leading-snug text-ink-soft"
         style={{
           padding: '12px 14px',
           background: 'color-mix(in srgb, var(--color-court) 6%, transparent)',
         }}
       >
-        <span className="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-ink-mute mr-2">
+        <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute mr-2">
           {eyebrow}
         </span>
-        Fills in once the recording finishes processing.
+        No tracked shots yet. Reprocess the recording to update this.
       </div>
     );
   }
@@ -862,10 +864,10 @@ function StrokeBarsMini({
       }}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <span className="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-ink-mute">
+        <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
           {eyebrow}
         </span>
-        <span className="text-[0.74rem] text-ink-soft">{overallText}</span>
+        <span className="text-[0.82rem] text-ink-soft">{overallText}</span>
       </div>
 
       <div className="space-y-1.5">
@@ -884,7 +886,7 @@ function StrokeBarsMini({
               className="grid items-center"
               style={{ gridTemplateColumns: '76px 1fr 52px', gap: 8 }}
             >
-              <span className="text-[0.78rem] text-ink-soft truncate">{label}</span>
+              <span className="text-[0.88rem] text-ink-soft truncate">{label}</span>
               <div className="h-2 rounded-full overflow-hidden bg-shade">
                 {value !== null && (
                   <div
@@ -898,7 +900,7 @@ function StrokeBarsMini({
                 )}
               </div>
               <span
-                className="text-right text-[0.78rem] font-display font-medium text-ink"
+                className="text-right text-[0.88rem] font-display font-medium text-ink"
                 style={{ fontFeatureSettings: '"tnum"' }}
               >
                 {value !== null ? (
@@ -906,7 +908,7 @@ function StrokeBarsMini({
                 ) : (
                   '–'
                 )}
-                <span className="text-ink-mute font-normal text-[0.7rem] ml-1">
+                <span className="text-ink-mute font-normal text-[0.82rem] ml-1">
                   ({row.n})
                 </span>
               </span>
@@ -933,16 +935,16 @@ function SpacingBarsMini({
   if (!counts || total === 0) {
     return (
       <div
-        className="rounded-lg text-[0.85rem] leading-snug text-ink-soft"
+        className="rounded-lg text-[0.95rem] leading-snug text-ink-soft"
         style={{
           padding: '12px 14px',
           background: 'color-mix(in srgb, var(--color-court) 6%, transparent)',
         }}
       >
-        <span className="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-ink-mute mr-2">
+        <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute mr-2">
           Spacing
         </span>
-        Fills in once the recording finishes processing.
+        No contact spacing data yet. Reprocess the recording to update this.
       </div>
     );
   }
@@ -966,10 +968,10 @@ function SpacingBarsMini({
       }}
     >
       <div className="flex items-baseline justify-between gap-3">
-        <span className="font-mono text-[0.66rem] uppercase tracking-[0.18em] text-ink-mute">
+        <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
           Spacing
         </span>
-        <span className="text-[0.74rem] text-ink-soft">
+        <span className="text-[0.82rem] text-ink-soft">
           {total} contact{total === 1 ? '' : 's'} tracked
         </span>
       </div>
@@ -983,7 +985,7 @@ function SpacingBarsMini({
               className="grid items-center"
               style={{ gridTemplateColumns: '76px 1fr 52px', gap: 8 }}
             >
-              <span className="text-[0.78rem] text-ink-soft truncate">{row.label}</span>
+              <span className="text-[0.88rem] text-ink-soft truncate">{row.label}</span>
               <div className="h-2 rounded-full overflow-hidden bg-shade">
                 <div
                   className="h-full rounded-full"
@@ -995,11 +997,11 @@ function SpacingBarsMini({
                 />
               </div>
               <span
-                className="text-right text-[0.78rem] font-display font-medium text-ink"
+                className="text-right text-[0.88rem] font-display font-medium text-ink"
                 style={{ fontFeatureSettings: '"tnum"' }}
               >
                 <CountUp value={pct} play={shown} suffix="%" />
-                <span className="text-ink-mute font-normal text-[0.7rem] ml-1">
+                <span className="text-ink-mute font-normal text-[0.82rem] ml-1">
                   ({row.n})
                 </span>
               </span>

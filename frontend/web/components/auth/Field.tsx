@@ -25,7 +25,7 @@ function FieldLabel({
     <label
       htmlFor={htmlFor}
       className={cn(
-        'font-mono uppercase text-[0.66rem] tracking-[0.14em] text-ink-mute',
+        'font-mono uppercase text-[0.82rem] tracking-[0.12em] text-ink-mute',
         className,
       )}
     >
@@ -50,7 +50,7 @@ function FieldControl({
         '[&>input]:border [&>input]:border-transparent [&>select]:border [&>select]:border-transparent',
         '[&>input]:rounded-[10px] [&>select]:rounded-[10px]',
         '[&>input]:font-sans [&>select]:font-sans',
-        '[&>input]:text-[0.95rem] [&>select]:text-[0.95rem]',
+        '[&>input]:text-[1.02rem] [&>select]:text-[1.02rem]',
         '[&>input]:text-ink [&>select]:text-ink',
         '[&>input]:placeholder:text-ink-mute',
         '[&>input]:transition-[border-color,background-color] [&>select]:transition-[border-color,background-color]',
@@ -72,7 +72,7 @@ function FieldControl({
 
 function FieldError({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-clay text-[0.82rem] leading-[1.4] mt-1 inline-flex items-center gap-1.5">
+    <p className="text-clay text-[0.88rem] leading-[1.4] mt-1 inline-flex items-center gap-1.5">
       <svg
         viewBox="0 0 24 24"
         width="14"

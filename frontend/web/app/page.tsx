@@ -180,39 +180,26 @@ export default function DashboardPage() {
 
       const totals = playerRecs.reduce(
         (acc, r) => ({
-          shots: acc.shots + (r.shotCount ?? 0),
-          forehands: acc.forehands + (r.forehandCount ?? 0),
-          backhands: acc.backhands + (r.backhandCount ?? 0),
-          serves: acc.serves + (r.serveCount ?? 0),
           inB: acc.inB + (r.inBoundsBounces ?? 0),
           outB: acc.outB + (r.outBoundsBounces ?? 0),
         }),
-        { shots: 0, forehands: 0, backhands: 0, serves: 0, inB: 0, outB: 0 }
+        { inB: 0, outB: 0 }
       );
 
       const safePct = (n: number, d: number) =>
         d > 0 ? Math.round((n / d) * 100) : 0;
-
-      // Stand-in accuracy proxies until per-stroke accuracy columns ship.
-      const fhAcc = safePct(totals.forehands, totals.shots);
-      const bhAcc = safePct(totals.backhands, totals.shots);
-      const serveIn = safePct(totals.serves, totals.shots);
-      const baseline = safePct(totals.inB, totals.inB + totals.outB);
-      const clips = playerRecs.length;
-
-      const metrics: PlayerMetric[] = [
-        { key: 'fh', label: 'FH acc', value: fhAcc, unitSuffix: '%' },
-        { key: 'bh', label: 'BH acc', value: bhAcc, unitSuffix: '%' },
-        { key: 'sv', label: 'Serve in', value: serveIn, unitSuffix: '%' },
-        { key: 'bl', label: 'Baseline', value: baseline, unitSuffix: '%' },
-        { key: 'cl', label: 'Recordings', value: clips },
-      ];
 
       const { first, last } = splitName(p.name);
       const lastClipISO = recordings
         .filter((r) => r.player_id === p.id)
         .map((r) => r.createdAt)
         .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
+
+      const metrics: PlayerMetric[] = [
+        { key: 'in', label: 'In bounds', value: safePct(totals.inB, totals.inB + totals.outB), unitSuffix: '%' },
+        { key: 'cl', label: 'Recordings', value: playerRecs.length },
+        { key: 'last', label: 'Last', value: lastClipISO ? formatDate(lastClipISO) : 'None yet' },
+      ];
 
       return {
         id: p.id,
@@ -280,7 +267,7 @@ export default function DashboardPage() {
       tag: pc.lastClipISO ? 'Latest recording' : 'Awaiting a recording',
       line: (
         <>
-          <em>{pc.lastName || pc.firstName}</em>
+          {pc.lastName || pc.firstName}
           {pc.lastClipDate ? ` · Last recording ${pc.lastClipDate}.` : ' has no recordings yet.'}
         </>
       ),
@@ -306,7 +293,7 @@ export default function DashboardPage() {
           {/* Greeting */}
           <section className="pt-6 pb-7">
             <span
-              className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court"
+              className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.12em] text-[0.82rem] text-court"
             >
               <span
                 aria-hidden
@@ -358,7 +345,7 @@ export default function DashboardPage() {
                   Roster
                 </h2>
               </div>
-              <div className="font-mono uppercase tracking-[0.14em] text-[0.7rem] text-ink-mute">
+              <div className="font-mono uppercase tracking-[0.12em] text-[0.82rem] text-ink-mute">
                 {playerCards.length} {playerCards.length === 1 ? 'player' : 'players'} · Spring 2026
               </div>
             </div>
@@ -421,7 +408,7 @@ function NetworkError() {
   return (
     <div className="py-20 text-center max-w-md mx-auto">
       <span
-        className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-clay"
+        className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.12em] text-[0.82rem] text-clay"
       >
         <span aria-hidden className="w-1.5 h-1.5 rounded-full bg-clay" />
         Couldn't load dashboard
@@ -436,7 +423,7 @@ function NetworkError() {
           fontSize: 'clamp(28px, 3vw, 40px)',
         }}
       >
-        We hit a snag fetching your data.
+        Couldn't load your dashboard.
       </h1>
       <p className="text-ink-soft mt-3">
         Check your connection and try again. If this keeps happening, your

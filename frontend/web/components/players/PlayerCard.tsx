@@ -108,11 +108,11 @@ export function PlayerCard({ player }: { player: PlayerCardData }) {
               {tail && (
                 <>
                   {' '}
-                  <em>{tail}</em>
+                  {tail}
                 </>
               )}
             </span>
-            <span className="truncate text-[0.85rem] text-ink-soft">
+            <span className="truncate text-[0.95rem] text-ink-soft">
               {metaLine(player)}
             </span>
           </div>
@@ -127,22 +127,22 @@ export function PlayerCard({ player }: { player: PlayerCardData }) {
 
         {/* Recent recordings */}
         <div className="flex flex-col gap-1.5">
-          <span className="font-mono text-[0.66rem] uppercase tracking-[0.14em] text-ink-mute">
+          <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
             {player.recent.length > 0
               ? `Last ${player.recent.length} recording${player.recent.length === 1 ? '' : 's'}`
               : 'No recordings yet'}
           </span>
           {player.recent.length === 0 ? (
-            <span className="text-[0.85rem] text-ink-mute">
-              Upload a video to start.
+            <span className="text-[0.95rem] text-ink-mute">
+              No recordings assigned.
             </span>
           ) : (
             player.recent.map((r) => (
               <div
                 key={r.id}
-                className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-[0.88rem]"
+                className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-[0.95rem]"
               >
-                <span className="font-mono text-[0.72rem] tabular-nums text-ink-mute">
+                <span className="font-mono text-[0.82rem] tabular-nums text-ink-mute">
                   {formatDateShort(r.date)}
                 </span>
                 <span className="truncate text-ink-soft">{r.label}</span>
@@ -154,7 +154,7 @@ export function PlayerCard({ player }: { player: PlayerCardData }) {
 
         {/* Foot */}
         <div className="mt-auto flex items-center justify-between border-t border-line-soft pt-3.5">
-          <span className="font-mono text-[0.7rem] uppercase tracking-[0.1em] text-ink-mute">
+          <span className="font-mono text-[0.82rem] uppercase tracking-[0.1em] text-ink-mute">
             {player.hoursRecorded != null
               ? `${player.hoursRecorded.toFixed(1)} hrs recorded`
               : `${player.matchCount} recording${player.matchCount === 1 ? '' : 's'}`}
@@ -177,11 +177,11 @@ function Stat({ label, pct }: { label: string; pct: number | null }) {
         ) : (
           <>
             <CountUp to={pct} />
-            <span className="ml-0.5 text-[0.62em] text-ink-mute">%</span>
+            <span className="ml-0.5 text-[0.82rem] text-ink-mute">%</span>
           </>
         )}
       </span>
-      <span className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-ink-mute">
+      <span className="font-mono text-[0.82rem] uppercase tracking-[0.1em] text-ink-mute">
         {label}
       </span>
     </div>
@@ -191,7 +191,7 @@ function Stat({ label, pct }: { label: string; pct: number | null }) {
 function ResultPill({ result }: { result: 'W' | 'L' | null }) {
   if (!result) {
     return (
-      <span className="font-mono text-[0.66rem] uppercase tracking-[0.12em] text-ink-mute">
+      <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
         Not recorded
       </span>
     )
@@ -199,7 +199,7 @@ function ResultPill({ result }: { result: 'W' | 'L' | null }) {
   const isWin = result === 'W'
   return (
     <span
-      className="rounded-full px-2 py-0.5 font-mono text-[0.66rem] font-semibold uppercase tracking-[0.12em]"
+      className="rounded-full px-2 py-0.5 font-mono text-[0.82rem] font-semibold uppercase tracking-[0.12em]"
       style={
         isWin
           ? {

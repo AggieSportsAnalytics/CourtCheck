@@ -48,8 +48,8 @@ export function StrokeBars({ rows }: { rows: StrokeRow[] }) {
         )
       })}
       {totalShots === 0 && (
-        <p className="text-sm text-ink-mute">
-          No stroke data yet. Process a recording to populate this.
+        <p className="text-[0.95rem] text-ink-mute">
+          No stroke data yet. Process a recording to add it.
         </p>
       )}
     </div>
@@ -95,7 +95,7 @@ function StrokeBarRow({
         <span className="font-display text-[1.05rem] font-medium tracking-[-0.012em] text-ink">
           {row.label}
         </span>
-        <div className="flex items-baseline gap-3 font-mono text-[0.72rem] tabular-nums text-ink-mute">
+        <div className="flex items-baseline gap-3 font-mono text-[0.82rem] tabular-nums text-ink-mute">
           <span>{row.count.toLocaleString()} shots</span>
           <span className="text-ink-soft">
             {Math.round(share * 100)}%

@@ -39,7 +39,7 @@ const NAV_ITEMS: NavItem[] = [
     match: (p) => p.startsWith('/players'),
   },
   {
-    name: 'Upload video',
+    name: 'Upload',
     href: '/upload',
     icon: <Upload className="size-[18px]" strokeWidth={1.75} />,
     match: (p) => p.startsWith('/upload'),
@@ -181,7 +181,7 @@ export default function Sidebar({ user, onSignOut }: Props) {
               href={item.href}
               title={item.name}
               aria-current={active ? 'page' : undefined}
-              className={`sidebar-link relative flex items-center gap-3 min-h-[44px] rounded-[8px] px-3 text-[0.92rem] transition-colors ${
+              className={`sidebar-link relative flex items-center gap-3 min-h-[44px] rounded-[8px] px-3 text-[1.02rem] transition-colors ${
                 active
                   ? 'bg-shade text-ink font-semibold'
                   : 'text-ink-soft font-medium hover:bg-shade hover:text-ink'
@@ -215,7 +215,7 @@ export default function Sidebar({ user, onSignOut }: Props) {
             onClick={() => setMenuOpen((s) => !s)}
             aria-label="Account menu"
             aria-expanded={menuOpen}
-            className="relative size-9 before:absolute before:-inset-[5px] before:content-[''] rounded-full bg-court text-cream font-display text-[0.95rem] font-medium inline-flex items-center justify-center transition-transform hover:-translate-y-[1px] cursor-pointer"
+            className="relative size-9 before:absolute before:-inset-[5px] before:content-[''] rounded-full bg-court text-cream font-display text-[1.02rem] font-medium inline-flex items-center justify-center transition-transform hover:-translate-y-[1px] cursor-pointer"
           >
             {user.initials || 'U'}
           </button>
@@ -226,14 +226,14 @@ export default function Sidebar({ user, onSignOut }: Props) {
               style={{ bottom: 'calc(100% + 12px)' }}
             >
               <div className="flex items-center gap-[10px] p-[10px_10px_12px] min-w-0">
-                <div className="size-9 rounded-full bg-court text-cream font-display text-[0.95rem] font-medium inline-flex items-center justify-center shrink-0">
+                <div className="size-9 rounded-full bg-court text-cream font-display text-[1.02rem] font-medium inline-flex items-center justify-center shrink-0">
                   {user.initials || 'U'}
                 </div>
                 <div className="flex flex-col min-w-0 gap-[1px]">
                   <div className="font-display font-medium text-[0.96rem] tracking-[-0.012em] text-ink leading-tight truncate">
                     {user.name}
                   </div>
-                  <div className="font-mono text-[0.66rem] tracking-[0.04em] text-ink-mute truncate">
+                  <div className="font-mono text-[0.82rem] tracking-[0.04em] text-ink-mute truncate">
                     {user.email}
                   </div>
                 </div>
@@ -243,7 +243,7 @@ export default function Sidebar({ user, onSignOut }: Props) {
                 href="/profile"
                 role="menuitem"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-[10px] w-full text-left px-[10px] py-[9px] rounded-[8px] text-[0.9rem] font-medium text-ink hover:bg-shade transition-colors"
+                className="flex items-center gap-[10px] w-full text-left px-[10px] py-[9px] rounded-[8px] text-[1.02rem] font-medium text-ink hover:bg-shade transition-colors"
               >
                 <UserCircle className="size-[15px] text-ink-mute" />
                 Profile
@@ -252,7 +252,7 @@ export default function Sidebar({ user, onSignOut }: Props) {
                 href="/settings"
                 role="menuitem"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-[10px] w-full text-left px-[10px] py-[9px] rounded-[8px] text-[0.9rem] font-medium text-ink hover:bg-shade transition-colors"
+                className="flex items-center gap-[10px] w-full text-left px-[10px] py-[9px] rounded-[8px] text-[1.02rem] font-medium text-ink hover:bg-shade transition-colors"
               >
                 <Settings className="size-[15px] text-ink-mute" />
                 Settings
@@ -265,7 +265,7 @@ export default function Sidebar({ user, onSignOut }: Props) {
                   setMenuOpen(false)
                   await onSignOut()
                 }}
-                className="flex items-center gap-[10px] w-full text-left px-[10px] py-[9px] rounded-[8px] text-[0.9rem] font-medium text-clay hover:bg-shade transition-colors cursor-pointer"
+                className="flex items-center gap-[10px] w-full text-left px-[10px] py-[9px] rounded-[8px] text-[1.02rem] font-medium text-clay hover:bg-shade transition-colors cursor-pointer"
               >
                 <LogOut className="size-[15px]" />
                 Sign out
@@ -289,7 +289,7 @@ export default function Sidebar({ user, onSignOut }: Props) {
           >
             {active && <span aria-hidden="true" className="absolute top-0 h-[3px] w-6 rounded-b bg-court" />}
             {item.icon}
-            <span className="font-mono text-[10px]">{item.name}</span>
+            <span className="font-sans text-[0.82rem]">{item.name}</span>
           </Link>
         )
       })}

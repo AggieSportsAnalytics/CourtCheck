@@ -25,10 +25,10 @@
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { background: var(--cream); color: var(--ink); }
+    html, body { background: var(--cream); color: var(--ink); overflow-x: clip; }
     body {
       font-family: 'Inter Tight', system-ui, sans-serif;
-      font-size: 16px; line-height: 1.55; letter-spacing: -0.005em;
+      font-size: 17px; line-height: 1.6; letter-spacing: -0.005em;
       -webkit-font-smoothing: antialiased;
       background-image:
         radial-gradient(1400px 900px at 88% -10%, var(--bg-grad-1), transparent 55%),
@@ -48,12 +48,12 @@
        Stops "compound-word\nrest of sentence" wrap artifacts like "film-/room slog". */
     h1 .line, h2 .line, h3 .line { display: block; }
     h1, h2, h3 { text-wrap: balance; }
-    .ital { color: var(--clay); font-style: italic; font-weight: 400; }
+    .ital { color: var(--ink); font-style: normal; font-weight: 400; }
     .num     { font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 72; font-weight: 500; font-feature-settings: 'tnum'; }
     .eyebrow {
       display: inline-flex; align-items: center; gap: 8px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase;
+      font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--court);
     }
     .eyebrow::before { content: ""; width: 6px; height: 6px; background: var(--clay); border-radius: 50%; }
@@ -109,7 +109,7 @@
       background: var(--clay);
       border-radius: 2px;
     }
-    /* Right cluster: theme toggle + Sign in (text link) + Get started (primary pill) */
+    /* Right cluster: theme toggle + Sign in (text link) + Create account (primary pill) */
     .nav-actions { display: flex; gap: 14px; align-items: center; }
     .nav-actions .nav-signin {
       font-size: 0.95rem; font-weight: 500;
@@ -172,7 +172,7 @@
     }
     .hero h1 .line { display: block; }
     .hero h1 br { display: block; }
-    .hero h1 .clay { color: var(--clay); font-style: italic; font-weight: 400; }
+    .hero h1 .clay { color: var(--ink); font-style: normal; font-weight: 400; }
     .hero .lede {
       font-size: 1.15rem;
       line-height: 1.55;
@@ -192,7 +192,7 @@
     }
     .hero-partner .partner-prefix {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+      font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--ink-mute);
     }
     .hero-partner .partner-name {
@@ -314,7 +314,7 @@
     .hero-float-card .fc-eyebrow {
       display: flex; align-items: center; gap: 6px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.6rem; letter-spacing: 0.16em; text-transform: uppercase;
+      font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--ink-mute);
       margin-bottom: 8px;
     }
@@ -372,7 +372,7 @@
       margin: 0;
     }
     .hero-float-card .fc-quote .ital {
-      color: var(--clay); font-style: italic; font-weight: 400;
+      color: var(--ink); font-style: normal; font-weight: 400;
     }
     /* Float keyframes — gentle drift, kept INSIDE the stage (positive translations only
        on the in-frame edge so the cards never wander off the page) */
@@ -423,7 +423,7 @@
       line-height: 1.02;
       margin: 16px 0 0;
     }
-    .problem h2 .ital { font-style: italic; font-weight: 400; color: var(--clay-soft); }
+    .problem h2 .ital { font-style: normal; font-weight: 400; color: var(--clay-soft); }
     .problem-body { color: rgba(244,240,230,0.78); font-size: 1.15rem; line-height: 1.6; }
     .problem-body p + p { margin-top: 14px; }
     .problem-body strong { color: var(--cream); font-weight: 500; }
@@ -555,7 +555,7 @@
     @media (max-width: 600px) { .how-grid { grid-template-columns: 1fr; } }
     .how-step .step-num {
       font-family: 'Newsreader', serif;
-      font-style: italic;
+      font-style: normal;
       font-weight: 400;
       font-size: 2.4rem;
       color: var(--lime);
@@ -609,7 +609,7 @@
     }
     .scrolly-tile-eyebrow {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+      font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--ink-mute);
       margin-bottom: 14px;
       display: flex; align-items: center; justify-content: space-between;
@@ -703,7 +703,7 @@
     }
     .scrolly-stage .stage-label {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase;
+      font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--court);
       margin-bottom: 12px;
       display: inline-flex; align-items: center; gap: 10px;
@@ -726,7 +726,7 @@
       line-height: 1.02;
       margin-bottom: 14px;
     }
-    .scrolly-stage h3 .ital { color: var(--clay); font-style: italic; font-weight: 400; }
+    .scrolly-stage h3 .ital { color: var(--ink); font-style: normal; font-weight: 400; }
     .scrolly-stage p {
       color: var(--ink-soft);
       font-size: 1.05rem;
@@ -760,8 +760,8 @@
     .closing h2 .line { display: block; }
     .closing h2 .lime {
       display: block;
-      color: var(--lime);
-      font-style: italic;
+      color: var(--ink);
+      font-style: normal;
       font-weight: 400;
     }
     .closing p {
@@ -785,7 +785,7 @@
     @media (max-width: 700px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
     .footer-grid h6 {
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase;
+      font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--ink-mute);
       margin-bottom: 14px;
     }
@@ -800,7 +800,7 @@
     .footer-grid a:hover { color: var(--ink); }
     .footer-tagline {
       font-family: 'Newsreader', serif;
-      font-style: italic; font-weight: 400;
+      font-style: normal; font-weight: 400;
       font-size: 1.1rem; letter-spacing: -0.005em;
       max-width: 30ch; color: var(--ink-soft);
     }
@@ -809,7 +809,7 @@
       border-top: 1px solid var(--line-soft);
       display: flex; justify-content: space-between; align-items: center;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase;
+      font-size: 0.82rem; letter-spacing: 0.12em; text-transform: uppercase;
       color: var(--ink-mute);
       flex-wrap: wrap; gap: 12px;
     }
@@ -976,7 +976,7 @@
       </div>
       <div class="nav-actions">
         <a href="/auth/login" class="nav-signin">Sign in</a>
-        <a href="/auth/signup" class="cta">Get started</a>
+        <a href="/auth/signup" class="cta">Create account</a>
       </div>
     </div>
   </nav>
@@ -992,7 +992,7 @@
           <span class="line clay">Know every<br>move.</span>
         </h1>
         <p class="lede">
-          CourtCheck turns raw match footage into the read coaches want. Ball tracking, heatmaps, stroke breakdown, and scouting reports. No rewinding a frame.
+          CourtCheck tracks every shot, bounce, and stroke in a match recording, then writes up what a coach would notice. Ball tracking, court maps, stroke breakdown, and a written report.
         </p>
         <div class="hero-cta-row">
           <a href="/auth/signup" class="btn btn-primary">
@@ -1025,7 +1025,7 @@
 
         <!-- Floating card 1: mini shot map -->
         <div class="hero-float-card card-shots" aria-hidden="true">
-          <div class="fc-eyebrow">Shots · this recording</div>
+          <div class="fc-eyebrow">Shot map</div>
           <svg class="fc-svg" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
             <rect x="6" y="4" width="88" height="62" rx="1.5" fill="color-mix(in srgb, var(--court) 6%, var(--paper))" stroke="var(--ink-mute)" stroke-width="0.7"/>
             <line x1="6" y1="35" x2="94" y2="35" stroke="var(--ink-mute)" stroke-width="0.5"/>
@@ -1073,7 +1073,7 @@
             <ellipse cx="28" cy="48" rx="10" ry="7"  fill="url(#hg-clay)"/>
             <ellipse cx="60" cy="40" rx="9"  ry="6"  fill="url(#hg-clay)"/>
           </svg>
-          <div class="fc-foot"><span class="ital" style="color: var(--clay); font-style: italic;">68%</span> deuce-side</div>
+          <div class="fc-foot"><span class="ital" style="color: var(--ink); font-style: normal;">68%</span> deuce-side</div>
         </div>
       </div>
     </section>
@@ -1086,12 +1086,11 @@
         <div class="problem-grid">
           <div>
             <span class="eyebrow">The state of the game</span>
-            <h2>Tennis has always been played on instinct.</h2>
+            <h2>Coaches still review tennis from memory.</h2>
           </div>
           <div class="problem-body insight">
-            <p>Every other major sport uses computer vision and analytics to train smarter. Tennis at the club and collegiate level is still flying blind.</p>
-            <p>Coaches scrub through hours of grainy recordings. Players replay points from memory. The answer to <strong>"what changed in the second set?"</strong> takes a Sunday to find.</p>
-            <p>CourtCheck closes that gap. Drop in the tape. Get the read.</p>
+            <p>College tennis has the footage and none of the tracking. Coaches scrub through hours of recordings; players replay points from memory. The answer to <strong>"what changed in the second set?"</strong> takes a Sunday to find.</p>
+            <p>CourtCheck answers it from the recording.</p>
           </div>
         </div>
       </section>
@@ -1132,26 +1131,26 @@
 
           <div class="scrolly-stage is-active" data-stage="1">
             <span class="stage-label"><span class="pip"></span>Stage 01 · The court</span>
-            <h3>Start with the tape. Nothing else.</h3>
-            <p>Recording in, court out. No annotations yet. This is what every coach starts with after a recording. The next three stages are what CourtCheck adds.</p>
+            <h3>Start with the recording.</h3>
+            <p>The court appears without annotations first. The next three stages add bounce locations, contact spacing, and coverage from the recording.</p>
           </div>
 
           <div class="scrolly-stage" data-stage="2">
             <span class="stage-label"><span class="pip"></span>Stage 02 · Shot map</span>
-            <h3>Every shot, placed.</h3>
-            <p>Bounce locations for every ball in the recording. Forehand, backhand, serve, volley. The view your coaching brain already uses, drawn for you in under fifteen minutes.</p>
+            <h3>Every bounce on the court.</h3>
+            <p>Bounce locations are plotted on the court and labeled forehand, backhand, or serve. Processing takes about 15 minutes.</p>
           </div>
 
           <div class="scrolly-stage" data-stage="3">
             <span class="stage-label"><span class="pip"></span>Stage 03 · Spacing</span>
             <h3>Where the player stood.</h3>
-            <p>Each line is the gap between player and ball at contact. Short means squeezed. Long means reaching. The pattern that tells you why a stroke broke down late in the recording.</p>
+            <p>Each line shows the distance between player and ball at contact. Short lines mark squeezed contact; long lines mark reaching. Compare contact spacing as the recording progresses.</p>
           </div>
 
           <div class="scrolly-stage" data-stage="4">
             <span class="stage-label"><span class="pip"></span>Stage 04 · Coverage</span>
-            <h3>The pattern, called out.</h3>
-            <p>Court coverage heatmap, plus the one line of plain English worth bringing to practice. Sequences surface only when they repeat across the recording.</p>
+            <h3>What repeats.</h3>
+            <p>The heatmap shows where the player spent time. The report describes sequences that repeat across the recording.</p>
           </div>
 
         </div>
@@ -1161,9 +1160,9 @@
     <!-- FEATURES -->
     <section class="feature container" id="features">
       <div class="section-head">
-        <span class="eyebrow">What we surface</span>
-        <h2>Patterns you'd find watching the tape, in the time it takes to stretch.</h2>
-        <p class="h2-lede">CourtCheck reads recordings the way an experienced assistant coach watches it back. Every shot in context. Every pattern in plain English. Coaches save ~80 hours per season.</p>
+        <span class="eyebrow">Recording analysis</span>
+        <h2>Review the recording with court maps and coach notes.</h2>
+        <p class="h2-lede">Check shot placement and contact spacing, then read a summary of positioning and errors from that recording.</p>
       </div>
 
       <div class="feature-grid">
@@ -1171,8 +1170,8 @@
           <div class="feat-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.5.5 0 0 1-.96 0L9.24 2.18a.5.5 0 0 0-.96 0l-2.35 8.36A2 2 0 0 1 4 12H2"/></svg>
           </div>
-          <h3>Patterns, in plain English.</h3>
-          <p>"Lin wins 71% of service games when she opens with a slice." Plain prose, not dashboards full of numbers. We only surface patterns that show up across two or more recordings.</p>
+          <h3>Patterns in writing</h3>
+          <p>Each processed recording includes a written summary of shot placement, positioning, and errors, with a suggested practice adjustment.</p>
           <div class="visual-block">
             <!-- Shot mix bars — built + scroll-animated by JS at the end of <body>,
                  mirroring dashboard.html's buildBars() exactly. -->
@@ -1184,16 +1183,16 @@
           <div class="feat-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0Z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>
           </div>
-          <h3>Shot maps, not spreadsheets.</h3>
-          <p>Every bounce, every contact, every stroke type. Overlaid on a court tile. The view your coaching brain already uses.</p>
+          <h3>Shot maps</h3>
+          <p>Each bounce and contact is drawn on a court and colored by stroke type.</p>
         </div>
 
         <div class="feature-card card">
           <div class="feat-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
-          <h3>From upload to first insight: 5 minutes.</h3>
-          <p>Drop in your recording, get the first surfaced pattern back before halftime of any other game you're watching. ~15 minutes for the full breakdown.</p>
+          <h3>Ready in about 15 minutes</h3>
+          <p>Upload a recording to get the shot map, contact spacing, court coverage, and written report in about 15 minutes.</p>
         </div>
       </div>
     </section>
@@ -1204,30 +1203,29 @@
         <div class="section-head">
           <span class="eyebrow">How it works</span>
           <h2 style="margin-top: 16px;">
-            <span class="line">Four steps.</span>
-            <span class="line">No film&#8209;room slog.</span>
+            <span class="line">How it works</span>
           </h2>
         </div>
         <div class="how-grid">
           <div class="how-step insight">
             <div class="step-num">i.</div>
-            <h5>Upload film</h5>
-            <p>MP4 from your camera, your phone, or your team's cloud. Up to 500 MB per recording.</p>
+            <h5>Upload a recording</h5>
+            <p>Upload an MP4 from your camera, phone, or team's cloud storage, up to 500 MB per recording.</p>
           </div>
           <div class="how-step insight">
             <div class="step-num">ii.</div>
-            <h5>We watch it</h5>
-            <p>~15 min on average. Computer vision reads ball, players, bounces, and strokes. Frame by frame.</p>
+            <h5>CourtCheck tracks it</h5>
+            <p>CourtCheck tracks the ball, players, bounces, and strokes frame by frame. Processing takes about 15 minutes.</p>
           </div>
           <div class="how-step insight">
             <div class="step-num">iii.</div>
-            <h5>Patterns surface</h5>
-            <p>Shot maps, spacing diagnostics, court coverage, and a written coaching report. All in the dashboard.</p>
+            <h5>Read the report</h5>
+            <p>Open the dashboard for shot maps, contact spacing, court coverage, and the written coaching report.</p>
           </div>
           <div class="how-step insight">
             <div class="step-num">iv.</div>
-            <h5>You coach better</h5>
-            <p>Drills get specific. Match prep gets sharper. Player conversations get backed by film, not memory.</p>
+            <h5>Take it to practice</h5>
+            <p>Use the report to plan drills, prepare for matches, and review points with players.</p>
           </div>
         </div>
       </div>
@@ -1236,10 +1234,9 @@
     <!-- CLOSING -->
     <section class="closing container">
       <h2 class="display">
-        <span class="line">Stop guessing.</span>
-        <span class="lime">Start winning.</span>
+        <span class="line">Start with one recording.</span>
       </h2>
-      <p>Upload your first recording. Get a full breakdown: heatmaps, stroke maps, and a written scouting report in minutes.</p>
+      <p>Upload a recording and get the shot map, stroke breakdown, and a written scouting report in about 15 minutes.</p>
       <a href="/auth/signup" class="btn btn-primary">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
         Upload your first recording
@@ -1257,7 +1254,7 @@
           <img class="logo logo-dark" src="/CourtCheckLogoDark.png" alt="CourtCheck" style="height: 40px; width: auto;">
             <video class="logo logo-video" muted playsinline preload="metadata" aria-hidden="true" style="height: 40px; width: auto;"><source src="/CourtCheckAnimation.webm" type="video/webm"><source src="/CourtCheckAnimation.mp4" type="video/mp4"></video>
           </a>
-          <p class="footer-tagline">See every shot. Know every move. Built for college tennis coaches.</p>
+          <p class="footer-tagline">Recording analysis for college tennis coaches.</p>
         </div>
         <div>
           <h6>Product</h6>
@@ -1286,7 +1283,7 @@
       </div>
       <div class="footer-foot">
         <span>© 2026 CourtCheck</span>
-        <span>v0.1 · brand mock</span>
+        <span>Tennis recording analysis</span>
       </div>
     </div>
   </footer>

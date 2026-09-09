@@ -1,5 +1,7 @@
 'use client';
 
+import { Prose } from '@/components/ui/display';
+
 import { RefObject } from 'react';
 import { useEntranceReveal } from '../viz/useEntranceReveal';
 import CountUp from '@/components/ui/CountUp';
@@ -81,14 +83,14 @@ export default function CoachInsights({ netApproach, errors, videoRef }: Props) 
       style={{ padding: '26px 30px' }}
     >
       <div className="mb-3.5">
-        <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
-          Coach insights
+        <span className="inline-flex items-center gap-2 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
+          Coaching notes
         </span>
         <h3 className="font-display font-medium text-[1.25rem] tracking-tight mt-3">
-          What stood out.
+          Errors and net play
         </h3>
-        <div className="text-ink-soft text-[0.95rem] mt-1">
-          Errors and net game. Tap a timestamp to jump.
+        <div className="text-ink-soft text-[1.02rem] mt-1">
+          Tap a timestamp to jump to it in the video.
         </div>
       </div>
 
@@ -114,7 +116,7 @@ export default function CoachInsights({ netApproach, errors, videoRef }: Props) 
 function TileHead({ eyebrow, headline }: { eyebrow: string; headline: string }) {
   return (
     <div className="mb-3">
-      <div className="font-mono text-[0.66rem] uppercase tracking-[0.16em] text-ink-mute">
+      <div className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
         {eyebrow}
       </div>
       <div className="font-display font-medium text-[1.05rem] tracking-tight mt-1.5">
@@ -132,7 +134,7 @@ export function PositionTile({ data }: { data: PositionSummary | null }) {
     return (
       <div className="cc-coach-tile">
         <TileHead eyebrow="Court position" headline="–" />
-        <p className="text-[0.88rem] text-ink-mute italic">No position data.</p>
+        <Prose className="text-ink-mute">No position data.</Prose>
       </div>
     );
   }
@@ -156,7 +158,7 @@ export function PositionTile({ data }: { data: PositionSummary | null }) {
             className="grid items-center"
             style={{ gridTemplateColumns: '128px 1fr 42px', gap: 10 }}
           >
-            <span className="text-[0.82rem] text-ink-soft">{z.label}</span>
+            <span className="text-[0.88rem] text-ink-soft">{z.label}</span>
             <div className="h-2 rounded-full overflow-hidden bg-shade">
               <div
                 className="h-full rounded-full"
@@ -170,7 +172,7 @@ export function PositionTile({ data }: { data: PositionSummary | null }) {
               />
             </div>
             <span
-              className="text-right text-[0.82rem] font-display font-medium text-ink"
+              className="text-right text-[0.88rem] font-display font-medium text-ink"
               style={{ fontFeatureSettings: '"tnum"' }}
             >
               <CountUp value={z.pct} play={shown} suffix="%" />
@@ -192,10 +194,12 @@ function NetApproachTile({
   if (!data || data.approaches === 0) {
     return (
       <div className="cc-coach-tile">
-        <TileHead eyebrow="Net game" headline="No net approaches detected." />
-        <p className="text-[0.88rem] text-ink-mute italic mt-1">
-          Player stayed behind the service line for the whole recording.
-        </p>
+        <TileHead eyebrow="Net game" headline={data ? 'No net approaches detected.' : 'No net approach data.'} />
+        <Prose className="text-ink-mute mt-1">
+          {data
+            ? 'The tracker did not identify a net approach in this recording.'
+            : 'Reprocess this recording to generate net approach data.'}
+        </Prose>
       </div>
     );
   }
@@ -205,8 +209,8 @@ function NetApproachTile({
         eyebrow="Net game"
         headline={`${data.approaches} approached · ${data.wins} won (${Math.round(data.win_pct)}%).`}
       />
-      <div className="text-[0.78rem] text-ink-mute mb-2">
-        Win rate heuristic (rally end &lt; 3s · opponent OOB last). Refines post-pilot.
+      <div className="text-[0.88rem] text-ink-mute mb-2">
+        Win rate is a heuristic: the rally ended within 3 seconds with the opponent's ball out.
       </div>
       <TimestampList
         items={data.events.map((e) => ({
@@ -251,11 +255,11 @@ function ErrorTile({
     <div className="cc-coach-tile">
       <TileHead
         eyebrow="Your errors"
-        headline={`${data.total} total · ${missed} unreturned ball${missed === 1 ? '' : 's'} + ${oob} OOB.`}
+        headline={`${data.total} error${data.total === 1 ? '' : 's'}: ${missed} unreturned, ${oob} out.`}
       />
-      <p className="text-[0.78rem] text-ink-soft mb-3 -mt-1.5 leading-snug">
-        Unreturned = the opponent's ball landed in your half and you did not swing. Counts placements against you, not only your errors.
-      </p>
+      <Prose className="text-ink-soft mb-3 -mt-1.5">
+        An unreturned ball landed in the player's half without a swing. This includes the opponent's placements as well as the player's errors.
+      </Prose>
       <div className="space-y-1.5 mb-3">
         {rows.map((r, i) => (
           <div
@@ -263,7 +267,7 @@ function ErrorTile({
             className="grid items-center"
             style={{ gridTemplateColumns: '112px 1fr 28px', gap: 10 }}
           >
-            <span className="text-[0.82rem] text-ink-soft">{r.label}</span>
+            <span className="text-[0.88rem] text-ink-soft">{r.label}</span>
             <div className="h-2 rounded-full overflow-hidden bg-shade">
               <div
                 className="h-full rounded-full"
@@ -275,7 +279,7 @@ function ErrorTile({
               />
             </div>
             <span
-              className="text-right text-[0.82rem] font-display font-medium text-ink"
+              className="text-right text-[0.88rem] font-display font-medium text-ink"
               style={{ fontFeatureSettings: '"tnum"' }}
             >
               <CountUp value={r.n} play={shown} />
@@ -309,7 +313,7 @@ function TimestampList({
   emptyLabel: string;
 }) {
   if (items.length === 0) {
-    return <p className="text-[0.82rem] text-ink-mute italic">{emptyLabel}</p>;
+    return <Prose className="text-ink-mute">{emptyLabel}</Prose>;
   }
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -337,12 +341,12 @@ function TimestampList({
             title={`${it.label} · jump to ${ts}`}
           >
             <span
-              className="font-mono text-[0.7rem] tabular-nums"
+              className="font-mono text-[0.82rem] tabular-nums"
               style={{ fontFeatureSettings: '"tnum"' }}
             >
               {ts}
             </span>
-            <span className="text-[0.7rem]">{it.label}</span>
+            <span className="text-[0.82rem]">{it.label}</span>
           </button>
         );
       })}
