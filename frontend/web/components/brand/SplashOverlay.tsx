@@ -104,7 +104,7 @@ export default function SplashOverlay({ storageKey = 'ccLandingSplashSeen' }: Pr
         playsInline
         autoPlay
         preload="auto"
-        className="block object-contain dark:invert dark:hue-rotate-180"
+        className="block object-contain"
         style={{
           width: 'min(72vw, 760px)',
           height: 'auto',

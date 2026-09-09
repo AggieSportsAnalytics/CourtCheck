@@ -104,7 +104,7 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
     >
       <div className="mb-3.5">
         <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
-          Rallies · this recording
+          Rallies
         </span>
         <h3 className="font-display font-medium text-[1.25rem] tracking-tight mt-3">
           Every rally, broken down.

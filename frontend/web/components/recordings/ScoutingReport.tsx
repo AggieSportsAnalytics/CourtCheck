@@ -35,7 +35,7 @@ function highlightStats(text: string): ReactNode[] {
     out.push(
       <strong
         key={`s-${i++}`}
-        className="font-display font-semibold text-court"
+        className="font-display font-medium text-ink"
         style={{ fontFeatureSettings: '"tnum"' }}
       >
         {token}
@@ -73,7 +73,7 @@ export default function ScoutingReport({ headline, sections, readMinutes }: Prop
       >
         <div>
           <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
-            Scouting report · this recording
+            Scouting report
           </span>
           <h2
             className="font-display font-medium mt-2 leading-[1.1]"
@@ -85,7 +85,7 @@ export default function ScoutingReport({ headline, sections, readMinutes }: Prop
           >
             {headline ?? (
               <>
-                What stood out in <em>this recording.</em>
+                What stood out.
               </>
             )}
           </h2>

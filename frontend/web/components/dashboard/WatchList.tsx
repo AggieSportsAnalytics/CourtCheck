@@ -65,13 +65,13 @@ export default function WatchList({ items }: Props) {
             {item.href ? (
               <Link
                 href={item.href}
-                className="mt-auto inline-flex items-center gap-1.5 text-court text-[0.82rem] font-medium dark:text-court-light transition-[gap] duration-150"
+                className="mt-auto inline-flex items-center gap-1.5 text-court text-[0.82rem] font-medium transition-[gap] duration-150"
               >
                 <span>{item.cta ?? 'See breakdown'}</span>
                 <span aria-hidden>→</span>
               </Link>
             ) : (
-              <span className="mt-auto inline-flex items-center gap-1.5 text-court text-[0.82rem] font-medium dark:text-court-light">
+              <span className="mt-auto inline-flex items-center gap-1.5 text-court text-[0.82rem] font-medium">
                 <span>{item.cta ?? 'See breakdown'}</span>
                 <span aria-hidden>→</span>
               </span>

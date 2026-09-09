@@ -55,19 +55,19 @@ function BrandMark({
       <img
         src="/CourtCheckLogoLight.png"
         alt="CourtCheck"
-        className="bm-img block w-auto dark:hidden"
+        className="bm-img block w-auto"
         style={{ height: '100%' }}
       />
       <img
         src="/CourtCheckLogoDark.png"
         alt="CourtCheck"
-        className="bm-img hidden w-auto dark:block"
+        className="bm-img hidden w-auto"
         style={{ height: '100%' }}
       />
       {withHoverVideo && (
         <video
           ref={videoRef}
-          className="bm-video absolute inset-0 w-auto dark:invert dark:hue-rotate-180"
+          className="bm-video absolute inset-0 w-auto"
           style={{ height: '100%' }}
           muted
           playsInline

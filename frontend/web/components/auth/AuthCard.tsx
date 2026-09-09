@@ -88,7 +88,7 @@ function AuthInlineLink({
   return (
     <a
       {...props}
-      className="text-court font-medium border-b border-current dark:text-court-light"
+      className="text-court font-medium border-b border-current"
     >
       {children}
     </a>

@@ -239,7 +239,7 @@ export default function DashboardPage() {
           tag: 'Awaiting data',
           line: (
             <>
-              Upload a recording to start reviewing your <em>players</em>.
+              Upload a recording to start reviewing your players.
             </>
           ),
           href: '/upload',
@@ -249,7 +249,7 @@ export default function DashboardPage() {
           tag: 'Awaiting data',
           line: (
             <>
-              Assign a recording to a player to see it on their <em>profile</em>.
+              Assign a recording to a player to see it on their profile.
             </>
           ),
           href: '/upload',
@@ -259,7 +259,7 @@ export default function DashboardPage() {
           tag: 'Awaiting data',
           line: (
             <>
-              Review the shot map once a recording finishes <em>processing</em>.
+              Review the shot map once a recording finishes processing.
             </>
           ),
           href: '/upload',
@@ -306,11 +306,11 @@ export default function DashboardPage() {
           {/* Greeting */}
           <section className="pt-6 pb-7">
             <span
-              className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court dark:text-court-light"
+              className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court"
             >
               <span
                 aria-hidden
-                className="w-1.5 h-1.5 rounded-full bg-clay dark:bg-clay-soft"
+                className="w-1.5 h-1.5 rounded-full bg-clay"
               />
               {greetingPrefix}, {coachName}. · {dateLine}
             </span>
@@ -325,7 +325,7 @@ export default function DashboardPage() {
                 paddingTop: '0.08em',
               }}
             >
-              Your roster <em>today</em>.
+              Your roster.
             </h1>
           </section>
 
@@ -436,7 +436,7 @@ function NetworkError() {
           fontSize: 'clamp(28px, 3vw, 40px)',
         }}
       >
-        We hit a snag <em>fetching your data</em>.
+        We hit a snag fetching your data.
       </h1>
       <p className="text-ink-soft mt-3">
         Check your connection and try again. If this keeps happening, your
@@ -445,7 +445,7 @@ function NetworkError() {
       <button
         type="button"
         onClick={() => window.location.reload()}
-        className="mt-6 inline-flex items-center gap-2.5 px-5 py-3 rounded-full bg-court text-cream font-medium hover:-translate-y-px transition-transform dark:bg-court-deep dark:hover:bg-court"
+        className="mt-6 inline-flex items-center gap-2.5 px-5 py-3 rounded-full bg-court text-cream font-medium hover:-translate-y-px transition-transform"
       >
         Retry
       </button>

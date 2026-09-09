@@ -1,8 +1,6 @@
 @import 'tailwindcss';
 @plugin "@tailwindcss/typography";
 
-/* Class-based dark mode (mocks toggle .dark on body) */
-@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   /* === BRAND COLOR TOKENS (light defaults) === */
@@ -84,74 +82,9 @@
   --shadow-hover: 0 1px 0 rgba(26, 24, 21, 0.05), 0 22px 56px -26px rgba(26, 24, 21, 0.20);
 }
 
-/* === DARK MODE OVERRIDES (Stadium-at-Night) — synced 2026-05-12 with the canonical mocks palette.
-   Cool navy surfaces with wider elevation deltas (cream → paper jumps ~30 luminance units so
-   adjacent sections read as distinct planes). Court stays GREEN (was incorrectly flipped to blue
-   in the original drop). Plum / amber / slate / court-surface added so dark mode mirrors the
-   full light-mode chromatic palette. */
-.dark {
-  --color-cream: #07080F;
-  --color-paper: #1F2940;
-  --color-surface: #2B374F;
-  --color-shade: #11161F;
-  --color-line: #2F3B52;
-  --color-line-soft: #1E2735;
-
-  --color-ink: #F4F0E6;
-  --color-ink-soft: #A8B0C0;
-  --color-ink-mute: #6B7388;
-
-  --color-court: #6FA88B;
-  --color-court-deep: #4A8268;
-  --color-court-light: #9FC6B0;
-  --color-court-surface: #6B3A24;
-
-  --color-clay: #E07A52;
-  --color-clay-soft: #F0A07F;
-
-  --color-lime: #DDE970;
-  --color-plum: #B584A6;
-  --color-amber: #DDB166;
-  --color-slate: #889DB3;
-
-  --color-stroke-forehand: #6FA88B;
-  --color-stroke-backhand: #B584A6;
-  --color-stroke-serve: #DDB166;
-  --color-stroke-volley: #E07A52;
-
-  /* Shadcn alias overrides */
-  --color-background: #07080F;
-  --color-foreground: #F4F0E6;
-  --color-card: #1F2940;
-  --color-card-foreground: #F4F0E6;
-  --color-popover: #2B374F;
-  --color-popover-foreground: #F4F0E6;
-  --color-primary: #6FA88B;
-  --color-primary-foreground: #07080F;
-  --color-secondary: #11161F;
-  --color-secondary-foreground: #F4F0E6;
-  --color-muted: #11161F;
-  --color-muted-foreground: #6B7388;
-  --color-accent: #E07A52;
-  --color-accent-foreground: #F4F0E6;
-  --color-destructive: #E07A52;
-  --color-destructive-foreground: #F4F0E6;
-  --color-border: #2F3B52;
-  --color-input: #2F3B52;
-  --color-ring: #6FA88B;
-
-  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.4), 0 18px 48px -24px rgba(0, 0, 0, 0.55);
-  --shadow-pop: 0 1px 0 rgba(0, 0, 0, 0.5), 0 24px 60px -28px rgba(0, 0, 0, 0.7);
-  --shadow-hover: 0 1px 0 rgba(0, 0, 0, 0.45), 0 22px 56px -26px rgba(0, 0, 0, 0.62);
-}
-
 @layer base {
   html {
     color-scheme: light;
-  }
-  html.dark,
-  .dark {
-    color-scheme: dark;
   }
 
   body {

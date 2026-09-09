@@ -82,7 +82,7 @@ export default function CoachInsights({ netApproach, errors, videoRef }: Props) 
     >
       <div className="mb-3.5">
         <span className="inline-flex items-center gap-2 font-mono text-[0.72rem] uppercase tracking-[0.18em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
-          Coach insights · this recording
+          Coach insights
         </span>
         <h3 className="font-display font-medium text-[1.25rem] tracking-tight mt-3">
           What stood out.
@@ -157,7 +157,7 @@ export function PositionTile({ data }: { data: PositionSummary | null }) {
             style={{ gridTemplateColumns: '128px 1fr 42px', gap: 10 }}
           >
             <span className="text-[0.82rem] text-ink-soft">{z.label}</span>
-            <div className="h-2 rounded-full overflow-hidden bg-shade dark:bg-surface">
+            <div className="h-2 rounded-full overflow-hidden bg-shade">
               <div
                 className="h-full rounded-full"
                 style={{
@@ -264,7 +264,7 @@ function ErrorTile({
             style={{ gridTemplateColumns: '112px 1fr 28px', gap: 10 }}
           >
             <span className="text-[0.82rem] text-ink-soft">{r.label}</span>
-            <div className="h-2 rounded-full overflow-hidden bg-shade dark:bg-surface">
+            <div className="h-2 rounded-full overflow-hidden bg-shade">
               <div
                 className="h-full rounded-full"
                 style={{

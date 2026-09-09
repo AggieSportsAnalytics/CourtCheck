@@ -1,14 +1,12 @@
 import { ReactNode } from 'react'
 
 import { BrandMark } from '@/components/brand/BrandMark'
-import { ThemeToggle } from '@/components/brand/ThemeToggle'
 
 function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="px-7 sm:px-14 py-7 flex items-center justify-between">
         <BrandMark />
-        <ThemeToggle />
       </header>
 
       <main className="flex-1 flex flex-col items-center justify-center px-7 pb-16 pt-2">

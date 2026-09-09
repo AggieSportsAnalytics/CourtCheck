@@ -189,7 +189,7 @@ export default function PlayersPage() {
           <div>
             <Eyebrow>Roster</Eyebrow>
             <Display as="h1" size="lg" className="mt-3.5 mb-2">
-              Your <em>team</em>.
+              Roster.
             </Display>
             <p className="text-base text-ink-soft">
               <Num size="sm">{players.length}</Num> player{players.length === 1 ? '' : 's'}{' '}
@@ -242,7 +242,7 @@ export default function PlayersPage() {
           })}
         </div>
 
-        <div className="ml-auto flex items-center gap-2.5">
+        <div className="ml-auto flex flex-wrap items-center gap-2.5 max-w-full">
           <label className="relative">
             <span className="sr-only">Search players</span>
             <svg

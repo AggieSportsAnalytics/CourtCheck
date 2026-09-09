@@ -30,7 +30,7 @@ export default function CheckmarkBurst({ size = 240 }: { size?: number }) {
       <Confetti />
       <div className="cc-logo-pop relative z-20 flex w-full items-center justify-center">
         <video
-          className="block h-auto w-full object-contain dark:invert dark:hue-rotate-180"
+          className="block h-auto w-full object-contain"
           autoPlay
           muted
           playsInline

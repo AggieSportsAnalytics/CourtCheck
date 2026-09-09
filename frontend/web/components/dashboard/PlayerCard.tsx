@@ -99,7 +99,7 @@ export default function PlayerCard({ player }: Props) {
 
       {/* 5-metric row (uses peer/sibling hover via group/metric-row) */}
       <div
-        className="grid grid-cols-5 gap-2 p-3.5 rounded-[10px] bg-shade dark:bg-surface group/metricrow"
+        className="grid grid-cols-5 gap-2 p-3.5 rounded-[10px] bg-shade group/metricrow"
       >
         {player.metrics.map((m, i) => {
           const isLead = i === leadIdx;
@@ -150,8 +150,8 @@ export default function PlayerCard({ player }: Props) {
                   className={[
                     'font-mono uppercase tracking-[0.1em] text-[0.6rem] mt-0.5',
                     m.delta >= 0
-                      ? 'text-court dark:text-court-light'
-                      : 'text-clay dark:text-clay-soft',
+                      ? 'text-court'
+                      : 'text-clay',
                   ].join(' ')}
                 >
                   {m.delta >= 0 ? '▲' : '▼'} {Math.abs(m.delta).toFixed(0)} pts

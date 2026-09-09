@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { LayoutDashboard, Users, Upload, Film, ChevronLeft, LogOut, UserCircle, Settings } from 'lucide-react'
-import { ThemeToggle } from '@/components/brand/ThemeToggle'
 import { BrandMark } from '@/components/brand/BrandMark'
 
 type SidebarUser = {
@@ -158,7 +157,7 @@ export default function Sidebar({ user, onSignOut }: Props) {
             muted
             playsInline
             preload="metadata"
-            className="object-contain dark:invert dark:hue-rotate-180"
+            className="object-contain"
             style={{ maxHeight: 48, width: 'auto' }}
             onMouseEnter={(e) => {
               const v = e.currentTarget
@@ -274,7 +273,6 @@ export default function Sidebar({ user, onSignOut }: Props) {
             </div>
           )}
         </div>
-        <ThemeToggle />
       </div>
     </aside>
     <nav className="app-bottom-nav" aria-label="Primary navigation">

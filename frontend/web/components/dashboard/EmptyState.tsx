@@ -17,11 +17,11 @@ export default function EmptyState({ coachName, dateLine }: Props) {
       {/* Hero */}
       <section className="pt-14 pb-7">
         <span
-          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court dark:text-court-light"
+          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court"
         >
           <span
             aria-hidden
-            className="w-1.5 h-1.5 rounded-full bg-clay dark:bg-clay-soft"
+            className="w-1.5 h-1.5 rounded-full bg-clay"
           />
           {dateLine}
         </span>
@@ -49,7 +49,7 @@ export default function EmptyState({ coachName, dateLine }: Props) {
         <div className="flex gap-3.5 items-center flex-wrap mt-7">
           <Link
             href="/upload"
-            className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-full bg-court text-cream font-medium text-base transition-transform hover:-translate-y-px dark:bg-court-deep dark:hover:bg-court"
+            className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-full bg-court text-cream font-medium text-base transition-transform hover:-translate-y-px"
             style={{ transition: 'transform 160ms cubic-bezier(0.34, 1.56, 0.64, 1), background 240ms cubic-bezier(0.2, 0.8, 0.2, 1)' }}
           >
             <svg
@@ -85,11 +85,11 @@ export default function EmptyState({ coachName, dateLine }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center p-12 md:p-16">
           <div>
             <span
-              className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court dark:text-court-light"
+              className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court"
             >
               <span
                 aria-hidden
-                className="w-1.5 h-1.5 rounded-full bg-clay dark:bg-clay-soft"
+                className="w-1.5 h-1.5 rounded-full bg-clay"
               />
               Drop a recording
             </span>
@@ -103,7 +103,7 @@ export default function EmptyState({ coachName, dateLine }: Props) {
                 fontSize: 'clamp(32px, 3.6vw, 48px)',
               }}
             >
-              Five minutes to your <em>first insight</em>.
+              Five minutes to your first insight.
             </h2>
             <p className="text-ink-soft mb-6 max-w-[36ch]" style={{ fontSize: '1.05rem', lineHeight: 1.55 }}>
               Upload an MP4 from this morning's recording. Within about 15 minutes
@@ -142,13 +142,13 @@ export default function EmptyState({ coachName, dateLine }: Props) {
           </div>
 
           <div
-            className="w-full max-w-[400px] mx-auto bg-shade dark:bg-surface rounded-[18px] border-[1.5px] border-dashed border-line p-12 flex flex-col items-center justify-center gap-4 hover:border-ink-mute transition-colors"
+            className="w-full max-w-[400px] mx-auto bg-shade rounded-[18px] border-[1.5px] border-dashed border-line p-12 flex flex-col items-center justify-center gap-4 hover:border-ink-mute transition-colors"
             role="button"
             tabIndex={0}
             aria-label="Upload a recording"
           >
             <div
-              className="w-15 h-15 rounded-2xl flex items-center justify-center text-court dark:text-court-light"
+              className="w-15 h-15 rounded-2xl flex items-center justify-center text-court"
               style={{
                 width: 60,
                 height: 60,
@@ -175,7 +175,7 @@ export default function EmptyState({ coachName, dateLine }: Props) {
               </div>
               <div className="text-ink-soft text-[0.92rem]">
                 or{' '}
-                <span className="text-court dark:text-court-light font-medium border-b border-current">
+                <span className="text-court font-medium border-b border-current">
                   browse files
                 </span>
               </div>
@@ -199,7 +199,7 @@ export default function EmptyState({ coachName, dateLine }: Props) {
               letterSpacing: '-0.014em',
             }}
           >
-            What you'll see <em>after the first recording</em>.
+            What you'll see after the first recording.
           </h3>
           <p className="text-ink-mute text-[0.95rem] max-w-[38ch]">
             A glimpse of the dashboard. Upload to make it yours.
@@ -267,7 +267,7 @@ export default function EmptyState({ coachName, dateLine }: Props) {
         </p>
         <Link
           href="/upload"
-          className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-full bg-court text-cream font-medium text-base hover:-translate-y-px transition-transform dark:bg-court-deep dark:hover:bg-court"
+          className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-full bg-court text-cream font-medium text-base hover:-translate-y-px transition-transform"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" width="18" height="18">
             <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
@@ -297,7 +297,7 @@ function EmptyPreviewCard({
   return (
     <div className="cc-card flex flex-col gap-3.5 p-7 min-h-[280px] overflow-hidden relative">
       <div
-        className="w-9 h-9 rounded-[10px] flex items-center justify-center text-court dark:text-court-light flex-shrink-0"
+        className="w-9 h-9 rounded-[10px] flex items-center justify-center text-court flex-shrink-0"
         style={{
           background: 'color-mix(in srgb, var(--color-court) 8%, transparent)',
         }}

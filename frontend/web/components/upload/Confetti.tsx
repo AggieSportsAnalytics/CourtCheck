@@ -11,7 +11,6 @@ import { useEffect, useRef } from 'react';
  * unmount it when the user resets — every mount fires a fresh burst.
  */
 const PALETTE_LIGHT = ['#BFC846', '#E1E7A6', '#B05B36', '#D08866', '#2E5341', '#7B4E6E'];
-const PALETTE_DARK = ['#DDE970', '#BFC846', '#E07A52', '#F0A07F', '#7B4E6E', '#6FA88B'];
 
 const LIFE_MS = 2400;
 const BURST_MS = 1700;
@@ -47,10 +46,7 @@ export default function Confetti() {
     canvas.height = Math.max(1, Math.floor(rect.height * dpr));
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const isDark =
-      document.documentElement.classList.contains('dark') ||
-      document.body.classList.contains('dark');
-    const colors = isDark ? PALETTE_DARK : PALETTE_LIGHT;
+    const colors = PALETTE_LIGHT;
 
     const cx = rect.width / 2;
     const cy = rect.height / 2;

@@ -112,7 +112,7 @@ export default function ShotBars({ data, ariaLabel }: Props) {
           style={{ gridTemplateColumns: '110px 1fr 56px', gap: 14 }}
         >
           <span className="text-[0.9rem] font-medium text-ink-soft">{d.label}</span>
-          <div className="h-5 rounded-full overflow-hidden relative bg-shade dark:bg-surface">
+          <div className="h-5 rounded-full overflow-hidden relative bg-shade">
             <div
               className="h-full rounded-full"
               style={{

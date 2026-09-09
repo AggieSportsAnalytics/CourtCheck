@@ -23,17 +23,6 @@
       --ease-spring:cubic-bezier(0.34, 1.56, 0.64, 1);
       --dur-quick:160ms; --dur-base:240ms; --dur-reveal:480ms; --dur-hero:800ms;
     }
-    body.dark {
-      --cream:#07080F; --paper:#1F2940; --surface:#2B374F; --shade:#11161F;
-      --line:#2F3B52; --line-soft:#1E2735;
-      --ink:#F4F0E6; --ink-soft:#A8B0C0; --ink-mute:#6B7388;
-      --court:#6FA88B; --court-deep:#4A8268; --court-light:#9FC6B0;
-      --clay:#E07A52; --clay-soft:#F0A07F;
-      --lime:#DDE970;
-      --court-surface:#6B3A24;
-      --bg-grad-1:rgba(176,91,54,0.12); --bg-grad-2:rgba(111,168,139,0.08);
-      --plum:#B584A6; --amber:#DDB166; --slate:#889DB3;
-    }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { background: var(--cream); color: var(--ink); }
@@ -93,8 +82,6 @@
     .brand-mark .logo { height: 52px; width: auto; display: block; }
     .brand-mark .logo-light { display: block; }
     .brand-mark .logo-dark { display: none; }
-    body.dark .brand-mark .logo-light { display: none; }
-    body.dark .brand-mark .logo-dark { display: block; }
     .brand-mark .name {
       font-family: 'Newsreader', serif; font-variation-settings: 'opsz' 60;
       font-weight: 500; font-size: 1.4rem; letter-spacing: -0.018em;
@@ -122,7 +109,6 @@
       background: var(--clay);
       border-radius: 2px;
     }
-    body.dark .nav-links a.active::after { background: var(--clay-soft); }
     /* Right cluster: theme toggle + Sign in (text link) + Get started (primary pill) */
     .nav-actions { display: flex; gap: 14px; align-items: center; }
     .nav-actions .nav-signin {
@@ -144,26 +130,18 @@
       transform: translateY(-1px);
       background: var(--court-deep);
     }
-    body.dark .nav-actions .cta { background: var(--court-deep); color: var(--cream); }
-    body.dark .nav-actions .cta:hover { background: var(--court); }
-    .theme-toggle {
       width: 38px; height: 38px; border-radius: 50%;
       border: 1px solid var(--line); background: var(--paper);
       cursor: pointer; display: flex; align-items: center; justify-content: center;
       color: var(--ink); padding: 0;
       transition: background var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out), transform var(--dur-base) var(--ease-out);
     }
-    .theme-toggle:hover { transform: rotate(20deg); border-color: var(--ink); }
-    .theme-toggle svg { width: 16px; height: 16px; }
-    .theme-toggle .moon { display: block; } .theme-toggle .sun  { display: none; }
-    body.dark .theme-toggle .moon { display: none; } body.dark .theme-toggle .sun { display: block; }
 
     /* Hero section gets a lighter cream wash so the first screen reads brighter than the rest */
     .hero-wrap {
       background: var(--paper);
       border-bottom: 1px solid var(--line-soft);
     }
-    body.dark .hero-wrap { background: var(--paper); border-bottom-color: var(--line-soft); }
 
     /* === HERO (2-column: text left, faded animation right — nextsense.io style) === */
     .hero {
@@ -225,15 +203,11 @@
       border-bottom: 1px solid var(--line);
       padding-bottom: 2px;
     }
-    body.dark .hero-partner .partner-name { color: var(--ink); }
     .hero-partner .partner-logo {
       height: 42px;
       width: auto;
       display: block;
       transition: transform var(--dur-base) var(--ease-out);
-    }
-    body.dark .hero-partner .partner-logo {
-      filter: invert(0.92) hue-rotate(180deg);
     }
     .hero-partner:hover .partner-logo { transform: translateY(-1px); }
     .btn {
@@ -256,14 +230,6 @@
         0 14px 28px -10px color-mix(in srgb, var(--court) 65%, transparent),
         0 22px 48px -18px color-mix(in srgb, var(--court) 45%, transparent);
     }
-    body.dark .btn-primary {
-      background: var(--court-deep); color: var(--cream);
-      box-shadow:
-        inset 0 1px 0 rgba(255,255,255,0.10),
-        0 1px 0 rgba(0,0,0,0.30),
-        0 16px 36px -12px color-mix(in srgb, var(--court-deep) 80%, transparent),
-        0 28px 60px -20px color-mix(in srgb, var(--court-deep) 60%, transparent);
-    }
     .btn-primary:hover {
       transform: translateY(-3px);
       background: var(--court-deep);
@@ -273,7 +239,6 @@
         0 22px 44px -14px color-mix(in srgb, var(--court) 70%, transparent),
         0 36px 72px -22px color-mix(in srgb, var(--court) 50%, transparent);
     }
-    body.dark .btn-primary:hover { background: var(--court); }
     .btn-primary:active { transform: translateY(-1px); }
     .btn-primary svg {
       transition: transform var(--dur-base) var(--ease-spring);
@@ -326,7 +291,6 @@
       mask-image: linear-gradient(95deg, transparent 0%, #000 12%, #000 100%);
       -webkit-mask-image: linear-gradient(95deg, transparent 0%, #000 12%, #000 100%);
     }
-    body.dark .hero-stage video { opacity: 0.55; }
 
     /* === Floating subtle glass cards over the bounce: court overlay + heatmap === */
     .hero-float-card {
@@ -439,7 +403,6 @@
     }
     /* Dark-mode equivalent of light's ink-black contrast panel: sit at --surface (brightest tier)
        so this section reads as a distinct elevated plane against hero-wrap (--paper) and body (--cream). */
-    body.dark .problem-wrap { background: var(--surface); color: var(--ink); border-top: 1px solid var(--line); }
     .problem {
       padding: 120px 56px 100px;
     }
@@ -451,8 +414,6 @@
     @media (max-width: 1000px) { .problem-grid { grid-template-columns: 1fr; gap: 40px; } }
     .problem-wrap .eyebrow { color: var(--lime); }
     .problem-wrap .eyebrow::before { background: var(--clay-soft); }
-    body.dark .problem-wrap .eyebrow { color: var(--court); }
-    body.dark .problem-wrap .eyebrow::before { background: var(--clay); }
     .problem h2 {
       font-family: 'Newsreader', serif;
       font-variation-settings: 'opsz' 96;
@@ -463,12 +424,9 @@
       margin: 16px 0 0;
     }
     .problem h2 .ital { font-style: italic; font-weight: 400; color: var(--clay-soft); }
-    body.dark .problem h2 .ital { color: var(--clay); }
     .problem-body { color: rgba(244,240,230,0.78); font-size: 1.15rem; line-height: 1.6; }
-    body.dark .problem-body { color: var(--ink-soft); }
     .problem-body p + p { margin-top: 14px; }
     .problem-body strong { color: var(--cream); font-weight: 500; }
-    body.dark .problem-body strong { color: var(--ink); font-weight: 500; }
     /* Beefy insight hover rules live further down; the .insight class handles all the work */
 
     /* === SECTION BASE === */
@@ -519,10 +477,6 @@
       display: flex; align-items: center; justify-content: center;
       margin-bottom: 24px;
     }
-    body.dark .feature-card .feat-icon {
-      background: color-mix(in srgb, var(--court-light) 14%, transparent);
-      color: var(--court-light);
-    }
     .feature-card .feat-icon svg { width: 22px; height: 22px; }
     .feature-card h3 {
       font-family: 'Newsreader', serif; font-weight: 500;
@@ -553,7 +507,6 @@
       overflow: hidden;
       position: relative;
     }
-    body.dark .bar-row .bar-track { background: var(--surface); }
     .bar-row .bar-fill {
       height: 100%;
       border-radius: 100px;
@@ -582,7 +535,6 @@
     #shotBars:hover .bar-row:hover { opacity: 1; }
     #shotBars .bar-row:hover .bar-fill { transform: scaleY(1.10); }
     #shotBars .bar-row:hover .bar-value { color: var(--clay); transform: translateX(2px); }
-    body.dark #shotBars .bar-row:hover .bar-value { color: var(--clay-soft); }
 
     /* === HOW-IT-WORKS (court-deep green contrast panel) === */
     .how {
@@ -592,14 +544,10 @@
       border-top: 1px solid rgba(0,0,0,0.15);
       border-bottom: 1px solid rgba(0,0,0,0.15);
     }
-    body.dark .how { background: var(--surface); color: var(--ink); border-color: var(--line-soft); }
     @media (max-width: 700px) { .how { padding: 72px 0; } }
     .how .eyebrow { color: var(--lime); }
     .how .eyebrow::before { background: var(--clay-soft); }
-    body.dark .how .eyebrow { color: var(--court); }
-    body.dark .how .eyebrow::before { background: var(--clay); }
     .how .section-head h2 { color: var(--cream); }
-    body.dark .how .section-head h2 { color: var(--ink); }
     .how-grid {
       display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
     }
@@ -615,7 +563,6 @@
       margin-bottom: 10px;
       font-feature-settings: 'tnum';
     }
-    body.dark .how-step .step-num { color: var(--clay); }
     .how-step h5 {
       font-family: 'Newsreader', serif;
       font-weight: 500;
@@ -623,9 +570,7 @@
       margin-bottom: 8px;
       color: var(--cream);
     }
-    body.dark .how-step h5 { color: var(--ink); }
     .how-step p { color: rgba(244,240,230,0.72); font-size: 0.98rem; line-height: 1.5; }
-    body.dark .how-step p { color: var(--ink-soft); }
     /* Beefy insight hover rules live further down; the .insight class handles all the work */
 
     /* === PINNED SCROLL: SCROLLYTELLING SECTION === */
@@ -673,7 +618,6 @@
       color: var(--court);
       font-variation-settings: 'opsz' 24;
     }
-    body.dark .scrolly-tile-eyebrow .stage-counter { color: var(--court-light); }
 
     /* Court tile: ports .court-tile from dashboard.html (same aspect, surface, radius) */
     .scrolly-tile {
@@ -764,7 +708,6 @@
       margin-bottom: 12px;
       display: inline-flex; align-items: center; gap: 10px;
     }
-    body.dark .scrolly-stage .stage-label { color: var(--court-light); }
     .scrolly-stage .stage-label .pip {
       width: 6px; height: 6px; border-radius: 50%;
       background: var(--ink-mute);
@@ -821,7 +764,6 @@
       font-style: italic;
       font-weight: 400;
     }
-    body.dark .closing h2 .lime { color: var(--lime); }
     .closing p {
       color: var(--ink-soft);
       font-size: 1.2rem;
@@ -889,15 +831,9 @@
       width: auto;
       background: transparent;
     }
-    body.dark .brand-mark .logo-video {
-      filter: invert(1) hue-rotate(180deg);
-    }
     .brand-mark:hover .logo-light,
     .brand-mark:hover .logo-dark { display: none; }
     .brand-mark:hover .logo-video { display: block; }
-    body.dark .brand-mark:hover .logo-light,
-    body.dark .brand-mark:hover .logo-dark { display: none; }
-    body.dark .brand-mark:hover .logo-video { display: block; }
 
     /* === Hover treatments — direct references to dashboard.html classes === */
 
@@ -915,15 +851,9 @@
         0 1px 0 rgba(26,24,21,0.05),
         0 32px 64px -22px rgba(26,24,21,0.28);
     }
-    body.dark .card:hover {
-      box-shadow:
-        0 1px 0 rgba(0,0,0,0.50),
-        0 36px 88px -26px rgba(0,0,0,0.78);
-    }
     /* Feature card prose warms slightly on card hover for tactile feedback */
     .feature-card.card:hover p { color: var(--ink); }
     .feature-card.card:hover h3 { color: var(--court); }
-    body.dark .feature-card.card:hover h3 { color: var(--court-light); }
     .feature-card.card .feat-icon {
       transition: transform var(--dur-base) var(--ease-spring),
                   background var(--dur-base) var(--ease-out);
@@ -974,12 +904,7 @@
         0 1px 0 rgba(0,0,0,0.20),
         0 24px 60px -22px rgba(0,0,0,0.55);
     }
-    body.dark .problem-wrap .insight:hover {
-      border-color: var(--ink-mute);
-      background: color-mix(in srgb, var(--paper) 55%, transparent);
-    }
     .problem-wrap .insight:hover p { color: var(--cream); }
-    body.dark .problem-wrap .insight:hover p { color: var(--ink); }
     .problem-wrap .insight:hover strong { color: var(--cream); }
 
     /* Same logic for How-It-Works (court-deep bg) */
@@ -990,14 +915,8 @@
         0 1px 0 rgba(0,0,0,0.20),
         0 24px 60px -22px rgba(0,0,0,0.55);
     }
-    body.dark .how .insight:hover {
-      border-color: var(--ink-mute);
-      background: color-mix(in srgb, var(--paper) 50%, transparent);
-    }
     .how .insight:hover p { color: var(--cream); }
-    body.dark .how .insight:hover p { color: var(--ink); }
     .how .insight:hover h5 { color: var(--lime); }
-    body.dark .how .insight:hover h5 { color: var(--court); }
     .how .insight .step-num {
       transition: transform var(--dur-base) var(--ease-spring), color var(--dur-base) var(--ease-out);
     }
@@ -1005,7 +924,6 @@
       transform: translateX(4px) scale(1.06);
       color: var(--lime);
     }
-    body.dark .how .insight:hover .step-num { color: var(--court); }
 
     /* Reduced-motion: kill transforms, keep color/border feedback. */
     @media (prefers-reduced-motion: reduce) {
@@ -1037,8 +955,6 @@
       background: transparent;
       display: block;
     }
-    body.dark .splash { background: var(--cream); }
-    body.dark .splash video { filter: invert(1) hue-rotate(180deg); }
     @media (prefers-reduced-motion: reduce) {
       .splash { display: none; }
     }
@@ -1059,10 +975,6 @@
         <a href="#how">How It Works</a>
       </div>
       <div class="nav-actions">
-        <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
-          <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
-        </button>
         <a href="/auth/login" class="nav-signin">Sign in</a>
         <a href="/auth/signup" class="cta">Get started</a>
       </div>
@@ -1379,21 +1291,6 @@
     </div>
   </footer>
 
-  <script>
-    (function() {
-      const toggle = document.getElementById('themeToggle');
-      const body = document.body;
-      const stored = localStorage.getItem('cc-theme');
-      if (stored === 'dark') body.classList.add('dark');
-      toggle.addEventListener('click', () => {
-        body.classList.toggle('dark');
-        localStorage.setItem('cc-theme', body.classList.contains('dark') ? 'dark' : 'light');
-        window.dispatchEvent(new CustomEvent('cc-theme-change', {
-          detail: { dark: body.classList.contains('dark') }
-        }));
-      });
-    })();
-  </script>
 
   <script>
     // brand-mark hover-to-play splash animation

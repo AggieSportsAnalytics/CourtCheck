@@ -15,21 +15,21 @@ const buttonVariants = cva(
     "[&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-[18px] shrink-0 [&_svg]:shrink-0",
     'outline-none',
     'focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-cream',
-    'dark:focus-visible:ring-offset-cream',
+    '',
   ].join(' '),
   {
     variants: {
       variant: {
         primary:
-          'bg-court text-cream hover:-translate-y-px hover:bg-court-deep dark:bg-court-deep dark:hover:bg-court',
+          'bg-court text-cream hover:-translate-y-px hover:bg-court-deep',
         ghost:
           'bg-transparent text-ink border border-line hover:border-ink',
         accent:
           'bg-clay text-cream hover:-translate-y-px hover:bg-clay-soft',
-        ink: 'bg-ink text-cream hover:-translate-y-px hover:opacity-95 dark:bg-court-deep',
+        ink: 'bg-ink text-cream hover:-translate-y-px hover:opacity-95',
         link: 'text-court underline-offset-4 hover:underline rounded-none px-0 py-0 h-auto',
         subtle:
-          'bg-shade text-ink hover:bg-line-soft dark:bg-surface dark:hover:bg-line',
+          'bg-shade text-ink hover:bg-line-soft',
       },
       size: {
         default: 'h-11 px-[26px] text-[1rem]',

@@ -68,7 +68,7 @@ export default function LoginPage() {
         </div>
 
         <AuthTitle className="text-center">
-          Welcome <em>back.</em>
+          Welcome back.
         </AuthTitle>
         <AuthSub className="text-center">
           Pick up where you left off.
@@ -120,7 +120,7 @@ export default function LoginPage() {
             </label>
             <Link
               href="/auth/forgot-password"
-              className="text-court font-medium dark:text-court-light hover:underline"
+              className="text-court font-medium hover:underline"
             >
               Forgot password?
             </Link>
@@ -157,7 +157,7 @@ export default function LoginPage() {
           New to CourtCheck?{' '}
           <Link href="/auth/signup" legacyBehavior passHref>
             <AuthInlineLink>
-              <em>Create an account.</em>
+              Create an account.
             </AuthInlineLink>
           </Link>
         </AuthFoot>

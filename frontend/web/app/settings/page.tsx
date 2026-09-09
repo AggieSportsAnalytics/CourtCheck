@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { createBrowserClient } from '@supabase/ssr'
-import { ThemeToggle } from '@/components/brand/ThemeToggle'
 
 type SaveMsg = { kind: 'ok' | 'err'; text: string }
 
@@ -54,9 +53,9 @@ export default function SettingsPage() {
       <section className="pt-6 pb-7">
         <span
           aria-hidden
-          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court dark:text-court-light"
+          className="inline-flex items-center gap-2 font-mono uppercase tracking-[0.18em] text-[0.72rem] text-court"
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-clay dark:bg-clay-soft" />
+          <span className="w-1.5 h-1.5 rounded-full bg-clay" />
           Account
         </span>
         <h1
@@ -70,7 +69,7 @@ export default function SettingsPage() {
             paddingTop: '0.08em',
           }}
         >
-          Your <em>settings</em>.
+          Settings.
         </h1>
         <p className="text-ink-soft text-base mt-3">
           Manage your account, display, and signed-in sessions.
@@ -80,7 +79,7 @@ export default function SettingsPage() {
       {/* Profile section */}
       <section className="cc-card p-7 mb-6">
         <header className="flex items-center justify-between gap-4 mb-5">
-          <h2 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court dark:text-court-light">
+          <h2 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court">
             Profile
           </h2>
           <Link
@@ -121,7 +120,7 @@ export default function SettingsPage() {
             <p className="text-ink-mute font-mono text-[0.72rem] tracking-[0.04em] mt-0.5">
               {email}
             </p>
-            <p className="text-court dark:text-court-light font-mono uppercase tracking-[0.14em] text-[0.62rem] mt-1">
+            <p className="text-court font-mono uppercase tracking-[0.14em] text-[0.62rem] mt-1">
               {role}
             </p>
           </div>
@@ -148,7 +147,7 @@ export default function SettingsPage() {
               type="button"
               onClick={handleSaveName}
               disabled={saving || !displayName.trim() || displayName.trim() === currentName}
-              className="px-4 py-2.5 rounded-md text-sm font-medium bg-court text-cream hover:-translate-y-px transition-transform disabled:opacity-50 disabled:translate-y-0 disabled:cursor-not-allowed dark:bg-court-deep dark:hover:bg-court"
+              className="px-4 py-2.5 rounded-md text-sm font-medium bg-court text-cream hover:-translate-y-px transition-transform disabled:opacity-50 disabled:translate-y-0 disabled:cursor-not-allowed"
             >
               {saving ? 'Saving.' : 'Save'}
             </button>
@@ -157,8 +156,8 @@ export default function SettingsPage() {
             <p
               className={`text-xs mt-2 ${
                 saveMsg.kind === 'ok'
-                  ? 'text-court dark:text-court-light'
-                  : 'text-clay dark:text-clay-soft'
+                  ? 'text-court'
+                  : 'text-clay'
               }`}
             >
               {saveMsg.text}
@@ -181,31 +180,12 @@ export default function SettingsPage() {
             readOnly
             className="w-full rounded-md px-3 py-2.5 text-sm bg-shade text-ink-soft border border-line cursor-not-allowed"
           />
-          <p className="text-ink-mute text-xs mt-2">
-            Need to change this? <em>Contact support</em>.
-          </p>
-        </div>
-      </section>
-
-      {/* Appearance */}
-      <section className="cc-card p-7 mb-6">
-        <h2 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court dark:text-court-light mb-5">
-          Appearance
-        </h2>
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-ink text-base font-medium">Theme</p>
-            <p className="text-ink-soft text-sm mt-0.5">
-              Cream paper by day, stadium at night. Tap to flip.
-            </p>
-          </div>
-          <ThemeToggle />
         </div>
       </section>
 
       {/* Account */}
       <section className="cc-card p-7">
-        <h2 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court dark:text-court-light mb-5">
+        <h2 className="font-mono uppercase tracking-[0.16em] text-[0.7rem] text-court mb-5">
           Account
         </h2>
 
@@ -220,7 +200,7 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={() => setConfirmSignOut(true)}
-              className="px-4 py-2.5 rounded-md text-sm font-medium border border-clay text-clay hover:bg-clay hover:text-cream transition-colors dark:border-clay-soft dark:text-clay-soft dark:hover:bg-clay-soft dark:hover:text-cream"
+              className="px-4 py-2.5 rounded-md text-sm font-medium border border-clay text-clay hover:bg-clay hover:text-cream transition-colors"
             >
               Sign out
             </button>

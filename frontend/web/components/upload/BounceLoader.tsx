@@ -17,7 +17,7 @@ export default function BounceLoader({ size = 380 }: { size?: number }) {
       aria-hidden="true"
     >
       <video
-        className="block h-auto w-full motion-reduce:hidden dark:invert dark:hue-rotate-180"
+        className="block h-auto w-full motion-reduce:hidden"
         autoPlay
         muted
         loop
@@ -32,7 +32,7 @@ export default function BounceLoader({ size = 380 }: { size?: number }) {
       <img
         src="/Bounce_Still.png"
         alt=""
-        className="hidden h-auto w-full motion-reduce:block dark:invert dark:hue-rotate-180"
+        className="hidden h-auto w-full motion-reduce:block"
       />
     </div>
   );
