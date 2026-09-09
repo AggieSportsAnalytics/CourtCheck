@@ -335,6 +335,284 @@ def compute_bounce_positions(
     return out
 
 
+def _swing_side(swing):
+    """P1 (track_id > 0) is near, expects far-side bounces; P2 is far,
+    expects near-side bounces."""
+    try:
+        tid = int(swing.get("track_id", 1))
+    except (TypeError, ValueError):
+        return "far"
+    return "far" if tid > 0 else "near"
+
+
+def _side_matches(bounce_side, expected_side):
+    return bounce_side == expected_side or bounce_side == "net"
+
+
+def pair_bounces_to_swings(sorted_bounces, bounce_positions, swing_events, fps=30.0):
+    """Two-pass, side-aware pairing of bounce frames to swing events.
+
+    Single source of truth shared by build_shots (frontend courtmaps) and the
+    in-video minimap render, so both show exactly the same paired bounces.
+
+    PASS 1 (strict, sequential): each swing claims the first still-unpaired
+    bounce inside its window [peak_frame, next_peak_frame) on the OPPOSITE half
+    (P1 swing -> far-side bounce; P2 swing -> near-side bounce). Net-line
+    bounces are claimable by either side.
+    PASS 2 (fallback, nearest-within-window, side-aware): any plausible bounce
+    still unpaired takes the nearest same-side swing within FALLBACK_WINDOW.
+    Bounces with no same-side swing in either window stay unpaired (orphans —
+    correct for P2 return bounces, which we don't classify yet).
+
+    Args:
+        sorted_bounces: ascending list of bounce frame indices, already
+            restricted to bounces present in bounce_positions.
+        bounce_positions: {frame_idx: {"side": ...}} from compute_bounce_positions.
+        swing_events: list of swing dicts with peak_frame + track_id.
+        fps: video fps (for the fallback time window).
+
+    Returns:
+        (bounce_to_swing: dict[int, dict], stats: dict)
+    """
+    all_swings_sorted = sorted(swing_events, key=lambda e: int(e.get("peak_frame", 0)))
+    bounce_to_swing: dict[int, dict] = {}
+
+    # ----- PASS 1: strict sequential, side-aware -----
+    strict_paired = 0
+    for i, swing in enumerate(all_swings_sorted):
+        if not swing.get("contact_ok", True):
+            continue  # swing failed the ball-proximity gate — not a real stroke
+        pf = int(swing.get("peak_frame", -1))
+        if pf < 0:
+            continue
+        next_pf = (
+            int(all_swings_sorted[i + 1].get("peak_frame", -1))
+            if i + 1 < len(all_swings_sorted)
+            else None
+        )
+        expected = _swing_side(swing)
+        for candidate in sorted_bounces:
+            if candidate <= pf:
+                continue
+            if next_pf is not None and candidate >= next_pf:
+                break
+            if candidate in bounce_to_swing:
+                continue
+            cand_side = bounce_positions[candidate]["side"]
+            if not _side_matches(cand_side, expected):
+                continue
+            bounce_to_swing[candidate] = swing
+            strict_paired += 1
+            break
+
+    # ----- PASS 2: nearest-within-window fallback, side-aware -----
+    FALLBACK_WINDOW_FRAMES = int(round(2.5 * (fps or 30.0)))
+    swing_peaks_with_event = [
+        (int(s.get("peak_frame", -1)), s)
+        for s in all_swings_sorted
+        if int(s.get("peak_frame", -1)) >= 0 and s.get("contact_ok", True)
+    ]
+    fallback_paired = 0
+    for bframe in sorted_bounces:
+        if bframe in bounce_to_swing:
+            continue
+        cand_side = bounce_positions[bframe]["side"]
+        best_swing = None
+        best_dist = FALLBACK_WINDOW_FRAMES + 1
+        for pf, swing in swing_peaks_with_event:
+            if not _side_matches(cand_side, _swing_side(swing)):
+                continue
+            d = abs(bframe - pf)
+            if d < best_dist:
+                best_dist = d
+                best_swing = swing
+        if best_swing is not None and best_dist <= FALLBACK_WINDOW_FRAMES:
+            bounce_to_swing[bframe] = best_swing
+            fallback_paired += 1
+
+    return bounce_to_swing, {
+        "strict": strict_paired,
+        "fallback": fallback_paired,
+        "total": len(sorted_bounces),
+    }
+
+
+# Frames each side of the swing peak to scan for the ball.
+SWING_GATE_SCAN_HALF = 8
+
+
+def detect_far_player_contacts(
+    ball_track,
+    homography_matrices,
+    court_ref,
+    bounce_frames,
+    exclude_window: int = 10,
+):
+    """Infer P2 (far player) hits from the ball trajectory.
+
+    The far player is too small for pose-based swing detection, so we read her
+    contacts off the ball instead: a y-direction reversal that occurs while the
+    ball is on the far half is P2 sending the ball back toward the near court.
+
+    A bounce is also a direction reversal, so reversals within +/-exclude_window
+    frames of a detected bounce are dropped — we only want racket contacts, not
+    the ball kicking up off the court.
+
+    Returns swing-event dicts (track_id = -1000, no stroke label) ready to feed
+    pair_bounces_to_swings, which will attach the resulting near-side bounce.
+    """
+    net_y = court_ref.net[0][1]
+    bounce_list = sorted(int(b) for b in bounce_frames)
+    contacts = []
+    for f in detect_shot_frames(ball_track):
+        if any(abs(f - b) <= exclude_window for b in bounce_list):
+            continue  # coincides with a bounce — that's the ball kicking up, not a hit
+        if f >= len(ball_track) or f >= len(homography_matrices):
+            continue
+        bp = ball_track[f]
+        H = homography_matrices[f]
+        if bp is None or bp[0] is None or H is None:
+            continue
+        pt = np.array([[[float(bp[0]), float(bp[1])]]], dtype=np.float32)
+        try:
+            m = cv2.perspectiveTransform(pt, H)
+        except cv2.error:
+            continue
+        if float(m[0, 0, 1]) >= net_y:
+            continue  # ball not on the far half — not a P2 contact
+        contacts.append({
+            "peak_frame": int(f),
+            "track_id": -1000,
+            "label": None,
+            "contact_ok": True,
+            "window_start": max(0, int(f) - 7),
+            "window_end": int(f) + 7,
+        })
+    return contacts
+
+
+def ball_arrived_from_other_side(
+    bounce_idx,
+    bounce_side,
+    ball_track,
+    homography_matrices,
+    court_ref,
+    lookback: int = 45,
+) -> bool:
+    """True if the ball crossed the net to reach this bounce.
+
+    A real rally bounce is preceded by the ball traveling from the OTHER half
+    (a near-side bounce <- ball came from the far half; a far-side bounce <- ball
+    came from the near half). A spurious detector bounce, where the ball never
+    actually traveled to that spot, has no such crossing and is filtered out.
+
+    This is the signal for which bounces to render — robust to sparse far-side
+    tracking and unreliable far-player swing detection, because it only needs a
+    few tracked ball points spanning the net (well-tracked mid-court).
+
+    Returns True for net-line bounces and when it cannot evaluate, so the gate
+    never silently drops on missing data.
+    """
+    if bounce_side not in ("near", "far"):
+        return True
+    net_y = court_ref.net[0][1]
+    want_far_before = bounce_side == "near"  # near bounce -> ball was on far half
+    start = max(0, int(bounce_idx) - lookback)
+    for f in range(start, int(bounce_idx)):
+        if f >= len(ball_track) or f >= len(homography_matrices):
+            continue
+        bp = ball_track[f]
+        H = homography_matrices[f]
+        if bp is None or bp[0] is None or H is None:
+            continue
+        pt = np.array([[[float(bp[0]), float(bp[1])]]], dtype=np.float32)
+        try:
+            m = cv2.perspectiveTransform(pt, H)
+        except cv2.error:
+            continue
+        on_far = float(m[0, 0, 1]) < net_y
+        if on_far == want_far_before:
+            return True
+    return False
+
+
+def swing_ball_on_hitter_side(
+    ev,
+    ball_track,
+    homography_matrices,
+    court_ref,
+    scan_half: int = SWING_GATE_SCAN_HALF,
+) -> bool:
+    """Side-based gate for a swing event.
+
+    A swing counts as a real stroke only if the ball is on the swinger's own
+    side of the net at some frame within +/-`scan_half` of the swing peak:
+      - P1 (track_id > 0, near): ball on the near half (court_y > net_y).
+      - P2 (track_id < 0, far):  ball on the far half  (court_y < net_y).
+
+    This rejects racket motion that fires while the ball is across the court
+    (the false strokes that registered phantom bounces). Unlike a tight
+    player-proximity threshold it does NOT depend on detecting the (tiny, sparse)
+    far player or a precise ball<->player distance.
+
+    Two ways to pass:
+      1. The ball is seen on the swinger's own half at some frame in the window.
+      2. The ball is APPROACHING the swinger before the peak (court_y trending
+         toward their baseline). This catches occluded contacts — on a backhand
+         the body often hides the ball at impact, so it's only tracked incoming
+         and outgoing on the far side and never explicitly on the near half;
+         the approach trend still confirms it was a real receive.
+
+    Returns True when it cannot evaluate (no homography / no ball in the window)
+    so the gate never silently drops a swing on missing data.
+    """
+    try:
+        pf = int(ev.get("peak_frame", -1))
+        tid = int(ev.get("track_id", 1))
+    except (TypeError, ValueError):
+        return True
+    if pf < 0:
+        return True
+
+    net_y = court_ref.net[0][1]
+    expect_near = tid > 0  # P1 hits on the near half; P2 on the far half
+
+    scan_start = max(0, pf - scan_half)
+    scan_end = min(len(ball_track), len(homography_matrices), pf + scan_half + 1)
+    evaluable = False
+    pre_peak_ys: list[float] = []  # tracked ball court_y from scan_start..peak
+    for f in range(scan_start, scan_end):
+        bp = ball_track[f]
+        if bp is None or bp[0] is None:
+            continue
+        H = homography_matrices[f]
+        if H is None:
+            continue
+        pt = np.array([[[float(bp[0]), float(bp[1])]]], dtype=np.float32)
+        try:
+            m = cv2.perspectiveTransform(pt, H)
+        except cv2.error:
+            continue
+        evaluable = True
+        court_y = float(m[0, 0, 1])
+        if f <= pf:
+            pre_peak_ys.append(court_y)
+        if (court_y > net_y) == expect_near:
+            return True
+
+    if not evaluable:
+        return True
+
+    # Occluded-contact fallback: ball never seen on the hitter's half, but was
+    # trending toward it before the peak (a real receive whose impact frame was
+    # hidden). court_y increasing = toward near (P1); decreasing = toward far (P2).
+    if len(pre_peak_ys) >= 2:
+        approaching_near = pre_peak_ys[-1] > pre_peak_ys[0]
+        if approaching_near == expect_near:
+            return True
+    return False
+
+
 def build_shots(
     bounces,
     ball_track,
@@ -474,92 +752,18 @@ def build_shots(
         "Serve/Overhead": "serve",
     }
 
-    # Two-pass side-aware pairing:
-    #   PASS 1 (strict, sequential) — each swing scans forward through valid
-    #   bounces inside its window [peak_frame, next_peak_frame) and claims the
-    #   first one on the OPPOSITE half (P1 swings → far-side bounce; P2 swings
-    #   → near-side bounce). Net-line bounces (37 ≤ svg_y ≤ 41) are claimable
-    #   by either side.
-    #
-    #   PASS 2 (fallback, nearest within window, side-aware) — any plausible
-    #   bounce still unpaired gets the label of the NEAREST swing within
-    #   FALLBACK_WINDOW seconds whose side matches. Catches:
-    #     - bounces past the LAST swing
-    #     - bounces between two swings that were too clustered for strict claim
-    #
-    # Bounces with NO same-side swing in either window stay "unknown" — this
-    # is correct for opponent (P2) return bounces, since we don't classify P2's
-    # strokes today.
+    # Side-aware bounce<->swing pairing (shared with the minimap render so both
+    # show the same paired bounces). See pair_bounces_to_swings for the two-pass
+    # strict+fallback logic. Unpaired bounces stay "unknown" below — correct for
+    # opponent (P2) return bounces, which we don't classify yet.
     sorted_bounces = sorted(int(b) for b in bounces if int(b) in bounce_positions)
-    bounce_to_swing: dict[int, dict] = {}
-
-    def _swing_side(swing):
-        """P1 (track_id > 0) is near, expects far-side bounces; P2 is far,
-        expects near-side bounces."""
-        try:
-            tid = int(swing.get("track_id", 1))
-        except (TypeError, ValueError):
-            return "far"
-        return "far" if tid > 0 else "near"
-
-    def _side_matches(bounce_side, expected_side):
-        return bounce_side == expected_side or bounce_side == "net"
-
-    # ----- PASS 1: strict sequential, side-aware -----
-    strict_paired = 0
-    for i, swing in enumerate(all_swings_sorted):
-        pf = int(swing.get("peak_frame", -1))
-        if pf < 0:
-            continue
-        next_pf = (
-            int(all_swings_sorted[i + 1].get("peak_frame", -1))
-            if i + 1 < len(all_swings_sorted)
-            else None
-        )
-        expected = _swing_side(swing)
-        for candidate in sorted_bounces:
-            if candidate <= pf:
-                continue
-            if next_pf is not None and candidate >= next_pf:
-                break
-            if candidate in bounce_to_swing:
-                continue
-            cand_side = bounce_positions[candidate]["side"]
-            if not _side_matches(cand_side, expected):
-                continue
-            bounce_to_swing[candidate] = swing
-            strict_paired += 1
-            break
-
-    # ----- PASS 2: nearest-within-window fallback, side-aware -----
-    FALLBACK_WINDOW_FRAMES = int(round(2.5 * (fps or 30.0)))
-    swing_peaks_with_event = [
-        (int(s.get("peak_frame", -1)), s)
-        for s in all_swings_sorted
-        if int(s.get("peak_frame", -1)) >= 0
-    ]
-    fallback_paired = 0
-    for bframe in sorted_bounces:
-        if bframe in bounce_to_swing:
-            continue
-        cand_side = bounce_positions[bframe]["side"]
-        best_swing = None
-        best_dist = FALLBACK_WINDOW_FRAMES + 1
-        for pf, swing in swing_peaks_with_event:
-            if not _side_matches(cand_side, _swing_side(swing)):
-                continue
-            d = abs(bframe - pf)
-            if d < best_dist:
-                best_dist = d
-                best_swing = swing
-        if best_swing is not None and best_dist <= FALLBACK_WINDOW_FRAMES:
-            bounce_to_swing[bframe] = best_swing
-            fallback_paired += 1
-
+    bounce_to_swing, _pair_stats = pair_bounces_to_swings(
+        sorted_bounces, bounce_positions, swing_events, fps
+    )
     print(
-        f"[Shots] Paired {len(bounce_to_swing)}/{len(sorted_bounces)} bounces "
-        f"(strict={strict_paired}, fallback={fallback_paired}, "
-        f"orphan={len(sorted_bounces) - len(bounce_to_swing)})",
+        f"[Shots] Paired {len(bounce_to_swing)}/{_pair_stats['total']} bounces "
+        f"(strict={_pair_stats['strict']}, fallback={_pair_stats['fallback']}, "
+        f"orphan={_pair_stats['total'] - len(bounce_to_swing)})",
         flush=True,
     )
 
@@ -1685,6 +1889,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         ball_detector = BallDetector(
             path_model=os.path.join(WEIGHTS_DIR, config.ball_model_weights),
             device=device,
+            infer_width=config.ball_infer_width,
+            infer_height=config.ball_infer_height,
         )
 
         # Lazy-load: only needed when calibration is absent
@@ -1933,9 +2139,11 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 ball_track=ball_track,
                 player_detections=player_detections,
             )
-            # frame_stroke_labels: {frame_idx: {track_id: label}}
-            # Populated for the 30 frames after each swing peak so Pass 2 can draw it.
-            frame_stroke_labels: dict[int, dict[int, str]] = {}
+            # Classify each swing's stroke (stored on the event). The
+            # ball-proximity gate, stroke counts, and frame_stroke_labels are
+            # applied later, once homography is available, so false swings
+            # (racket motion while the ball is across the court) never register
+            # a stroke or claim a bounce.
             for event in swing_events:
                 # Only the near player (positive track_id) is bound to a
                 # roster player_id and therefore has a known handedness.
@@ -1953,12 +2161,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 )
                 _probs, label = pose_stroke_classifier.predict(seq)
                 event["label"] = label
-                pose_stroke_counts[label] = pose_stroke_counts.get(label, 0) + 1
-                # Show label from peak frame for 30 frames
-                display_end = min(total_frames - 1, event["peak_frame"] + 30)
-                for f in range(event["peak_frame"], display_end + 1):
-                    frame_stroke_labels.setdefault(f, {})[event["track_id"]] = label
-            print(f"[Stroke] {len(swing_events)} swings → FH={pose_stroke_counts.get('Forehand',0)} BH={pose_stroke_counts.get('Backhand',0)} Srv={pose_stroke_counts.get('Serve/Overhead',0)}")
+            print(f"[Stroke] {len(swing_events)} swings detected (pre-gate)")
 
         update_progress(0.5, "Detecting bounce points and stroke types")
 
@@ -1988,17 +2191,117 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             last_H_ref = calibrated_H_ref
             last_kps = calibrated_keypoints  # use saved keypoints to draw court lines
 
-        # Pre-compute the valid-bounce set BEFORE Pass 2 so the minimap render
-        # filters out detector noise. Production runs (UC Davis, St Mary's) are
-        # always calibrated, so homography_matrices is fully populated above and
-        # this captures the true valid set. Uncalibrated dev runs fall back to
-        # the raw set (minimap shows everything; build_shots still filters
-        # after Pass 2 via the canonical recompute).
+        # ---------- Build the final swing set (P1 pose + P2 ball-contacts) ----------
+        # P1 (near): keep pose swings that pass the ball-side gate — these are
+        # reliable and carry a classified stroke label. The gate rejects racket
+        # motion that fires while the ball is across the court (the false strokes
+        # that registered phantom bounces).
+        # P2 (far): the far player is too small for pose-based swing detection,
+        # so her hits are inferred from the ball — a far-side direction reversal
+        # is P2 sending the ball back. These register a near-side bounce but are
+        # NOT classified or labeled (too small to read the stroke).
+        # Calibrated runs only (both need homography); uncalibrated dev runs keep
+        # the raw pose swings untouched.
+        if config.enable_stroke_recognition and swing_events:
+            gate_on = calibrated_H_ref is not None
+            if gate_on:
+                p1_swings = []
+                for ev in swing_events:
+                    if int(ev.get("track_id", 1)) <= 0:
+                        continue  # drop unreliable pose-based far swings
+                    ev["contact_ok"] = swing_ball_on_hitter_side(
+                        ev, ball_track, homography_matrices, court_ref
+                    )
+                    p1_swings.append(ev)
+                p2_contacts = detect_far_player_contacts(
+                    ball_track, homography_matrices, court_ref, bounces_all
+                )
+                swing_events = p1_swings + p2_contacts
+
+                pose_stroke_counts = {"Forehand": 0, "Backhand": 0, "Serve/Overhead": 0}
+                frame_stroke_labels = {}
+                p1_valid = 0
+                for ev in p1_swings:
+                    if not ev.get("contact_ok", True):
+                        continue
+                    p1_valid += 1
+                    label = ev.get("label")
+                    if not label:
+                        continue
+                    pose_stroke_counts[label] = pose_stroke_counts.get(label, 0) + 1
+                    display_end = min(total_frames - 1, int(ev["peak_frame"]) + 30)
+                    for f in range(int(ev["peak_frame"]), display_end + 1):
+                        frame_stroke_labels.setdefault(f, {})[ev["track_id"]] = label
+                print(
+                    f"[Stroke] P1 {p1_valid}/{len(p1_swings)} pose swings passed ball-side gate "
+                    f"(FH={pose_stroke_counts.get('Forehand', 0)} "
+                    f"BH={pose_stroke_counts.get('Backhand', 0)} "
+                    f"Srv={pose_stroke_counts.get('Serve/Overhead', 0)}) "
+                    f"+ P2 {len(p2_contacts)} ball-contacts"
+                )
+                # Diagnostic: per-stroke gate pass/fail (is the gate eating backhands?)
+                _gate = {}
+                for ev in p1_swings:
+                    lbl = ev.get("label", "?")
+                    p, t = _gate.get(lbl, (0, 0))
+                    _gate[lbl] = (p + (1 if ev.get("contact_ok") else 0), t + 1)
+                print("[Diag] P1 gate by stroke (pass/total): "
+                      + ", ".join(f"{k}={p}/{t}" for k, (p, t) in sorted(_gate.items())))
+                # Diagnostic: WHERE do P1 swings + drawn labels fall in time?
+                _all_pf = sorted(int(e["peak_frame"]) for e in p1_swings)
+                _pass_pf = sorted(int(e["peak_frame"]) for e in p1_swings if e.get("contact_ok"))
+                _lbl_frames = sorted(frame_stroke_labels.keys())
+                def _fr(lst):
+                    return f"{lst[0]}..{lst[-1]} (n={len(lst)})" if lst else "none"
+                print(f"[Diag] P1 swing peak_frames: all={_fr(_all_pf)} passed={_fr(_pass_pf)} "
+                      f"| label frames drawn={_fr(_lbl_frames)} of total={total_frames}")
+            else:
+                for ev in swing_events:
+                    ev["contact_ok"] = True
+
+        # Pre-compute the minimap bounce set BEFORE Pass 2. A bounce renders only
+        # if the ball actually CROSSED THE NET to reach it (a real rally shot) —
+        # this keeps both players' genuine bounces while dropping detector noise
+        # where the ball never traveled there. Far-side dots are additionally
+        # colored by the P1 stroke that produced them (via the swing pairing).
+        # Production runs (UC Davis, St Mary's) are always calibrated, so
+        # homography_matrices is fully populated above. Uncalibrated dev runs have
+        # no reliable side classification, so they fall back to the raw set.
+        bounce_strokes_for_minimap: dict[int, str] = {}
         if calibrated_H_ref is not None and bounces_all:
             bounce_positions_render = compute_bounce_positions(
                 bounces_all, ball_track, homography_matrices, court_ref,
             )
-            bounces_for_minimap = set(bounce_positions_render.keys())
+            sorted_render_bounces = sorted(bounce_positions_render.keys())
+            bounces_for_minimap = {
+                b for b in sorted_render_bounces
+                if ball_arrived_from_other_side(
+                    b, bounce_positions_render[b]["side"],
+                    ball_track, homography_matrices, court_ref,
+                )
+            }
+            # Far-side coloring: label each shown bounce by the P1 stroke that
+            # produced it (swing pairing). Unpaired shown bounces fall back to
+            # the default bounce color.
+            bounce_to_swing_render, _ = pair_bounces_to_swings(
+                sorted_render_bounces, bounce_positions_render, swing_events, fps
+            )
+            bounce_strokes_for_minimap = {
+                bidx: ev.get("label", "")
+                for bidx, ev in bounce_to_swing_render.items()
+            }
+            print(
+                f"[Minimap] showing {len(bounces_for_minimap)}/{len(sorted_render_bounces)} "
+                f"bounces (ball crossed the net to reach them)"
+            )
+            # Diagnostic: near (P2 lands) vs far (P1 lands) — detected vs shown.
+            def _side_counts(idxs):
+                c = {"near": 0, "far": 0, "net": 0}
+                for b in idxs:
+                    c[bounce_positions_render[b].get("side", "net")] = c.get(bounce_positions_render[b].get("side", "net"), 0) + 1
+                return c
+            print(f"[Diag] bounces detected by side={_side_counts(sorted_render_bounces)} "
+                  f"shown by side={_side_counts(bounces_for_minimap)}")
         else:
             bounces_for_minimap = set(bounces_all)
 
@@ -2053,6 +2356,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 trace_color=config.ball_trace_color,
                 trace_min_alpha=config.ball_trace_min_alpha,
                 frame_stroke_labels=frame_stroke_labels,
+                bounce_strokes=bounce_strokes_for_minimap,
             )
             if frame_idx < len(player_detections):
                 minimap = draw_minimap_players(

@@ -282,6 +282,7 @@ def draw_minimap_ball_and_bounces(
     trace_min_alpha=0.3,
     bounce_color=(0, 255, 255),
     frame_stroke_labels=None,
+    bounce_strokes=None,
 ):
     """
     Draw ball trace and accumulated bounces on the minimap.
@@ -296,9 +297,12 @@ def draw_minimap_ball_and_bounces(
         dots invisible — clamping at ~0.3 keeps the full comet tail
         readable on the minimap.
     frame_stroke_labels: dict[int, dict[int, str]] mapping frame_idx ->
-        {track_id -> stroke label}.  When provided, each bounce dot is
-        colored by the stroke type that produced it instead of the
-        uniform bounce_color.
+        {track_id -> stroke label}.  Legacy fallback coloring (looks up the
+        bounce frame, which usually misses since the swing precedes the bounce).
+    bounce_strokes: dict[int, str] mapping bounce_frame -> classifier stroke
+        label, from the canonical bounce<->swing pairing. Preferred source for
+        far-side dot color; when a bounce isn't in this map it was an unpaired
+        orphan and the caller filters it out of `bounces` entirely.
     """
 
     if homography_inv is None:
@@ -374,6 +378,10 @@ def draw_minimap_ball_and_bounces(
         dot_color = bounce_color
         if on_near_side:
             dot_color = _NEAR_SIDE_BOUNCE_COLOR
+        elif bounce_strokes and bounce_idx in bounce_strokes:
+            # Far-side bounce paired to a P1 swing — color by that stroke
+            # (canonical pairing, matches the dashboard shot map).
+            dot_color = STROKE_COLORS_BGR.get(bounce_strokes[bounce_idx], _STROKE_BOUNCE_DEFAULT)
         elif frame_stroke_labels is not None:
             labels_at_bounce = frame_stroke_labels.get(bounce_idx, {})
             if labels_at_bounce:
