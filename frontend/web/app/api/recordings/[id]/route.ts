@@ -40,7 +40,7 @@ export async function GET(
 
     const { id } = await params;
 
-    const FULL_COLS = "id, name, status, progress, processing_stage, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, player_shot_map_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, scouting_report, player_id, keypoints, notes, shots, coverage_grid, position_summary, net_approach_summary, error_summary, rallies, rally_summary";
+    const FULL_COLS = "id, name, status, progress, processing_stage, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, player_shot_map_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, scouting_report, player_id, favorited, keypoints, notes, shots, coverage_grid, position_summary, net_approach_summary, error_summary, rallies, rally_summary";
     // Pre-migration safety: if a column the API references hasn't been added
     // to `matches` yet, Postgres returns "column matches.<name> does not
     // exist". Retry up to N times, each time stripping ONLY the column named
@@ -50,6 +50,7 @@ export async function GET(
     // net approach) the moment a newer column landed mid-deploy.
     const OPTIONAL_COLS = new Set([
       "processing_stage",
+      "favorited",
       "shots",
       "coverage_grid",
       "position_summary",
@@ -164,6 +165,7 @@ export async function GET(
         inBoundsBounces: data.in_bounds_bounces ?? null,
         outBoundsBounces: data.out_bounds_bounces ?? null,
         scoutingReport: data.scouting_report ?? null,
+        favorited: data.favorited ?? false,
         playerId: data.player_id ?? null,
         playerHandedness,
         keypoints: data.keypoints ?? [],
@@ -231,6 +233,10 @@ export async function PATCH(
       if (!name) return NextResponse.json({ error: 'Name cannot be empty' }, { status: 400 });
       if (name.length > 100) return NextResponse.json({ error: 'Name too long (max 100 characters)' }, { status: 400 });
       updates.name = name;
+    }
+
+    if (typeof body.favorited === 'boolean') {
+      updates.favorited = body.favorited;
     }
 
     if (Array.isArray(body.notes)) {
@@ -324,7 +330,7 @@ export async function DELETE(
     // Fetch row first to get storage paths and verify ownership
     const { data, error: fetchError } = await supabaseAdmin
       .from("matches")
-      .select("id, input_path, results_path, bounce_heatmap_path, player_heatmap_path")
+      .select("id, input_path, results_path, bounce_heatmap_path, player_heatmap_path, player_shot_map_path")
       .eq("id", id)
       .eq("user_id", user.id)
       .single();
@@ -359,6 +365,7 @@ export async function DELETE(
       data.results_path,
       data.bounce_heatmap_path,
       data.player_heatmap_path,
+      data.player_shot_map_path,
     ].filter(Boolean) as string[];
 
     if (resultsPaths.length > 0) {
