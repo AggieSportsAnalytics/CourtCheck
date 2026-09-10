@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useMemo, useState, type RefObject } from 'react';
-import ShotMap, { SAMPLE_SHOTS, shotMapCounts, shotMapUnknownCount, type ShotDot } from '../viz/ShotMap';
-import Spacing, { SAMPLE_SPACING, spacingCounts, type SpacingShot } from '../viz/Spacing';
+import ShotMap, { shotMapCounts, shotMapUnknownCount, type ShotDot } from '../viz/ShotMap';
+import Spacing, { spacingCounts, type SpacingShot } from '../viz/Spacing';
 import Coverage from '../viz/Coverage';
 import Legend from '../viz/Legend';
 import { StrokeKey, STROKE_COLOR_BY_KEY } from '../viz/CourtSVG';
 import { PositionTile, type PositionSummary } from './CoachInsights';
 import CountUp from '@/components/ui/CountUp';
-import { isDemoMode } from '@/lib/demo/demoData';
+import Link from 'next/link';
 import { useEntranceReveal } from '../viz/useEntranceReveal';
 
 type VizMode = 'shotMap' | 'spacing' | 'coverage';
@@ -36,9 +36,8 @@ type Props = {
    *  mode's right rail so coaches see "where she stood" + "how often she
    *  stood at the baseline" side-by-side. */
   positionSummary?: PositionSummary | null;
-  /** Recording status — drives the Coverage empty state vs sample fallback. */
-  recordingStatus?: string;
   handedness?: 'right' | 'left' | null;
+  playerId?: string | null;
   /** Source video fps — fallback for seeking when a shot has no time_s. */
   fps?: number | null;
   /** Optional. When provided, clicking a bounce on the shot map opens a
@@ -153,8 +152,7 @@ function buildSpacingShots(shots: ApiShot[]): SpacingShot[] {
   return out;
 }
 
-export default function VizPanel({ shots = [], coverageGrid, positionSummary, recordingStatus, handedness, fps, videoRef }: Props) {
-  const demoMode = isDemoMode();
+export default function VizPanel({ shots = [], coverageGrid, positionSummary, handedness, playerId, fps, videoRef }: Props) {
   const [mode, setMode] = useState<VizMode>('shotMap');
   const [shotFilter, setShotFilter] = useState<StrokeKey | null>(null);
   const [spacingFilter, setSpacingFilter] = useState<StrokeKey | null>(null);
@@ -181,12 +179,11 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
 
   const head = HEAD[mode];
 
-  // Derive viz-shaped data from real shots; fall back to sample only when empty.
+  // Derive visual data from recorded shots only.
   const realDots = useMemo(() => buildShotMapDots(shots), [shots]);
   const realSpacing = useMemo(() => buildSpacingShots(shots), [shots]);
-  const shotDots: ShotDot[] = realDots.length > 0 ? realDots : SAMPLE_SHOTS;
-  const spacingShots: SpacingShot[] =
-    realSpacing.length > 0 ? realSpacing : SAMPLE_SPACING;
+  const shotDots: ShotDot[] = realDots;
+  const spacingShots: SpacingShot[] = realSpacing;
   const usingReal = realDots.length > 0;
 
   // Coverage: real grid if backend gave us a 12x8 with any non-zero cell.
@@ -267,15 +264,14 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
     return [compute('forehand'), compute('backhand'), compute('serve')];
   }, [realDots, usingReal]);
 
-  // Sample spacing can describe the demo, but never a real recording.
   const spacingInsight = useMemo(() => {
-    if (realSpacing.length === 0 && !demoMode) return null;
+    if (realSpacing.length === 0) return null;
     const jammed = spacingShots.filter((s) => s.q === 'jammed').length;
     const squeezed = spacingShots.filter((s) => s.q === 'squeezed').length;
     const ideal = spacingShots.filter((s) => s.q === 'ideal').length;
     const long = spacingShots.filter((s) => s.q === 'long').length;
     return { jammed, squeezed, ideal, long };
-  }, [spacingShots, realSpacing, demoMode]);
+  }, [spacingShots, realSpacing]);
 
   return (
     <div
@@ -292,7 +288,7 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
         <div className="text-ink-soft text-[1.02rem] mt-1">{head.sub}</div>
         {mode === 'shotMap' && handedness == null && (
           <p className="font-mono text-[0.82rem] text-ink-mute mt-2">
-            Assuming right-handed. Set handedness on the player profile if this player is a lefty; forehand and backhand labels depend on it.
+            Assuming right-handed. {playerId ? <Link href={`/players/${playerId}`} className="text-court underline">Set handedness on the player profile</Link> : 'Set handedness on the player profile'} if this player is a lefty; forehand and backhand labels depend on it.
           </p>
         )}
 
@@ -349,10 +345,14 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
               />
             )}
             {mode === 'spacing' && (
-              <Spacing shots={spacingShots} activeFilter={spacingFilter} />
+              realSpacing.length > 0 ? <Spacing shots={spacingShots} activeFilter={spacingFilter} /> : (
+                <div className="h-full flex items-center justify-center p-6 text-center text-ink-mute">
+                  Spacing data is unavailable for this recording.
+                </div>
+              )
             )}
             {mode === 'coverage' &&
-              (recordingStatus === 'done' && !usingRealCoverage ? (
+              (!usingRealCoverage ? (
                 <CoverageEmpty />
               ) : (
                 <Coverage grid={realCoverageGrid ?? undefined} />
@@ -360,33 +360,11 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
           </div>
           <div className="text-center font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute mt-2">
             {head.halfLabel}
-            {(() => {
-              // What "is sample" means per mode:
-              //   shotMap: no real bounces produced any dots
-              //   spacing: no real bounces had valid player+ball contact coords
-              //   coverage: backend didn't produce a non-empty coverage_grid
-              const isSample =
-                mode === 'shotMap'
-                  ? !usingReal
-                  : mode === 'spacing'
-                    ? realSpacing.length === 0
-                    : !usingRealCoverage;
-              if (mode === 'coverage' && recordingStatus === 'done' && !usingRealCoverage) {
-                return (
-                  <span className="ml-2 normal-case tracking-normal text-clay">
-                    · no coverage data
-                  </span>
-                );
-              }
-              if (isSample) {
-                return (
-                  <span className="ml-2 normal-case tracking-normal text-clay">
-                    · sample data
-                  </span>
-                );
-              }
-              return null;
-            })()}
+            {mode === 'shotMap' && !usingReal && (
+              <span className="block normal-case tracking-normal mt-1">
+                Fills in once the recording finishes processing.
+              </span>
+            )}
           </div>
         </div>
 
@@ -439,24 +417,13 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
               <QualityLegend />
               <MarkerLegend />
               <SpacingBarsMini counts={spacingInsight} />
-              {(spacingInsight || demoMode) && (
+              {spacingInsight && (
                 <CoachingInsight>
-                  {spacingInsight ? (
-                    <>
-                      <strong>{spacingInsight.ideal}</strong> shots at ideal
-                      extension. <strong>{spacingInsight.squeezed}</strong>{' '}
-                      squeezed,{' '}
-                      <strong>{spacingInsight.jammed}</strong> jammed (ball on
-                      top), <strong>{spacingInsight.long}</strong> reaching.
-                    </>
-                  ) : (
-                    <>
-                      <strong>23</strong> shots at ideal extension.{' '}
-                      <strong>8</strong> squeezed, <strong>2</strong> jammed
-                      (ball on top), <strong>4</strong> reaching. Step back a
-                      half-step on returns to clean up the squeezed shots.
-                    </>
-                  )}
+                  <strong>{spacingInsight.ideal}</strong> shots at ideal
+                  extension. <strong>{spacingInsight.squeezed}</strong>{' '}
+                  squeezed,{' '}
+                  <strong>{spacingInsight.jammed}</strong> jammed (ball on
+                  top), <strong>{spacingInsight.long}</strong> reaching.
                 </CoachingInsight>
               )}
             </>
@@ -470,27 +437,16 @@ export default function VizPanel({ shots = [], coverageGrid, positionSummary, re
               {positionSummary && positionSummary.n_frames > 0 && (
                 <PositionTile data={positionSummary} />
               )}
-              {(coverageInsight || demoMode) && (
+              {coverageInsight && (
                 <CoachingInsight>
-                  {coverageInsight ? (
+                  <strong>{coverageInsight.baselinePct}%</strong> of the
+                  recording was spent at the baseline third of the court.
+                  {coverageInsight.sideBias && coverageInsight.sidePct && (
                     <>
-                      <strong>{coverageInsight.baselinePct}%</strong> of the
-                      recording was spent at the baseline third of the court.
-                      {coverageInsight.sideBias && coverageInsight.sidePct && (
-                        <>
-                          {' '}
-                          Lateral bias toward the{' '}
-                          <strong>{coverageInsight.sideBias}</strong> (
-                          <strong>{coverageInsight.sidePct}%</strong> of time).
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <strong>82%</strong> of your recording was within 2 feet of
-                      the baseline. Only <strong>9%</strong> inside the service
-                      boxes. Stepping in on second-serve returns could shorten
-                      points.
+                      {' '}
+                      Lateral bias toward the{' '}
+                      <strong>{coverageInsight.sideBias}</strong> (
+                      <strong>{coverageInsight.sidePct}%</strong> of time).
                     </>
                   )}
                 </CoachingInsight>
@@ -878,7 +834,7 @@ function StrokeBarsMini({
               ? 'Forehand'
               : row.key === 'backhand'
                 ? 'Backhand'
-                : 'Serve';
+                : 'Serve/Overhead';
           const value = row[metricKey];
           return (
             <div

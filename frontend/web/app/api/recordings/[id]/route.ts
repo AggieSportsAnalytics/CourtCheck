@@ -9,6 +9,17 @@ import { checkRateLimit, rateLimitResponse, clientIp } from '@/lib/ratelimit';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// Older clients wrote these jsonb columns as JSON *strings* (three live rows still
+// hold "[{...}]"), which made every saved note invisible to the array guard in the UI.
+// Accept both shapes; the next PATCH rewrites the column as a real array.
+function parseJsonArray(value: unknown): unknown[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string') {
+    try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed : []; } catch { return []; }
+  }
+  return [];
+}
+
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -103,12 +114,15 @@ export async function GET(
     // Defaults to 'right' (no badge shown frontside) if the player isn't bound
     // or the handedness column hasn't been migrated yet.
     let playerHandedness: 'right' | 'left' | null = null;
+    let playerName: string | null = null;
     if (data.player_id) {
       const handednessRes = await supabaseAdmin
         .from("players")
-        .select("handedness")
+        .select("name, handedness")
         .eq("id", data.player_id)
+        .eq("user_id", user.id)
         .single();
+      playerName = handednessRes.data?.name ?? null;
       const h = (handednessRes.data as { handedness?: string } | null)?.handedness;
       if (h === 'left' || h === 'right') {
         playerHandedness = h;
@@ -148,6 +162,7 @@ export async function GET(
         stage: data.processing_stage || null,
         error: data.error || null,
         videoUrl,
+        inputPath: data.input_path ?? null,
         bounceHeatmapUrl,
         playerHeatmapUrl,
         playerShotMapUrl,
@@ -168,8 +183,9 @@ export async function GET(
         favorited: data.favorited ?? false,
         playerId: data.player_id ?? null,
         playerHandedness,
-        keypoints: data.keypoints ?? [],
-        notes: data.notes ?? [],
+        playerName,
+        keypoints: parseJsonArray(data.keypoints),
+        notes: parseJsonArray(data.notes),
         shots: Array.isArray(data.shots) ? data.shots : [],
         coverageGrid: Array.isArray(data.coverage_grid) ? data.coverage_grid : [],
         positionSummary: data.position_summary && typeof data.position_summary === "object" ? data.position_summary : null,
@@ -239,11 +255,16 @@ export async function PATCH(
       updates.favorited = body.favorited;
     }
 
+    if (body.notes !== undefined && (!Array.isArray(body.notes) || body.notes.length > 200)) {
+      return NextResponse.json({ error: 'Use up to 200 notes per recording.' }, { status: 400 });
+    }
     if (Array.isArray(body.notes)) {
       const validNotes = body.notes.every(
         (n: unknown) =>
           typeof n === 'object' && n !== null &&
           typeof (n as { timestamp_sec: number }).timestamp_sec === 'number' &&
+          Number.isFinite((n as { timestamp_sec: number }).timestamp_sec) &&
+          (n as { timestamp_sec: number }).timestamp_sec >= 0 &&
           typeof (n as { text: string }).text === 'string'
       );
       if (!validNotes) return NextResponse.json({ error: 'Invalid notes format' }, { status: 400 });
@@ -253,33 +274,45 @@ export async function PATCH(
       }));
     }
 
+    if (body.keypoints !== undefined && (!Array.isArray(body.keypoints) || body.keypoints.length > 500)) {
+      return NextResponse.json({ error: 'Use up to 500 keypoints per recording.' }, { status: 400 });
+    }
     if (Array.isArray(body.keypoints)) {
       // Validate each keypoint: { type, timestamp_sec }
       const valid = body.keypoints.every(
         (k: unknown) =>
           typeof k === 'object' && k !== null &&
           ['set_start', 'side_switch', 'cut'].includes((k as { type: string }).type) &&
-          typeof (k as { timestamp_sec: number }).timestamp_sec === 'number'
+          typeof (k as { timestamp_sec: number }).timestamp_sec === 'number' &&
+          Number.isFinite((k as { timestamp_sec: number }).timestamp_sec) &&
+          (k as { timestamp_sec: number }).timestamp_sec >= 0
       );
       if (!valid) return NextResponse.json({ error: 'Invalid keypoints format' }, { status: 400 });
-      updates.keypoints = body.keypoints;
+      updates.keypoints = body.keypoints.map((k: { type: string; timestamp_sec: number }) => ({
+        type: k.type,
+        timestamp_sec: k.timestamp_sec,
+      }));
     }
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
     }
 
-    const { error } = await supabaseAdmin
+    const { data: updatedRows, error } = await supabaseAdmin
       .from("matches")
       .update(updates)
       .eq("id", id)
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .select("id");
 
     if (error) {
       console.error("PATCH error", error);
       return NextResponse.json({ error: "Failed to update" }, { status: 500 });
     }
 
+    if (!updatedRows?.length) {
+      return NextResponse.json({ error: 'Recording not found' }, { status: 404 });
+    }
     return NextResponse.json(updates);
   } catch (e) {
     console.error(e);

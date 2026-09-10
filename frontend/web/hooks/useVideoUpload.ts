@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 // on long rallies. Server has no way to know duration before the upload lands,
 // so the gate is client-side; pair with the storage bucket size cap server-side.
 const MAX_DURATION_SEC = 15 * 60;
+const POLL_INTERVAL_MS = 1500;
+const MAX_POLL_FAILURES = 20;
 
 async function probeVideoDuration(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -19,12 +21,12 @@ async function probeVideoDuration(file: File): Promise<number> {
     video.onloadedmetadata = () => {
       const d = video.duration;
       cleanup();
-      if (!Number.isFinite(d) || d <= 0) reject(new Error('Could not read duration'));
+      if (!Number.isFinite(d) || d <= 0) reject(new Error('We could not read the recording length. Export an MP4 and try again.'));
       else resolve(d);
     };
     video.onerror = () => {
       cleanup();
-      reject(new Error('Could not load video metadata'));
+      reject(new Error('We could not read that recording. Export an MP4 and try again.'));
     };
     video.src = url;
   });
@@ -182,6 +184,13 @@ export function useVideoUpload(
     // let them resolve; concurrent ones will arrive out-of-order but the last
     // write wins, which is fine for a monotonically-increasing progress.
     let inFlight = false;
+    let consecutiveFailures = 0;
+    const controller = new AbortController();
+    pollAbortRef.current = controller;
+    const stopPolling = () => {
+      if (intervalRef.current !== null) clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    };
     intervalRef.current = setInterval(async () => {
       if (inFlight) return; // skip tick if previous is still running
       inFlight = true;
@@ -189,8 +198,23 @@ export function useVideoUpload(
         const t0 = performance.now();
         const res = await fetch(`/api/status?match_id=${id}`, {
           cache: 'no-store',
+          signal: controller.signal,
         });
+        if (controller.signal.aborted) return;
+        if (res.status === 401) {
+          stopPolling();
+          setStatus('failed');
+          setError('Your session expired. Sign in again and open Recordings to find this upload.');
+          return;
+        }
+        if (!res.ok) throw new Error(`Status request failed (${res.status})`);
         const data = await res.json();
+        if (controller.signal.aborted) return;
+        if (!['pending', 'processing', 'done', 'failed'].includes(data.status)) {
+          throw new Error('Invalid processing status');
+        }
+        consecutiveFailures = 0;
+        setError(null);
         const dtMs = Math.round(performance.now() - t0);
         // Diagnostic: log every poll response so we can see in browser devtools
         // whether the chain Modal → Supabase → /api/status → hook is alive.
@@ -217,11 +241,17 @@ export function useVideoUpload(
           }
         }
       } catch (err) {
+        if (controller.signal.aborted) return;
         console.error('Poll fetch error:', err);
+        consecutiveFailures += 1;
+        if (consecutiveFailures >= MAX_POLL_FAILURES) {
+          stopPolling();
+          setError('We lost contact with processing. Open Recordings to check on it.');
+        }
       } finally {
         inFlight = false;
       }
-    }, 1500);
+    }, POLL_INTERVAL_MS);
   }, []);
 
   const handleFile = useCallback(
@@ -239,7 +269,7 @@ export function useVideoUpload(
           const duration = await probeVideoDuration(file);
           if (duration > MAX_DURATION_SEC) {
             throw new Error(
-              `Video is ${formatMinSec(duration)} — please trim or split into ${formatMinSec(MAX_DURATION_SEC)} or shorter clips. (Long-match support is coming.)`,
+              `Recordings must be 15 minutes or shorter. This one is ${formatMinSec(duration)}. Trim it or split it into shorter recordings.`,
             );
           }
         } catch (err) {

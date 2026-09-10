@@ -109,6 +109,13 @@ export default function RecordingsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const [favoriteError, setFavoriteError] = useState<{ id: string; message: string } | null>(null);
+  useEffect(() => {
+    if (!favoriteError) return;
+    const timer = setTimeout(() => setFavoriteError(null), 4500);
+    return () => clearTimeout(timer);
+  }, [favoriteError]);
+
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkState, setBulkState] = useState<'idle' | 'confirming' | 'deleting'>('idle');
@@ -117,6 +124,7 @@ export default function RecordingsPage() {
   // Toggle a recording's favorite flag. Optimistically flip the SWR cache so
   // the star reacts instantly, persist via PATCH, and roll back on failure.
   async function toggleFavorite(id: string, next: boolean) {
+    setFavoriteError(null);
     mutate(
       (curr) =>
         curr
@@ -136,6 +144,7 @@ export default function RecordingsPage() {
       });
       if (!res.ok) throw new Error('Failed to update favorite');
     } catch {
+      setFavoriteError({ id, message: "Couldn't update favorite. Try again." });
       // Revert the optimistic flip.
       mutate(
         (curr) =>
@@ -596,6 +605,9 @@ export default function RecordingsPage() {
                         {rec.status !== 'done' &&
                           ` · ${rec.status === 'failed' ? 'Processing failed' : 'Processing'}`}
                       </span>
+                      {favoriteError?.id === rec.id && (
+                        <span role="alert" className="text-[0.82rem] text-clay">{favoriteError.message}</span>
+                      )}
                       {/* Desktop status line */}
                       {rec.status !== 'done' && (
                         <span className="hidden md:block text-[0.88rem] text-ink-mute">

@@ -2,9 +2,11 @@ import hmac
 import os
 import tempfile
 import time
+import uuid
 import modal
 import requests
 from fastapi import Request, HTTPException
+from fastapi.responses import JSONResponse
 
 app = modal.App("tennis-modal")
 
@@ -66,18 +68,25 @@ async def process_video(request: Request):
     ):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    payload = await request.json()
-    file_key = payload["file_key"]
-    match_id = payload["match_id"]
+    try:
+        payload = await request.json()
+        if not isinstance(payload, dict):
+            raise ValueError("Expected an object")
+        match_id = payload.get("match_id")
+        file_key = payload.get("file_key")
+        if not isinstance(match_id, str):
+            raise ValueError("Missing recording ID")
+        uuid.UUID(match_id)
+        if not isinstance(file_key, str) or not file_key.startswith(f"{match_id}/"):
+            raise ValueError("Storage key does not belong to the recording")
+        if any(part in ("", ".", "..") for part in file_key.split("/")):
+            raise ValueError("Invalid storage key")
+    except (ValueError, TypeError):
+        return JSONResponse({"error": "Invalid recording ID or storage key."}, status_code=400)
 
-    from supabase import create_client
+    supabase = None
 
-    supabase = create_client(
-        os.environ["SUPABASE_URL"],
-        os.environ["SUPABASE_SERVICE_ROLE_KEY"],
-    )
-
-    def _stage(stage: str, progress: float) -> None:
+    def _stage(stage: str, progress: float, *, failure: str | None = None) -> None:
         """Write an early-stage breadcrumb to Supabase so the UI shows what's
         happening during the 15-90s window between the trigger-process webhook
         and run_pipeline's heartbeat. Without this the page sat on
@@ -85,8 +94,14 @@ async def process_video(request: Request):
         for the entire Modal cold-start + download + import phase.
         Defensive on column-missing so an un-migrated environment still
         runs to completion."""
+        nonlocal supabase
         payload: dict = {"progress": round(float(progress), 3), "processing_stage": stage}
+        if failure:
+            payload = {**payload, "status": "failed", "error": failure}
         try:
+            if supabase is None:
+                from supabase import create_client
+                supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_ROLE_KEY"])
             supabase.table("matches").update(payload).eq("id", match_id).execute()
             print(f"[Stage] {stage} ({progress:.3f})", flush=True)
         except Exception as e:
@@ -97,55 +112,67 @@ async def process_video(request: Request):
             except Exception as e2:
                 print(f"[Stage] {stage} write failed: {e2}", flush=True)
 
-    _stage("Downloading recording", 0.008)
+    try:
+        from supabase import create_client
 
-    # Download video — preserve original filename so _resolve_camera_id can detect court number.
-    # Supabase storage occasionally returns 504 Gateway Timeout under load; retry with a
-    # fresh signed URL on each attempt (the URL itself is fine, but a fresh one is cheap insurance).
-    original_name = os.path.basename(file_key)
-    video_path = os.path.join(tempfile.gettempdir(), original_name)
+        supabase = create_client(
+            os.environ["SUPABASE_URL"],
+            os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+        )
 
-    download_attempts = 4
-    last_exc = None
-    for attempt in range(1, download_attempts + 1):
-        try:
-            signed = supabase.storage.from_("raw-videos").create_signed_url(
-                file_key,
-                expires_in=3600,
-            )
-            signed_url = signed["signedUrl"]
+        _stage("Downloading recording", 0.008)
 
-            # (connect, read) timeouts. Most stalls are read-side; 300s read covers
-            # multi-GB clips at typical CDN throughput while still failing fast on dead links.
-            with requests.get(signed_url, stream=True, timeout=(15, 300)) as r:
-                r.raise_for_status()
-                with open(video_path, "wb") as f:
-                    for chunk in r.iter_content(64 * 1024):
-                        if chunk:
-                            f.write(chunk)
-            break  # success
-        except (requests.exceptions.HTTPError,
-                requests.exceptions.ConnectionError,
-                requests.exceptions.ChunkedEncodingError,
-                requests.exceptions.Timeout) as exc:
-            last_exc = exc
-            status = getattr(getattr(exc, "response", None), "status_code", None)
-            # 4xx (other than 408/429) are real errors — don't retry
-            if status is not None and 400 <= status < 500 and status not in (408, 429):
-                raise
-            if attempt == download_attempts:
-                raise
-            backoff = min(60, 2 ** attempt)  # 2s, 4s, 8s, 16s (cap 60s)
-            print(f"[download] attempt {attempt}/{download_attempts} failed ({type(exc).__name__}: {exc}); retrying in {backoff}s")
-            time.sleep(backoff)
-    else:
-        # Should be unreachable — loop either breaks on success or raises on final attempt.
-        if last_exc is not None:
-            raise last_exc
+        # Download video — preserve original filename so _resolve_camera_id can detect court number.
+        # Supabase storage occasionally returns 504 Gateway Timeout under load; retry with a
+        # fresh signed URL on each attempt (the URL itself is fine, but a fresh one is cheap insurance).
+        original_name = os.path.basename(file_key)
+        video_path = os.path.join(tempfile.gettempdir(), original_name)
 
-    _stage("Loading models", 0.012)
+        download_attempts = 4
+        last_exc = None
+        for attempt in range(1, download_attempts + 1):
+            try:
+                signed = supabase.storage.from_("raw-videos").create_signed_url(
+                    file_key,
+                    expires_in=3600,
+                )
+                signed_url = signed["signedUrl"]
 
-    from backend.pipeline.run import run_pipeline
+                # (connect, read) timeouts. Most stalls are read-side; 300s read covers
+                # multi-GB clips at typical CDN throughput while still failing fast on dead links.
+                with requests.get(signed_url, stream=True, timeout=(15, 300)) as r:
+                    r.raise_for_status()
+                    with open(video_path, "wb") as f:
+                        for chunk in r.iter_content(64 * 1024):
+                            if chunk:
+                                f.write(chunk)
+                break  # success
+            except (requests.exceptions.HTTPError,
+                    requests.exceptions.ConnectionError,
+                    requests.exceptions.ChunkedEncodingError,
+                    requests.exceptions.Timeout) as exc:
+                last_exc = exc
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                # 4xx (other than 408/429) are real errors — don't retry
+                if status is not None and 400 <= status < 500 and status not in (408, 429):
+                    raise
+                if attempt == download_attempts:
+                    raise
+                backoff = min(60, 2 ** attempt)  # 2s, 4s, 8s, 16s (cap 60s)
+                print(f"[download] attempt {attempt}/{download_attempts} failed ({type(exc).__name__}: {exc}); retrying in {backoff}s")
+                time.sleep(backoff)
+        else:
+            # Should be unreachable — loop either breaks on success or raises on final attempt.
+            if last_exc is not None:
+                raise last_exc
+
+        _stage("Loading models", 0.012)
+
+        from backend.pipeline.run import run_pipeline
+    except Exception:
+        _stage("Processing could not start", 0, failure="Processing could not start. Press Reprocess to try again.")
+        raise
+
     result = run_pipeline(video_path, match_id)
 
     return result

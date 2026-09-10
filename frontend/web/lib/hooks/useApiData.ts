@@ -5,28 +5,14 @@
 // endpoints, so keying them through SWR gives stale-while-revalidate caching:
 // a revisit renders cached data instantly and revalidates in the background,
 // and concurrent requests for the same key dedup into one.
-//
-// Demo mode (?demo=1) short-circuits the network: the hook serves the
-// fabricated roster/recordings via `fallbackData` and passes a null key so SWR
-// never fetches.
 
 import useSWR, { type SWRConfiguration, type SWRResponse } from 'swr';
-import {
-  isDemoMode,
-  DEMO_PLAYERS,
-  DEMO_RECORDINGS,
-  DEMO_SUMMARY,
-} from '@/lib/demo/demoData';
 
 export const fetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Request failed (${res.status})`);
   return res.json();
 };
-
-function demoOn(): boolean {
-  return isDemoMode(typeof window !== 'undefined' ? window.location.search : null);
-}
 
 // Defaults: revalidate on focus/reconnect (SWR defaults) so the UI self-heals
 // without a manual refresh; keepPreviousData so navigating between pages shows
@@ -81,13 +67,8 @@ export interface RecordingsData {
 
 /** Players roster. Cached + deduped across the dashboard, list, and detail pages. */
 export function usePlayersData(): SWRResponse<PlayersData> {
-  const demo = demoOn();
-  return useSWR<PlayersData>(demo ? null : '/api/players', fetcher, {
+  return useSWR<PlayersData>('/api/players', fetcher, {
     ...BASE_CONFIG,
-    // Demo roster matches the API shape closely enough for the card views.
-    fallbackData: demo
-      ? ({ players: DEMO_PLAYERS } as unknown as PlayersData)
-      : undefined,
   });
 }
 
@@ -98,22 +79,16 @@ export function usePlayersData(): SWRResponse<PlayersData> {
  * hammering the DB on an idle list.
  */
 export function useRecordingsData(): SWRResponse<RecordingsData> {
-  const demo = demoOn();
-  return useSWR<RecordingsData>(demo ? null : '/api/recordings', fetcher, {
+  return useSWR<RecordingsData>('/api/recordings', fetcher, {
     ...BASE_CONFIG,
     refreshInterval: (latest) =>
       latest?.recordings?.some((r) => r.status === 'processing') ? 5000 : 0,
-    fallbackData: demo
-      ? ({ recordings: DEMO_RECORDINGS } as unknown as RecordingsData)
-      : undefined,
   });
 }
 
 // Loosely typed: the dashboard owns the full summary shape and casts on consume.
 export function useDashboardSummary(): SWRResponse<unknown> {
-  const demo = demoOn();
-  return useSWR<unknown>(demo ? null : '/api/dashboard/summary', fetcher, {
+  return useSWR<unknown>('/api/dashboard/summary', fetcher, {
     ...BASE_CONFIG,
-    fallbackData: demo ? (DEMO_SUMMARY as unknown) : undefined,
   });
 }

@@ -58,29 +58,26 @@ export async function GET(
 
     const { id } = await params;
 
+    const includeTemplates = !user.user_metadata?.onboarding_template;
+    const ownerFilter = includeTemplates ? `user_id.is.null,user_id.eq.${user.id}` : `user_id.eq.${user.id}`;
     let { data, error } = await supabaseAdmin
       .from('players')
       .select('id, name, position, year, photo_url, handedness, user_id, created_at')
       .eq('id', id)
+      .or(ownerFilter)
       .single();
     if (error && typeof error.message === 'string' && error.message.includes('does not exist')) {
       const retry = await supabaseAdmin
         .from('players')
-        .select('id, name, position, year, photo_url, created_at')
+        .select('id, name, position, year, photo_url, user_id, created_at')
         .eq('id', id)
+        .or(ownerFilter)
         .single();
       data = retry.data as typeof data;
       error = retry.error;
     }
 
     if (error || !data) {
-      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
-    }
-
-    // Restrict visibility: caller can see demo (user_id null) or own rows only.
-    // Using `as` to narrow the type since the legacy retry omits user_id.
-    const owner = (data as { user_id?: string | null }).user_id ?? null;
-    if (owner !== null && owner !== user.id) {
       return NextResponse.json({ error: 'Player not found' }, { status: 404 });
     }
 
@@ -112,7 +109,7 @@ export async function PATCH(
 
     const { id } = await params;
 
-    // Ownership check: only the row's owner can edit. Demo rows (user_id null)
+    // Ownership check: only the row's owner can edit. Template rows (user_id null)
     // are read-only for everyone. Returns 404 (not 403) for non-owned rows
     // to avoid leaking existence of other users' players.
     const { data: ownerRow, error: ownerErr } = await fetchPlayerForOwnershipCheck(id);

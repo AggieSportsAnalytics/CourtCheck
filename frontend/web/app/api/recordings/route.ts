@@ -94,6 +94,7 @@ export async function GET() {
       const { data: playerRows, error: playerErr } = await supabaseAdmin
         .from("players")
         .select("id, name")
+        .eq("user_id", user.id)
         .in("id", playerIds);
       if (playerErr) {
         // Non-fatal — fall back to no player names; UI will show "—".

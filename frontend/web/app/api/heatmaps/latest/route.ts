@@ -36,7 +36,8 @@ export async function GET() {
 
     if (error) {
       console.error('Latest heatmaps fetch error', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error('Summary query failed', error);
+      return NextResponse.json({ error: 'Could not load your summary. Refresh to try again.' }, { status: 500 });
     }
 
     const latest = data?.[0];
@@ -79,7 +80,7 @@ export async function GET() {
     });
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+    return NextResponse.json({ error: 'Could not load your summary. Refresh to try again.' }, { status: 500 });
   }
 }
 

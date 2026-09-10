@@ -27,7 +27,7 @@ const jetbrainsMono = JetBrains_Mono({
 })
 
 export const metadata: Metadata = {
-  title: { default: 'CourtCheck', template: '%s | CourtCheck' },
+  title: { default: 'Dashboard · CourtCheck', template: '%s · CourtCheck' },
   description:
     'Tennis analytics for college coaches. Upload a recording for shot tracking, court maps, stroke breakdown, and a written report.',
   icons: {

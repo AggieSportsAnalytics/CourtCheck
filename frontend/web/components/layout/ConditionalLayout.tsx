@@ -8,18 +8,9 @@ interface ConditionalLayoutProps {
   children: ReactNode;
 }
 
-// Map a pathname to a short page label. Falls through to null for unknown
-// routes which renders the bare brand title.
+// Auth pages retain their client labels; app route titles come from metadata.
 function pageNameFor(pathname: string | null): string | null {
   if (!pathname) return null;
-  if (pathname === '/') return 'Dashboard';
-  if (pathname.startsWith('/recordings/') && pathname !== '/recordings') return 'Recording';
-  if (pathname === '/recordings') return 'Recordings';
-  if (pathname.startsWith('/players/') && pathname !== '/players') return 'Player';
-  if (pathname === '/players') return 'Players';
-  if (pathname === '/upload') return 'Upload';
-  if (pathname === '/profile') return 'Profile';
-  if (pathname === '/settings') return 'Settings';
   if (pathname === '/auth/login') return 'Sign in';
   if (pathname === '/auth/signup') return 'Sign up';
   if (pathname === '/auth/forgot-password') return 'Reset password';
@@ -32,7 +23,7 @@ export default function ConditionalLayout({ children }: ConditionalLayoutProps) 
   const pathname = usePathname();
 
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === 'undefined' || !pathname?.startsWith('/auth')) return;
     const page = pageNameFor(pathname);
     document.title = page ? `${page} | CourtCheck` : 'CourtCheck';
   }, [pathname]);

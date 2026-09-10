@@ -73,7 +73,7 @@ function inPct(inB: number | null, outB: number | null): number | null {
 
 export default function PlayerDetailPage() {
   const { id } = useParams<{ id: string }>()
-  // SWR-cached roster + recordings (demo data served via the hooks' fallback).
+  // SWR-cached roster + recordings.
   // Reusing the same keys as the dashboard/list means navigating here is an
   // instant cache hit instead of a fresh round trip.
   const { data: pData, error: pErr, isLoading: pLoading, mutate: mutatePlayers } = usePlayersData()
@@ -89,13 +89,13 @@ export default function PlayerDetailPage() {
       ) ?? null,
     [pData, id],
   )
-  // The list endpoint hides demo/template rows (user_id IS NULL) from onboarded
+  // The list endpoint hides template rows (user_id IS NULL) from onboarded
   // users, so a player the by-id endpoint returns can be absent from the cached
   // list. Fall back to /api/players/[id] before declaring "Player not found"
   // (the 2026-07-05 triage fix, re-applied on top of the SWR cache).
   const needById =
-    !pLoading && pData != null && listedPlayer == null && !String(id).startsWith('demo-')
-  const { data: byIdData, isLoading: byIdLoading } = useSWR<{ player: ApiPlayer | null }>(
+    !pLoading && pData != null && listedPlayer == null
+  const { data: byIdData, isLoading: byIdLoading, mutate: mutateById } = useSWR<{ player: ApiPlayer | null }>(
     needById ? `/api/players/${id}` : null,
     fetcher,
   )
@@ -149,7 +149,7 @@ export default function PlayerDetailPage() {
     () => [
       { key: 'forehand', label: 'Forehand', count: totals.fh },
       { key: 'backhand', label: 'Backhand', count: totals.bh },
-      { key: 'serve', label: 'Serve', count: totals.sv },
+      { key: 'serve', label: 'Serve/Overhead', count: totals.sv },
       // Volley count not in backend yet. Renders as 0% bar with "0 shots".
       { key: 'volley', label: 'Volley', count: 0 },
     ],
@@ -253,8 +253,9 @@ export default function PlayerDetailPage() {
           </div>
           <HandednessControl
             playerId={player.id}
-            value={(player.handedness as Handedness | undefined) ?? 'right'}
-            onChange={(next) =>
+            value={(player.handedness as Handedness | null | undefined) ?? null}
+            onChange={(next) => {
+              mutateById((curr) => curr?.player ? { player: { ...curr.player, handedness: next } } : curr, { revalidate: false })
               mutatePlayers(
                 (curr) =>
                   curr
@@ -266,7 +267,7 @@ export default function PlayerDetailPage() {
                     : curr,
                 { revalidate: false },
               )
-            }
+            }}
           />
         </div>
 
@@ -536,14 +537,14 @@ function HandednessControl({
   onChange,
 }: {
   playerId: string
-  value: Handedness
-  onChange: (next: Handedness) => void
+  value: Handedness | null
+  onChange: (next: Handedness | null) => void
 }) {
   const [saving, setSaving] = useState<Handedness | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const update = async (next: Handedness) => {
-    if (next === value) return
+    if (next === value || saving) return
     setSaving(next)
     setError(null)
     onChange(next) // optimistic
@@ -576,6 +577,7 @@ function HandednessControl({
       <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
         Handedness
       </span>
+      {value === null && <span className="rounded-full bg-shade px-3 py-1 text-[0.88rem] text-ink-mute">Not set</span>}
       <div
         role="radiogroup"
         aria-label="Player handedness"
@@ -590,7 +592,7 @@ function HandednessControl({
               type="button"
               role="radio"
               aria-checked={active}
-              disabled={isSaving}
+              disabled={saving !== null}
               onClick={() => update(opt)}
               className={`rounded-full px-3.5 py-1 text-[0.88rem] font-medium transition-colors duration-150 ${
                 active

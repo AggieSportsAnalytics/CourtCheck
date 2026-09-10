@@ -4,6 +4,13 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+PROCESSED_VIDEO_UPLOAD_ERROR = "The analyzed video could not be saved. Press Reprocess to try again."
+
+
+class ProcessedVideoUploadError(RuntimeError):
+    """The required video artifact could not be stored."""
+
+
 def make_streamable_mp4(input_path: str, source_audio_path: str | None = None) -> str:
     """
     Re-encode and remux to a browser-streamable MP4 (moov atom first).
@@ -157,4 +164,6 @@ def upload_results_parallel(
             print(f"[Storage] Upload failed for {key}: {e}")
             results[key] = None
 
+    if not results.get("results_path"):
+        raise ProcessedVideoUploadError(PROCESSED_VIDEO_UPLOAD_ERROR)
     return results

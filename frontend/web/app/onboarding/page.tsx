@@ -82,14 +82,14 @@ export default function OnboardingPage() {
             Pick your starting roster.
           </h1>
           <p className="text-ink-soft text-[1.02rem] text-center mt-2 mb-7">
-            You can edit, delete, and add players any time after.
+            You can edit players any time after.
           </p>
 
           <div className="grid gap-4 md:grid-cols-2 mb-4">
             <RosterCard
               title="UC Davis Tennis"
               subtitle={ucDavis ? `${ucDavis.players.length} players` : 'Loading...'}
-              body="Start with the UC Davis women's roster. Rename, edit, or remove any player later."
+              body="Start with the UC Davis women's roster. Edit player details later."
               preview={ucDavis?.players.slice(0, 6).map((p) => p.name) ?? []}
               cta="Use UC Davis"
               busy={picking === 'uc-davis'}
@@ -99,7 +99,7 @@ export default function OnboardingPage() {
             <RosterCard
               title="Empty roster"
               subtitle="Start from scratch"
-              body="Add players one at a time as you upload recordings."
+              body="Upload recordings without assigning a player."
               preview={[]}
               cta="Start empty"
               busy={picking === 'empty'}

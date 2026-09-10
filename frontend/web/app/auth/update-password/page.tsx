@@ -28,6 +28,7 @@ export default function UpdatePasswordPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
+  const [otherSessionsSignedOut, setOtherSessionsSignedOut] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -51,7 +52,14 @@ export default function UpdatePasswordPage() {
       })
       if (updateError) throw updateError
       // Revoke all other sessions for safety.
-      await supabase.auth.signOut({ scope: 'others' })
+      try {
+        const { error: signOutError } = await supabase.auth.signOut({ scope: 'others' })
+        if (signOutError) throw signOutError
+        setOtherSessionsSignedOut(true)
+      } catch (err) {
+        console.error('Other sessions sign-out failed', err)
+        setOtherSessionsSignedOut(false)
+      }
       setDone(true)
     } catch (err) {
       const message =
@@ -91,7 +99,8 @@ export default function UpdatePasswordPage() {
               Password updated.
             </h3>
             <p className="text-ink-soft text-[1.02rem] leading-[1.5] max-w-[32ch] mx-auto mb-6">
-              Other sessions have been signed out for safety.
+              {otherSessionsSignedOut ? 'Other sessions have been signed out for safety.'
+                : 'Your password changed, but other sessions could not be signed out. Sign out on your other devices.'}
             </p>
             <Link
               href="/auth/login"

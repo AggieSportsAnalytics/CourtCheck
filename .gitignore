@@ -38,6 +38,7 @@ backend/training/runs/
 backend/training/__pycache__/
 backend/calibration_frames/videos/
 *.mp4
+!frontend/web/public/Bounce_Animated.mp4
 *.mov
 
 # Node / frontend artifacts
@@ -76,7 +77,7 @@ docs/upgrade-plan*.md
 docs/superpowers/
 
 # Audit (responsive screenshots, session state) — local-only
-frontend/web/scripts/audit/storageState.json
+frontend/web/scripts/audit/storageState*.json
 frontend/web/scripts/audit/screenshots/
 frontend/web/scripts/audit/sign-in-failed.png
 
@@ -86,3 +87,5 @@ catboost_info/
 legacy/
 media/
 .codegraph/
+frontend/web/scripts/audit/functional/REPORT.md
+frontend/web/scripts/audit/functional/report.json

@@ -33,13 +33,11 @@ import { STROKE_COLOR_BY_KEY } from '@/components/viz/CourtSVG';
  *   - unified viz card (3-way toggle: shot map / spacing / coverage)
  *   - shot breakdown (mix | accuracy)
  *   - scouting report (6 sections, court-tinted final-line rail)
- *   - stats (4 tiles: winners / unforced errors / first serve in / avg rally)
+ *   - stats (measured bounce and rally totals)
  *
  * Backend wiring preserved:
  *   - GET /api/recordings/[id] polls every 5s until status === done|failed.
- *   - videoUrl is LOCKED on first valid value (prev ?? data.recording.videoUrl)
- *     so the <video> doesn't reload on every poll. This is the shipped fix —
- *     DO NOT regress.
+ *   - videoUrl stays stable during polls and refreshes after a media error.
  *   - notes PATCH is debounced 800ms; while saving, incoming poll data does
  *     not clobber local note state.
  */
@@ -52,6 +50,7 @@ type Recording = {
   stage: string | null;
   error: string | null;
   videoUrl: string | null;
+  inputPath: string | null;
   bounceHeatmapUrl: string | null;
   playerHeatmapUrl: string | null;
   playerShotMapUrl: string | null;
@@ -71,6 +70,7 @@ type Recording = {
   outBoundsBounces: number | null;
   scoutingReport: string | null;
   playerId: string | null;
+  playerName: string | null;
   /** 'left' if the near player is left-handed; null if unset/unknown. Drives
    *  the "Left-handed" badge so coaches can sanity-check FH/BH labeling. */
   playerHandedness: 'right' | 'left' | null;
@@ -108,6 +108,24 @@ export default function RecordingDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<TimedNote[]>([]);
   const [savingNotes, setSavingNotes] = useState(false);
+  const [notesError, setNotesError] = useState<string | null>(null);
+  const savingNotesRef = useRef(false);
+  const pendingNotesRef = useRef<{ id: string; notes: TimedNote[] } | null>(null);
+  const notesRequestRef = useRef<Promise<void>>(Promise.resolve());
+  const flushNotesRef = useRef<() => void>(() => {});
+  const notesUnmountedRef = useRef(false);
+  const [favoriteError, setFavoriteError] = useState<string | null>(null);
+  const [favoriting, setFavoriting] = useState(false);
+  const videoErroredRef = useRef(false);
+  const videoRefreshRef = useRef(false);
+  const videoResumeRef = useRef<number | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!favoriteError) return;
+    const timer = setTimeout(() => setFavoriteError(null), 4500);
+    return () => clearTimeout(timer);
+  }, [favoriteError]);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -116,24 +134,26 @@ export default function RecordingDetailPage() {
   const [reprocessError, setReprocessError] = useState<string | null>(null);
 
   const toggleFavorite = useCallback(async () => {
-    setRecording((prev) => {
-      if (!prev) return prev;
-      const next = !prev.favorited;
-      // Persist; revert in the catch if it fails.
-      fetch(`/api/recordings/${id}`, {
+    if (!recording || favoriting) return;
+    const next = !recording.favorited;
+    setFavoriting(true);
+    setFavoriteError(null);
+    setRecording((prev) => prev ? { ...prev, favorited: next } : prev);
+    try {
+      const res = await fetch(`/api/recordings/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ favorited: next }),
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error('Failed to update favorite');
-        })
-        .catch(() => {
-          setRecording((p) => (p ? { ...p, favorited: !next } : p));
-        });
-      return { ...prev, favorited: next };
-    });
-  }, [id]);
+      });
+      if (!res.ok) throw new Error('Failed to update favorite');
+    } catch (err) {
+      console.error('Favorite update failed', err);
+      setRecording((prev) => prev ? { ...prev, favorited: !next } : prev);
+      setFavoriteError("Couldn't update favorite. Try again.");
+    } finally {
+      setFavoriting(false);
+    }
+  }, [id, recording, favoriting]);
 
   const handleDeleteRecording = useCallback(async () => {
     setDeleting(true);
@@ -171,19 +191,24 @@ export default function RecordingDetailPage() {
         });
         if (signal?.aborted) return;
         if (!res.ok) {
-          setError('Recording not found.');
+          setError(res.status === 404 ? 'Recording not found.' : res.status === 401
+            ? 'Your session expired. Sign in again.'
+            : "We couldn't load that recording. Go back to Recordings and try again.");
           return;
         }
         const data = await res.json();
         if (signal?.aborted) return;
-        // Lock the videoUrl once set — prevents <video> reload on each poll
+        setError(null);
+        const refreshVideo = videoErroredRef.current;
+        // Keep playback stable during polls; replace an expired URL after an error.
         setRecording((prev) => ({
           ...data.recording,
-          videoUrl: prev?.videoUrl ?? data.recording.videoUrl,
+          videoUrl: !prev?.videoUrl || (refreshVideo && prev.videoUrl !== data.recording.videoUrl)
+            ? data.recording.videoUrl : prev.videoUrl,
         }));
         // Don't clobber local notes while a save is in-flight
         setNotes((prev) => {
-          if (savingNotes) return prev;
+          if (savingNotesRef.current) return prev;
           const incoming = data.recording.notes;
           return Array.isArray(incoming) ? incoming : [];
         });
@@ -195,12 +220,13 @@ export default function RecordingDetailPage() {
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
-        setError('Failed to load recording.');
+        console.error('Recording fetch failed', err);
+        setError("We couldn't load that recording. Go back to Recordings and try again.");
       } finally {
         if (!signal?.aborted) setLoading(false);
       }
     },
-    [id, savingNotes]
+    [id]
   );
 
   const handleReprocessRecording = useCallback(async () => {
@@ -259,43 +285,91 @@ export default function RecordingDetailPage() {
     return () => {
       controller.abort();
       if (pollRef.current) clearInterval(pollRef.current);
-      if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
     };
   }, [fetchRecording]);
 
-  const saveNotes = (updated: TimedNote[]) => {
-    if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
-    setSavingNotes(true);
-    notesTimeoutRef.current = setTimeout(async () => {
+  const persistNotes = useCallback((keepalive = false) => {
+    const pending = pendingNotesRef.current;
+    if (!pending) return;
+    // Serialize requests so an older response cannot replace newer notes.
+    const request = async () => {
+      if (!keepalive && notesUnmountedRef.current) return;
       try {
-        await fetch(`/api/recordings/${id}`, {
+        const res = await fetch(`/api/recordings/${pending.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ notes: updated }),
+          body: JSON.stringify({ notes: pending.notes }),
+          keepalive,
         });
+        if (!res.ok) throw new Error(`Notes save failed (${res.status})`);
+        if (pendingNotesRef.current === pending) {
+          pendingNotesRef.current = null;
+          savingNotesRef.current = false;
+          setNotesError(null);
+        }
+      } catch (err) {
+        console.error('Notes save failed', err);
+        if (pendingNotesRef.current === pending) setNotesError("Couldn't save. Retry");
       } finally {
-        setSavingNotes(false);
+        if (!pendingNotesRef.current || pendingNotesRef.current === pending) setSavingNotes(false);
       }
+    };
+    if (keepalive) void request();
+    else notesRequestRef.current = notesRequestRef.current.then(request);
+  }, []);
+  flushNotesRef.current = () => persistNotes(true);
+
+  useEffect(() => {
+    notesUnmountedRef.current = false;
+    return () => {
+      notesUnmountedRef.current = true;
+      if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
+      flushNotesRef.current();
+    };
+  }, []);
+
+  const saveNotes = (updated: TimedNote[]) => {
+    if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
+    pendingNotesRef.current = { id, notes: updated };
+    savingNotesRef.current = true;
+    setSavingNotes(true);
+    setNotesError(null);
+    notesTimeoutRef.current = setTimeout(() => {
+      notesTimeoutRef.current = null;
+      persistNotes();
     }, 800);
   };
 
   const handleAddNote = (note: TimedNote) => {
-    setNotes((prev) => {
-      const arr = Array.isArray(prev) ? prev : [];
-      const updated = [...arr, note];
-      saveNotes(updated);
-      return updated;
-    });
+    const updated = [...notes, note];
+    setNotes(updated);
+    saveNotes(updated);
   };
 
   const handleDeleteNote = (index: number) => {
-    setNotes((prev) => {
-      const arr = Array.isArray(prev) ? prev : [];
-      const updated = arr.filter((_, i) => i !== index);
-      saveNotes(updated);
-      return updated;
-    });
+    const updated = notes.filter((_, i) => i !== index);
+    setNotes(updated);
+    saveNotes(updated);
   };
+
+  const handleVideoError = useCallback(async () => {
+    if (videoRefreshRef.current) return;
+    videoRefreshRef.current = true;
+    videoErroredRef.current = true;
+    videoResumeRef.current = videoRef.current?.currentTime ?? 0;
+    setVideoError("We couldn't play the recording. Refresh to try again.");
+    await fetchRecording();
+  }, [fetchRecording]);
+
+  const handleVideoLoaded = useCallback(() => {
+    if (videoResumeRef.current !== null && videoRef.current) {
+      videoRef.current.currentTime = videoResumeRef.current;
+      videoResumeRef.current = null;
+    }
+    videoErroredRef.current = false;
+    videoRefreshRef.current = false;
+    setVideoError(null);
+  }, []);
 
   // ── Loading ──
   if (loading) {
@@ -398,6 +472,13 @@ export default function RecordingDetailPage() {
           {recording.error && (
             <p className="text-[0.82rem] text-ink-soft">{recording.error}</p>
           )}
+          {recording.inputPath && (
+            <button type="button" onClick={handleReprocessRecording} disabled={reprocessing}
+              className="min-h-11 px-4 py-2 rounded-full bg-court text-cream disabled:opacity-60">
+              {reprocessing ? 'Starting…' : 'Reprocess'}
+            </button>
+          )}
+          {reprocessError && <p role="alert" className="text-clay">{reprocessError}</p>}
           <Link
             href="/upload"
             className="mt-2 text-[0.95rem] text-court hover:opacity-80"
@@ -446,26 +527,17 @@ export default function RecordingDetailPage() {
     recording.scoutingReport
   );
 
-  // Stats tiles — 4 only (per mock). Values derive from realShots so the
-  // chip / breakdown / tile all share the same total. (Previous version
-  // used recording.shotCount which is the backend's swing aggregate; that
-  // could exceed realShots.length when bounce pairing dropped some swings.)
+  // Measured totals from the recorded shots and rally state machine.
   const realShotCount = realShots.length;
-  const winners =
-    realShotCount > 0 && inPct !== null
-      ? Math.round((realShotCount * inPct) / 100 / 12)
-      : null;
-  const unforced =
-    realShotCount > 0 && inPct !== null
-      ? Math.max(0, Math.round((realShotCount * (100 - inPct)) / 100 / 8))
-      : null;
+  const rallyLengths = (recording.rallies ?? []).map((r) => r.shot_count).filter(Number.isFinite);
+  const longestRally = rallyLengths.length > 0 ? Math.max(...rallyLengths) : null;
   // Avg rally length comes from the rally state machine (build_rallies in
   // backend/pipeline/rallies.py). The legacy shot_count/rally_count
   // derivation was unreliable — it counts CatBoost trajectory direction
   // changes, which split one rally into multiple when the ball tracker
   // briefly loses sight of the ball. Show "—" until reprocessed.
   const avgRally =
-    recording.rallySummary && recording.rallySummary.total > 0
+    recording.rallySummary && recording.rallySummary.total > 0 && Number.isFinite(recording.rallySummary.avg_length)
       ? recording.rallySummary.avg_length.toFixed(1)
       : null;
   const decisiveTotal =
@@ -482,7 +554,7 @@ export default function RecordingDetailPage() {
         <div className="flex items-center gap-2 flex-wrap">
           {/* Reprocess — only relevant once a run has settled (done/failed).
               While processing, the polling UI is already in control. */}
-          {(recording.status === 'done' || recording.status === 'failed') && (
+          {recording.inputPath && (
             confirmingReprocess ? (
               <div className="flex items-center gap-2">
                 <span className="text-[0.88rem] text-ink-soft">
@@ -594,7 +666,9 @@ export default function RecordingDetailPage() {
       {/* Header */}
       <div className="pb-8">
         <span className="inline-flex items-center gap-2 font-mono text-[0.82rem] uppercase tracking-[0.12em] text-court before:content-[''] before:w-1.5 before:h-1.5 before:bg-clay before:rounded-full">
-          Recording
+          Recording · {recording.playerName && recording.playerId ? (
+            <Link href={`/players/${recording.playerId}`} className="underline">{recording.playerName}</Link>
+          ) : 'Unassigned'}
         </span>
         <div className="flex items-center gap-3 mt-2.5 flex-wrap">
           <h1
@@ -627,6 +701,7 @@ export default function RecordingDetailPage() {
             aria-label={recording.favorited ? 'Remove from favorites' : 'Add to favorites'}
             aria-pressed={recording.favorited}
             onClick={toggleFavorite}
+            disabled={favoriting}
             className={`w-9 h-9 shrink-0 rounded-full border inline-flex items-center justify-center cursor-pointer transition-colors ${
               recording.favorited
                 ? 'border-amber text-amber'
@@ -638,6 +713,7 @@ export default function RecordingDetailPage() {
             </svg>
           </button>
         </div>
+        {favoriteError && <p role="alert" className="text-[0.88rem] text-clay mt-2">{favoriteError}</p>}
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-ink-soft text-[1.02rem] mt-3 items-center">
           {recording.playerHandedness === 'left' && (
             <span
@@ -684,12 +760,13 @@ export default function RecordingDetailPage() {
       <div className="cc-video-hero mb-8">
         <div className="bg-paper border border-line rounded-[14px] overflow-hidden min-w-0">
           {recording.videoUrl ? (
-            <VideoPlayer ref={videoRef} src={recording.videoUrl} />
+            <VideoPlayer ref={videoRef} src={recording.videoUrl} onError={handleVideoError} onLoadedMetadata={handleVideoLoaded} />
           ) : (
             <div className="aspect-video flex items-center justify-center bg-shade">
               <p className="text-[0.95rem] text-ink-mute">No recording available.</p>
             </div>
           )}
+          {videoError && <p role="alert" className="text-clay p-3">{videoError}</p>}
         </div>
 
         <NotesPanel
@@ -698,6 +775,8 @@ export default function RecordingDetailPage() {
           onAdd={handleAddNote}
           onDelete={handleDeleteNote}
           saving={savingNotes}
+          error={notesError}
+          onRetry={() => saveNotes(notes)}
         />
       </div>
 
@@ -720,8 +799,8 @@ export default function RecordingDetailPage() {
         shots={recording.shots ?? []}
         coverageGrid={recording.coverageGrid ?? []}
         positionSummary={recording.positionSummary}
-        recordingStatus={recording.status}
         handedness={recording.playerHandedness}
+        playerId={recording.playerId}
         fps={recording.fps}
         videoRef={videoRef}
       />
@@ -766,14 +845,15 @@ export default function RecordingDetailPage() {
         </article>
       )}
 
-      {/* Stats — 4 tiles */}
+      {/* Measured totals; rally wins appear only when classified. */}
       <StatsCard
         shotsTracked={realShotCount > 0 ? realShotCount : undefined}
         tiles={[
-          { label: 'Winners', value: winners ?? '–' },
-          { label: 'Unforced errors', value: unforced ?? '–' },
+          { label: 'In bounds', value: inPct === null ? '–' : `${inPct}%`, unit: inPct === null ? undefined : `${inB} of ${totalBounces}` },
+          { label: 'Rallies', value: recording.rallySummary?.total ?? '–' },
           { label: 'Avg rally length', value: avgRally ?? '–' },
-          { label: 'Rallies won', value: ralliesWonTotal ?? '–' },
+          { label: 'Longest rally', value: longestRally ?? '–' },
+          ...(ralliesWonTotal ? [{ label: 'Rallies won', value: ralliesWonTotal }] : []),
         ]}
       />
     </div>
