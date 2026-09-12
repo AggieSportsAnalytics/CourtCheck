@@ -5,6 +5,7 @@ match failed) instead of silently returning results_path=None, which previously 
 a match be marked "done" with no playable video. Heatmap uploads stay optional.
 """
 import pytest
+import httpx
 
 from backend.pipeline import storage
 
@@ -74,3 +75,64 @@ def test_all_uploads_succeed(monkeypatch, tmp_path):
     assert result["results_path"] == "match-123/processed.mp4"
     assert result["bounce_heatmap_path"] == "match-123/bounce_heatmap.png"
     assert result["player_heatmap_path"] == "match-123/player_heatmap.png"
+
+
+def test_upload_retries_transient_then_succeeds(monkeypatch):
+    """A transient error (timeout/connection blip) is retried, not fatal."""
+    monkeypatch.setattr(storage.time, "sleep", lambda *_: None)
+    calls = {"n": 0}
+
+    def _flaky():
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise httpx.ConnectError("transient blip")
+        return "done"
+
+    assert storage._upload_with_retry(_flaky, "test", storage.time.monotonic() + 60) == "done"
+    assert calls["n"] == 3
+
+
+def test_upload_does_not_retry_permanent_4xx(monkeypatch):
+    """A 413 (file over the project size limit) is permanent — fail on first try."""
+    monkeypatch.setattr(storage.time, "sleep", lambda *_: None)
+    calls = {"n": 0}
+
+    def _too_big():
+        calls["n"] += 1
+        request = httpx.Request("POST", "http://example/storage")
+        response = httpx.Response(413, request=request)
+        raise httpx.HTTPStatusError("payload too large", request=request, response=response)
+
+    with pytest.raises(httpx.HTTPStatusError):
+        storage._upload_with_retry(_too_big, "test", storage.time.monotonic() + 60)
+    assert calls["n"] == 1
+
+
+def test_upload_does_not_retry_permanent_storage_api_error(monkeypatch):
+    """A storage-SDK 4xx (e.g. 413 on a heatmap) is permanent — not retried."""
+    monkeypatch.setattr(storage.time, "sleep", lambda *_: None)
+    from storage3.exceptions import StorageApiError
+    calls = {"n": 0}
+
+    def _too_big():
+        calls["n"] += 1
+        raise StorageApiError("payload too large", "Payload too large", 413)
+
+    with pytest.raises(StorageApiError):
+        storage._upload_with_retry(_too_big, "test", storage.time.monotonic() + 60)
+    assert calls["n"] == 1
+
+
+def test_upload_stops_at_time_budget(monkeypatch):
+    """Retries stop once the overall deadline has passed, even for transient errors."""
+    monkeypatch.setattr(storage.time, "sleep", lambda *_: None)
+    calls = {"n": 0}
+
+    def _always_fails():
+        calls["n"] += 1
+        raise httpx.ConnectError("transient blip")
+
+    # Deadline already in the past -> one attempt, then stop (not all four).
+    with pytest.raises(httpx.ConnectError):
+        storage._upload_with_retry(_always_fails, "test", storage.time.monotonic() - 1)
+    assert calls["n"] == 1
