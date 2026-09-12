@@ -157,4 +157,14 @@ def upload_results_parallel(
             print(f"[Storage] Upload failed for {key}: {e}")
             results[key] = None
 
+    # The processed video is the one mandatory artifact — raise rather than let the
+    # caller mark the match "done" with no playable video (heatmaps stay optional).
+    # We deliberately do NOT sweep the optional uploads here: heatmap keys are
+    # deterministic (<match_id>/*.png) with x-upsert, so on a reprocess they may
+    # belong to a prior successful run whose row still references them. A first-time
+    # failure only leaves small, unreferenced PNGs; safe cleanup needs attempt-
+    # specific keys (future work).
+    if results.get("results_path") is None:
+        raise RuntimeError(f"processed video upload failed for match {match_id}")
+
     return results
