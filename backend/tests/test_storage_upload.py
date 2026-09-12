@@ -88,7 +88,7 @@ def test_upload_retries_transient_then_succeeds(monkeypatch):
             raise httpx.ConnectError("transient blip")
         return "done"
 
-    assert storage._upload_with_retry(_flaky, "test") == "done"
+    assert storage._upload_with_retry(_flaky, "test", storage.time.monotonic() + 60) == "done"
     assert calls["n"] == 3
 
 
@@ -104,5 +104,35 @@ def test_upload_does_not_retry_permanent_4xx(monkeypatch):
         raise httpx.HTTPStatusError("payload too large", request=request, response=response)
 
     with pytest.raises(httpx.HTTPStatusError):
-        storage._upload_with_retry(_too_big, "test")
+        storage._upload_with_retry(_too_big, "test", storage.time.monotonic() + 60)
+    assert calls["n"] == 1
+
+
+def test_upload_does_not_retry_permanent_storage_api_error(monkeypatch):
+    """A storage-SDK 4xx (e.g. 413 on a heatmap) is permanent — not retried."""
+    monkeypatch.setattr(storage.time, "sleep", lambda *_: None)
+    from storage3.exceptions import StorageApiError
+    calls = {"n": 0}
+
+    def _too_big():
+        calls["n"] += 1
+        raise StorageApiError("payload too large", "Payload too large", 413)
+
+    with pytest.raises(StorageApiError):
+        storage._upload_with_retry(_too_big, "test", storage.time.monotonic() + 60)
+    assert calls["n"] == 1
+
+
+def test_upload_stops_at_time_budget(monkeypatch):
+    """Retries stop once the overall deadline has passed, even for transient errors."""
+    monkeypatch.setattr(storage.time, "sleep", lambda *_: None)
+    calls = {"n": 0}
+
+    def _always_fails():
+        calls["n"] += 1
+        raise httpx.ConnectError("transient blip")
+
+    # Deadline already in the past -> one attempt, then stop (not all four).
+    with pytest.raises(httpx.ConnectError):
+        storage._upload_with_retry(_always_fails, "test", storage.time.monotonic() - 1)
     assert calls["n"] == 1
