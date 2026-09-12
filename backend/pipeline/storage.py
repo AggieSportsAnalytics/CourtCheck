@@ -42,8 +42,9 @@ def make_streamable_mp4(input_path: str, source_audio_path: str | None = None) -
     def _run_ffmpeg(codec: str) -> bool:
         remaining = encode_deadline - time.monotonic()
         if remaining <= 0:
-            print(f"[Storage] encode budget exhausted before {codec}")
-            return False
+            # Budget spent by a prior attempt: fail rather than fall back to the
+            # unencoded original, which would upload as a non-playable processed.mp4.
+            raise RuntimeError(f"encode budget exhausted before {codec}")
         cmd = ["ffmpeg", "-y", "-i", str(input_path)]
         if source_audio_path:
             cmd += ["-i", str(source_audio_path)]
@@ -73,9 +74,12 @@ def make_streamable_mp4(input_path: str, source_audio_path: str | None = None) -
             return True
         except subprocess.CalledProcessError:
             return False
-        except subprocess.TimeoutExpired:
-            print(f"[Storage] ffmpeg ({codec}) hit the {_FFMPEG_BUDGET_SEC}s encode budget")
-            return False
+        except subprocess.TimeoutExpired as exc:
+            # A hung/too-slow encode must fail the run, not ship the unencoded
+            # original as processed.mp4 (which would be marked done but unplayable).
+            raise RuntimeError(
+                f"ffmpeg ({codec}) exceeded the {_FFMPEG_BUDGET_SEC}s encode budget"
+            ) from exc
 
     try:
         if _run_ffmpeg("h264_nvenc"):
@@ -148,6 +152,13 @@ def _upload_with_retry(upload_fn, label: str, deadline: float):
     raise last_exc
 
 
+def _tus_offset(client: httpx.Client, location: str, auth: dict, timeout: float) -> int:
+    """Return the server's current durable offset for a TUS upload (to resume)."""
+    resp = client.head(location, headers={**auth, "Tus-Resumable": "1.0.0"}, timeout=timeout)
+    resp.raise_for_status()
+    return int(resp.headers["Upload-Offset"])
+
+
 def _upload_resumable(
     local_path: str,
     bucket: str,
@@ -159,8 +170,9 @@ def _upload_resumable(
     """Upload a file via Supabase's resumable (TUS) endpoint in 6MB chunks.
 
     Each chunk is its own request, so no single request approaches the standard
-    endpoint's ~50MB cap or storage3's 20s timeout. Every request's timeout is
-    capped by ``deadline`` (monotonic) so the whole upload stays within budget.
+    endpoint's ~50MB cap or storage3's 20s timeout. A transient chunk failure
+    resumes from the server's offset instead of restarting the session, and the
+    whole upload (create + chunks + retries) is bounded by ``deadline``.
     """
     url = os.environ["SUPABASE_URL"].rstrip("/")
     key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
@@ -182,39 +194,56 @@ def _upload_resumable(
         return min(_STORAGE_TIMEOUT_SEC, remaining)
 
     with httpx.Client() as client:
-        created = client.post(
-            f"{url}/storage/v1/upload/resumable",
-            headers={
-                **auth,
-                "Tus-Resumable": "1.0.0",
-                "Upload-Length": str(size),
-                "Upload-Metadata": metadata,
-                "x-upsert": "true",
-            },
-            timeout=_timeout(),
-        )
-        created.raise_for_status()
-        location = created.headers["Location"]
-        if location.startswith("/"):
-            location = f"{url}{location}"
+        def _create() -> str:
+            resp = client.post(
+                f"{url}/storage/v1/upload/resumable",
+                headers={
+                    **auth,
+                    "Tus-Resumable": "1.0.0",
+                    "Upload-Length": str(size),
+                    "Upload-Metadata": metadata,
+                    "x-upsert": "true",
+                },
+                timeout=_timeout(),
+            )
+            resp.raise_for_status()
+            loc = resp.headers["Location"]
+            return f"{url}{loc}" if loc.startswith("/") else loc
+
+        # Creating the session is stateless, so a failed create can restart freely.
+        location = _upload_with_retry(_create, f"TUS create {remote_path}", deadline)
 
         offset = 0
+        failures = 0
         with open(local_path, "rb") as f:
             while offset < size:
+                f.seek(offset)
                 chunk = f.read(_TUS_CHUNK_SIZE)
-                patched = client.patch(
-                    location,
-                    headers={
-                        **auth,
-                        "Tus-Resumable": "1.0.0",
-                        "Upload-Offset": str(offset),
-                        "Content-Type": "application/offset+octet-stream",
-                    },
-                    content=chunk,
-                    timeout=_timeout(),
-                )
-                patched.raise_for_status()
-                offset = int(patched.headers["Upload-Offset"])
+                try:
+                    patched = client.patch(
+                        location,
+                        headers={
+                            **auth,
+                            "Tus-Resumable": "1.0.0",
+                            "Upload-Offset": str(offset),
+                            "Content-Type": "application/offset+octet-stream",
+                        },
+                        content=chunk,
+                        timeout=_timeout(),
+                    )
+                    patched.raise_for_status()
+                    offset = int(patched.headers["Upload-Offset"])
+                    failures = 0
+                except Exception as exc:
+                    if _permanent_status(exc):
+                        raise
+                    failures += 1
+                    backoff = min(30, 2 ** failures)
+                    if failures >= _UPLOAD_MAX_ATTEMPTS or time.monotonic() + backoff >= deadline:
+                        raise
+                    print(f"[Storage] TUS chunk @ {offset} failed ({type(exc).__name__}: {exc}); resuming in {backoff}s")
+                    time.sleep(backoff)
+                    offset = _tus_offset(client, location, auth, _timeout())
 
 
 def upload_processed_video(
@@ -223,11 +252,10 @@ def upload_processed_video(
     bucket: str = "results"
 ) -> str:
     remote_path = f"{match_id}/processed.mp4"
-    deadline = time.monotonic() + _UPLOAD_BUDGET_SEC
-    _upload_with_retry(
-        lambda: _upload_resumable(local_path, bucket, remote_path, "video/mp4", deadline),
-        label=f"processed video {match_id}",
-        deadline=deadline,
+    # _upload_resumable retries and resumes internally within this budget.
+    _upload_resumable(
+        local_path, bucket, remote_path, "video/mp4",
+        deadline=time.monotonic() + _UPLOAD_BUDGET_SEC,
     )
     return remote_path
 
@@ -269,40 +297,38 @@ def upload_results_parallel(
     Upload processed video and heatmaps to Supabase in parallel.
     Returns dict with keys: results_path, bounce_heatmap_path, player_heatmap_path, player_shot_map_path.
     """
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-
-    tasks = {}
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        tasks["results_path"] = executor.submit(upload_processed_video, local_video_path, match_id)
+    executor = ThreadPoolExecutor(max_workers=4)
+    try:
+        video_future = executor.submit(upload_processed_video, local_video_path, match_id)
+        heatmap_futures: dict = {}
         if local_bounce_path and os.path.exists(local_bounce_path):
-            tasks["bounce_heatmap_path"] = executor.submit(
+            heatmap_futures["bounce_heatmap_path"] = executor.submit(
                 upload_heatmap_png, local_bounce_path, match_id, "bounce_heatmap.png"
             )
         if local_player_path and os.path.exists(local_player_path):
-            tasks["player_heatmap_path"] = executor.submit(
+            heatmap_futures["player_heatmap_path"] = executor.submit(
                 upload_heatmap_png, local_player_path, match_id, "player_heatmap.png"
             )
         if local_shot_map_path and os.path.exists(local_shot_map_path):
-            tasks["player_shot_map_path"] = executor.submit(
+            heatmap_futures["player_shot_map_path"] = executor.submit(
                 upload_heatmap_png, local_shot_map_path, match_id, "player_shot_map.png"
             )
 
-    results = {}
-    for key, future in tasks.items():
-        try:
-            results[key] = future.result()
-        except Exception as e:
-            print(f"[Storage] Upload failed for {key}: {e}")
-            results[key] = None
-
-    # The processed video is the one mandatory artifact — raise rather than let the
-    # caller mark the match "done" with no playable video (heatmaps stay optional).
-    # We deliberately do NOT sweep the optional uploads here: heatmap keys are
-    # deterministic (<match_id>/*.png) with x-upsert, so on a reprocess they may
-    # belong to a prior successful run whose row still references them. A first-time
-    # failure only leaves small, unreferenced PNGs; safe cleanup needs attempt-
-    # specific keys (future work).
-    if results.get("results_path") is None:
-        raise RuntimeError(f"processed video upload failed for match {match_id}")
-
-    return results
+        # The processed video is the one mandatory artifact. Block on it FIRST so a
+        # video failure fails fast (marking the match failed) instead of waiting for
+        # optional heatmap retries to burn their budget. Heatmaps upload concurrently;
+        # collect them only once the video is safely stored.
+        # We deliberately do NOT sweep optional uploads on failure: heatmap keys are
+        # deterministic (<match_id>/*.png) with x-upsert, so on a reprocess they may
+        # belong to a prior successful run whose row still references them.
+        results = {"results_path": video_future.result()}
+        for key, future in heatmap_futures.items():
+            try:
+                results[key] = future.result()
+            except Exception as e:
+                print(f"[Storage] Upload failed for {key}: {e}")
+                results[key] = None
+        return results
+    finally:
+        # Don't block on still-running optional uploads (esp. after a video failure).
+        executor.shutdown(wait=False)
