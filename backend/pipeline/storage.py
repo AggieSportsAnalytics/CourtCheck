@@ -157,4 +157,9 @@ def upload_results_parallel(
             print(f"[Storage] Upload failed for {key}: {e}")
             results[key] = None
 
+    # The processed video is the one mandatory artifact — raise rather than let the
+    # caller mark the match "done" with no playable video (heatmaps stay optional).
+    if results.get("results_path") is None:
+        raise RuntimeError(f"processed video upload failed for match {match_id}")
+
     return results
