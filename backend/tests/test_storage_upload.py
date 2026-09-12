@@ -136,3 +136,48 @@ def test_upload_stops_at_time_budget(monkeypatch):
     with pytest.raises(httpx.ConnectError):
         storage._upload_with_retry(_always_fails, "test", storage.time.monotonic() - 1)
     assert calls["n"] == 1
+
+
+def test_encode_timeout_raises(monkeypatch, tmp_path):
+    """A hung encode raises rather than returning the unencoded original file."""
+    def _timeout_run(*a, **k):
+        raise storage.subprocess.TimeoutExpired(cmd="ffmpeg", timeout=1)
+
+    monkeypatch.setattr(storage.subprocess, "run", _timeout_run)
+    src = tmp_path / "in.avi"
+    src.write_bytes(b"x")
+
+    with pytest.raises(RuntimeError):
+        storage.make_streamable_mp4(str(src))
+
+
+def test_video_failure_does_not_wait_for_heatmaps(monkeypatch, tmp_path):
+    """A video-upload failure raises promptly without awaiting slow heatmap retries."""
+    import threading
+    import time as _time
+
+    release = threading.Event()
+
+    def _boom_video(*a, **k):
+        raise RuntimeError("video boom")
+
+    def _slow_heatmap(*a, **k):
+        release.wait(timeout=30)  # would block ~30s if the caller waited on it
+        return "late"
+
+    monkeypatch.setattr(storage, "upload_processed_video", _boom_video)
+    monkeypatch.setattr(storage, "upload_heatmap_png", _slow_heatmap)
+
+    bounce = tmp_path / "bounce.png"
+    bounce.write_bytes(b"x")
+
+    t0 = _time.monotonic()
+    with pytest.raises(RuntimeError):
+        storage.upload_results_parallel(
+            local_video_path="/tmp/x.mp4",
+            match_id="m",
+            local_bounce_path=str(bounce),
+        )
+    elapsed = _time.monotonic() - t0
+    release.set()  # unblock the lingering worker thread
+    assert elapsed < 5, f"video failure waited {elapsed:.1f}s on the heatmap"
