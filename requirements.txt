@@ -1,9 +1,10 @@
-opencv-python
-torch
-ultralytics
-catboost
-scipy
-numpy
+# Cap majors so a Modal image rebuild can't jump to a breaking next-major (numpy 3, opencv 5, ...); minor/patch still flow for Dependabot.
+opencv-python<5
+torch<3
+ultralytics<9
+catboost<2
+scipy<2
+numpy<3
 lap
 
 tensorboard
