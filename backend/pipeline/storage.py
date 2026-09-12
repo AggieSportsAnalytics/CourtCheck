@@ -1,8 +1,22 @@
 from supabase import create_client
+import base64
 import os
 import subprocess
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
+import httpx
+
+# The processed video is uploaded via Supabase's resumable (TUS) endpoint rather
+# than the standard /object endpoint, which rejects bodies over ~50MB (413) and is
+# subject to storage3's 20s-per-request timeout — a larger clip under load hits one
+# or the other and the whole job is marked failed. TUS sends 6MB chunks (each well
+# under both limits). Uploads also gained retry, which the download path already had.
+_TUS_CHUNK_SIZE = 6 * 1024 * 1024  # Supabase requires 6MB TUS chunks (last may be smaller)
+_UPLOAD_MAX_ATTEMPTS = 4
+_STORAGE_TIMEOUT_SEC = 120.0
+_FFMPEG_TIMEOUT_SEC = 900  # cap a hung encode instead of running to the Modal wall-clock
 
 def make_streamable_mp4(input_path: str, source_audio_path: str | None = None) -> str:
     """
@@ -46,9 +60,13 @@ def make_streamable_mp4(input_path: str, source_audio_path: str | None = None) -
                 check=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                timeout=_FFMPEG_TIMEOUT_SEC,
             )
             return True
         except subprocess.CalledProcessError:
+            return False
+        except subprocess.TimeoutExpired:
+            print(f"[Storage] ffmpeg ({codec}) timed out after {_FFMPEG_TIMEOUT_SEC}s — trying fallback")
             return False
 
     try:
@@ -74,25 +92,107 @@ def get_supabase():
     return create_client(url, key)
 
 
+def _b64(value: str) -> str:
+    return base64.b64encode(value.encode()).decode()
+
+
+def _upload_with_retry(upload_fn, label: str):
+    """Run an upload with bounded exponential backoff.
+
+    Supabase storage occasionally returns transient 5xx/504 under load; the video
+    upload had no retry, so a single blip failed the whole run. Permanent 4xx
+    (e.g. 413 when a file exceeds the project's global size limit) are not retried.
+    """
+    last_exc = None
+    for attempt in range(1, _UPLOAD_MAX_ATTEMPTS + 1):
+        try:
+            return upload_fn()
+        except Exception as exc:
+            if isinstance(exc, httpx.HTTPStatusError):
+                status = exc.response.status_code
+                if 400 <= status < 500 and status not in (408, 429):
+                    raise
+            last_exc = exc
+            if attempt == _UPLOAD_MAX_ATTEMPTS:
+                break
+            backoff = min(30, 2 ** attempt)
+            print(
+                f"[Storage] {label} upload attempt {attempt}/{_UPLOAD_MAX_ATTEMPTS} "
+                f"failed ({type(exc).__name__}: {exc}); retrying in {backoff}s"
+            )
+            time.sleep(backoff)
+    raise last_exc
+
+
+def _upload_resumable(
+    local_path: str,
+    bucket: str,
+    remote_path: str,
+    content_type: str,
+    cache_control: str = "3600",
+) -> None:
+    """Upload a file via Supabase's resumable (TUS) endpoint in 6MB chunks.
+
+    Each chunk is its own request, so no single request approaches the standard
+    endpoint's ~50MB cap or storage3's 20s timeout.
+    """
+    url = os.environ["SUPABASE_URL"].rstrip("/")
+    key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+    size = os.path.getsize(local_path)
+    auth = {"Authorization": f"Bearer {key}", "apikey": key}
+    metadata = ",".join(
+        [
+            f"bucketName {_b64(bucket)}",
+            f"objectName {_b64(remote_path)}",
+            f"contentType {_b64(content_type)}",
+            f"cacheControl {_b64(cache_control)}",
+        ]
+    )
+
+    with httpx.Client(timeout=httpx.Timeout(_STORAGE_TIMEOUT_SEC)) as client:
+        created = client.post(
+            f"{url}/storage/v1/upload/resumable",
+            headers={
+                **auth,
+                "Tus-Resumable": "1.0.0",
+                "Upload-Length": str(size),
+                "Upload-Metadata": metadata,
+                "x-upsert": "true",
+            },
+        )
+        created.raise_for_status()
+        location = created.headers["Location"]
+        if location.startswith("/"):
+            location = f"{url}{location}"
+
+        offset = 0
+        with open(local_path, "rb") as f:
+            while offset < size:
+                chunk = f.read(_TUS_CHUNK_SIZE)
+                patched = client.patch(
+                    location,
+                    headers={
+                        **auth,
+                        "Tus-Resumable": "1.0.0",
+                        "Upload-Offset": str(offset),
+                        "Content-Type": "application/offset+octet-stream",
+                    },
+                    content=chunk,
+                )
+                patched.raise_for_status()
+                offset = int(patched.headers["Upload-Offset"])
+
+
 def upload_processed_video(
     local_path: str,
     match_id: str,
     bucket: str = "results"
 ) -> str:
-    supabase = get_supabase()
     remote_path = f"{match_id}/processed.mp4"
-
-    with open(local_path, "rb") as f:
-        supabase.storage.from_(bucket).upload(
-            remote_path,
-            f,
-            file_options={
-                "content-type": "video/mp4",
-                "cacheControl": "3600",
-                "x-upsert": "true"
-            }
-        )
-
+    _upload_with_retry(
+        lambda: _upload_resumable(local_path, bucket, remote_path, "video/mp4"),
+        label=f"processed video {match_id}",
+    )
     return remote_path
 
 
@@ -103,20 +203,22 @@ def upload_heatmap_png(
     bucket: str = "results"
 ) -> str:
     """Upload a heatmap PNG to Supabase storage."""
-    supabase = get_supabase()
     remote_path = f"{match_id}/{filename}"
 
-    with open(local_path, "rb") as f:
-        supabase.storage.from_(bucket).upload(
-            remote_path,
-            f,
-            file_options={
-                "content-type": "image/png",
-                "cacheControl": "3600",
-                "x-upsert": "true"
-            }
-        )
+    def _do() -> None:
+        supabase = get_supabase()
+        with open(local_path, "rb") as f:
+            supabase.storage.from_(bucket).upload(
+                remote_path,
+                f,
+                file_options={
+                    "content-type": "image/png",
+                    "cacheControl": "3600",
+                    "x-upsert": "true",
+                },
+            )
 
+    _upload_with_retry(_do, label=f"{filename} {match_id}")
     return remote_path
 
 
