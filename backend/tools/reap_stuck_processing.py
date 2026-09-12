@@ -8,20 +8,22 @@ backstop.
 
 Behaviour:
   - Finds rows where status='processing', created_at is older than the age
-    window (default 45 min), AND results_path is null.
+    window (default 60 min), AND results_path is null.
   - Flips them to status='failed' with a retryable error so the coach can
     re-run. The write is guarded on status='processing' so a run that finished
     between our read and write is never clobbered (reported as skipped).
 
 Safety:
   - Dry-run by default. `--apply` required to actually write.
-  - The age window MUST exceed Modal's 30-min pipeline timeout so a live run is
-    never reaped mid-flight (enforced: values <= 30 are rejected).
-  - Reprocess gap: created_at is the ORIGINAL upload time, not the current
-    attempt's start, so a reprocessed match keeps an old created_at. To avoid
-    reaping a live reprocess we skip rows that already have a results_path.
-    A stuck *reprocess* is therefore NOT auto-recovered — that needs a
-    per-attempt timestamp (future schema work); matches has no updated_at yet.
+  - created_at is the upload START, not the processing-attempt start, so the age
+    window must cover slow-upload + queue time ON TOP OF Modal's 30-min timeout.
+    The default (60 min) leaves margin and the CLI rejects values <= 30, but a
+    pathologically slow first-time upload could still be misjudged. The real fix
+    is a per-attempt start/heartbeat timestamp (future schema work; matches has
+    no updated_at yet) — until then, prefer a generous window and manual runs.
+  - Reprocess: a reprocessed match keeps its old created_at, so we skip rows that
+    already have a results_path to avoid reaping a live reprocess. A stuck
+    *reprocess* is therefore NOT auto-recovered (same per-attempt-timestamp fix).
   - Prints every action.
 
 Usage:
@@ -42,9 +44,10 @@ from typing import Iterable, Optional
 from supabase import create_client
 
 
-# Must exceed Modal's 1800s (30 min) pipeline timeout so an in-flight run is
-# never mistaken for a dead one.
-DEFAULT_MAX_AGE_MINUTES = 45
+# Window measured from created_at (the upload START), so it must cover slow-upload
+# + queue time PLUS Modal's 30-min processing timeout; otherwise a live first-time
+# run could be reaped. 60 leaves margin — the real fix is a per-attempt timestamp.
+DEFAULT_MAX_AGE_MINUTES = 60
 
 FAILURE_MESSAGE = "Processing timed out. Please try again."
 
