@@ -7,17 +7,21 @@ block, so the pipeline cannot self-heal these; this external sweep is the
 backstop.
 
 Behaviour:
-  - Finds rows where status='processing' AND created_at is older than the
-    age window (default 45 min).
+  - Finds rows where status='processing', created_at is older than the age
+    window (default 45 min), AND results_path is null.
   - Flips them to status='failed' with a retryable error so the coach can
     re-run. The write is guarded on status='processing' so a run that finished
-    between our read and write is never clobbered.
+    between our read and write is never clobbered (reported as skipped).
 
 Safety:
   - Dry-run by default. `--apply` required to actually write.
   - The age window MUST exceed Modal's 30-min pipeline timeout so a live run is
-    never reaped mid-flight. created_at is used because matches has no
-    updated_at column yet (deferred schema work).
+    never reaped mid-flight (enforced: values <= 30 are rejected).
+  - Reprocess gap: created_at is the ORIGINAL upload time, not the current
+    attempt's start, so a reprocessed match keeps an old created_at. To avoid
+    reaping a live reprocess we skip rows that already have a results_path.
+    A stuck *reprocess* is therefore NOT auto-recovered — that needs a
+    per-attempt timestamp (future schema work); matches has no updated_at yet.
   - Prints every action.
 
 Usage:
@@ -85,18 +89,24 @@ def reap(match_ids: Optional[Iterable[str]], apply: bool, max_age_minutes: int) 
 
     query = (
         supabase.table("matches")
-        .select("id, name, status, created_at, progress")
+        .select("id, name, status, created_at, progress, results_path")
         .eq("status", "processing")
     )
     if match_ids:
         query = query.in_("id", list(match_ids))
     rows = query.execute().data or []
 
-    # When the operator names specific ids, target them regardless of age.
-    if match_ids:
-        stuck = rows
-    else:
-        stuck = [r for r in rows if is_stuck(r.get("created_at"), now, max_age_minutes)]
+    # Age check ALWAYS applies (even with --match-id) so a live/fresh run is never
+    # reaped just because its id was named. Rows with a results_path are reprocess
+    # attempts whose created_at is the original upload time, not this attempt's
+    # start — reaping them could kill a live reprocess, so skip them. (Recovering a
+    # stuck reprocess needs a per-attempt timestamp; future schema work.)
+    stuck = [
+        r
+        for r in rows
+        if r.get("results_path") is None
+        and is_stuck(r.get("created_at"), now, max_age_minutes)
+    ]
 
     if not stuck:
         print(
@@ -108,7 +118,9 @@ def reap(match_ids: Optional[Iterable[str]], apply: bool, max_age_minutes: int) 
     print(f"Found {len(stuck)} stuck row(s). Mode: {'APPLY' if apply else 'DRY RUN'}\n")
 
     reaped = 0
+    skipped = 0
     failed = 0
+    would_reap = 0
     for row in stuck:
         mid = row["id"]
         name = row.get("name") or "(unnamed)"
@@ -117,25 +129,34 @@ def reap(match_ids: Optional[Iterable[str]], apply: bool, max_age_minutes: int) 
 
         if not apply:
             print("    would mark failed (dry run)")
-            reaped += 1
+            would_reap += 1
             continue
 
         try:
             # Guard on status so a run that just finished is never clobbered.
-            supabase.table("matches").update(
-                {"status": "failed", "error": FAILURE_MESSAGE, "progress": 0}
-            ).eq("id", mid).eq("status", "processing").execute()
-            print("    marked failed")
-            reaped += 1
+            resp = (
+                supabase.table("matches")
+                .update({"status": "failed", "error": FAILURE_MESSAGE, "progress": 0})
+                .eq("id", mid)
+                .eq("status", "processing")
+                .execute()
+            )
+            # Zero rows updated => the run finished between our read and write.
+            if getattr(resp, "data", None):
+                print("    marked failed")
+                reaped += 1
+            else:
+                print("    skipped (no longer processing)")
+                skipped += 1
         except Exception as e:
             print(f"    ! failed to update: {e}")
             failed += 1
 
     print()
-    verb = "Reaped" if apply else "Would reap"
-    print(f"{verb} {reaped} row(s) · failed {failed}")
-    if not apply:
-        print("Re-run with --apply to actually mark them failed.")
+    if apply:
+        print(f"Reaped {reaped} · skipped {skipped} (races) · failed {failed}")
+    else:
+        print(f"Would reap {would_reap} row(s). Re-run with --apply to mark them failed.")
 
 
 def main() -> None:
@@ -158,9 +179,11 @@ def main() -> None:
         "--match-id",
         action="append",
         dest="match_ids",
-        help="Restrict to one or more match ids. Repeatable. Ignores --max-age-minutes.",
+        help="Restrict the sweep to one or more match ids. Repeatable. The age check still applies.",
     )
     args = parser.parse_args()
+    if args.max_age_minutes <= 30:
+        parser.error("--max-age-minutes must exceed Modal's 30-minute timeout (use a value > 30).")
     reap(match_ids=args.match_ids, apply=args.apply, max_age_minutes=args.max_age_minutes)
 
 
