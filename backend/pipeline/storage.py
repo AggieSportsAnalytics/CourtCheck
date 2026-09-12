@@ -15,8 +15,9 @@ import httpx
 # under both limits). Uploads also gained retry, which the download path already had.
 _TUS_CHUNK_SIZE = 6 * 1024 * 1024  # Supabase requires 6MB TUS chunks (last may be smaller)
 _UPLOAD_MAX_ATTEMPTS = 4
-_STORAGE_TIMEOUT_SEC = 120.0
-_FFMPEG_TIMEOUT_SEC = 900  # cap a hung encode instead of running to the Modal wall-clock
+_STORAGE_TIMEOUT_SEC = 120.0  # per-request timeout; also capped by the overall upload budget
+_UPLOAD_BUDGET_SEC = 600.0  # overall wall-clock per artifact across retries (< the 1800s job cap)
+_FFMPEG_BUDGET_SEC = 900  # overall encode budget shared across codec attempts (< the 1800s job cap)
 
 def make_streamable_mp4(input_path: str, source_audio_path: str | None = None) -> str:
     """
@@ -34,8 +35,15 @@ def make_streamable_mp4(input_path: str, source_audio_path: str | None = None) -
     """
     input_path = Path(input_path)
     output_path = input_path.with_suffix("").with_name(input_path.stem + "_web.mp4")
+    # One deadline shared across both codec attempts: a hung nvenc followed by a
+    # hung libx264 could otherwise each burn the full budget and take the whole job.
+    encode_deadline = time.monotonic() + _FFMPEG_BUDGET_SEC
 
     def _run_ffmpeg(codec: str) -> bool:
+        remaining = encode_deadline - time.monotonic()
+        if remaining <= 0:
+            print(f"[Storage] encode budget exhausted before {codec}")
+            return False
         cmd = ["ffmpeg", "-y", "-i", str(input_path)]
         if source_audio_path:
             cmd += ["-i", str(source_audio_path)]
@@ -60,13 +68,13 @@ def make_streamable_mp4(input_path: str, source_audio_path: str | None = None) -
                 check=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
-                timeout=_FFMPEG_TIMEOUT_SEC,
+                timeout=remaining,
             )
             return True
         except subprocess.CalledProcessError:
             return False
         except subprocess.TimeoutExpired:
-            print(f"[Storage] ffmpeg ({codec}) timed out after {_FFMPEG_TIMEOUT_SEC}s — trying fallback")
+            print(f"[Storage] ffmpeg ({codec}) hit the {_FFMPEG_BUDGET_SEC}s encode budget")
             return False
 
     try:
@@ -96,26 +104,42 @@ def _b64(value: str) -> str:
     return base64.b64encode(value.encode()).decode()
 
 
-def _upload_with_retry(upload_fn, label: str):
-    """Run an upload with bounded exponential backoff.
+def _permanent_status(exc: Exception) -> bool:
+    """True for a non-retryable 4xx, across httpx and the storage SDK.
+
+    The video (TUS) path raises ``httpx.HTTPStatusError``; the heatmap path raises
+    storage3's ``StorageApiError`` (status on ``.status``). 408/429 stay retryable.
+    """
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+    else:
+        status = getattr(exc, "status", None)
+    try:
+        status = int(status)
+    except (TypeError, ValueError):
+        return False
+    return 400 <= status < 500 and status not in (408, 429)
+
+
+def _upload_with_retry(upload_fn, label: str, deadline: float):
+    """Run an upload with bounded exponential backoff and an overall time budget.
 
     Supabase storage occasionally returns transient 5xx/504 under load; the video
-    upload had no retry, so a single blip failed the whole run. Permanent 4xx
-    (e.g. 413 when a file exceeds the project's global size limit) are not retried.
+    upload had no retry, so a single blip failed the whole run. Retries stop once
+    ``deadline`` (monotonic) is reached so a degraded endpoint can't run out the
+    Modal job wall-clock. Permanent 4xx (e.g. 413) are not retried.
     """
     last_exc = None
     for attempt in range(1, _UPLOAD_MAX_ATTEMPTS + 1):
         try:
             return upload_fn()
         except Exception as exc:
-            if isinstance(exc, httpx.HTTPStatusError):
-                status = exc.response.status_code
-                if 400 <= status < 500 and status not in (408, 429):
-                    raise
+            if _permanent_status(exc):
+                raise
             last_exc = exc
-            if attempt == _UPLOAD_MAX_ATTEMPTS:
-                break
             backoff = min(30, 2 ** attempt)
+            if attempt == _UPLOAD_MAX_ATTEMPTS or time.monotonic() + backoff >= deadline:
+                break
             print(
                 f"[Storage] {label} upload attempt {attempt}/{_UPLOAD_MAX_ATTEMPTS} "
                 f"failed ({type(exc).__name__}: {exc}); retrying in {backoff}s"
@@ -129,12 +153,14 @@ def _upload_resumable(
     bucket: str,
     remote_path: str,
     content_type: str,
+    deadline: float,
     cache_control: str = "3600",
 ) -> None:
     """Upload a file via Supabase's resumable (TUS) endpoint in 6MB chunks.
 
     Each chunk is its own request, so no single request approaches the standard
-    endpoint's ~50MB cap or storage3's 20s timeout.
+    endpoint's ~50MB cap or storage3's 20s timeout. Every request's timeout is
+    capped by ``deadline`` (monotonic) so the whole upload stays within budget.
     """
     url = os.environ["SUPABASE_URL"].rstrip("/")
     key = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
@@ -149,7 +175,13 @@ def _upload_resumable(
         ]
     )
 
-    with httpx.Client(timeout=httpx.Timeout(_STORAGE_TIMEOUT_SEC)) as client:
+    def _timeout() -> float:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError(f"upload budget exhausted for {remote_path}")
+        return min(_STORAGE_TIMEOUT_SEC, remaining)
+
+    with httpx.Client() as client:
         created = client.post(
             f"{url}/storage/v1/upload/resumable",
             headers={
@@ -159,6 +191,7 @@ def _upload_resumable(
                 "Upload-Metadata": metadata,
                 "x-upsert": "true",
             },
+            timeout=_timeout(),
         )
         created.raise_for_status()
         location = created.headers["Location"]
@@ -178,6 +211,7 @@ def _upload_resumable(
                         "Content-Type": "application/offset+octet-stream",
                     },
                     content=chunk,
+                    timeout=_timeout(),
                 )
                 patched.raise_for_status()
                 offset = int(patched.headers["Upload-Offset"])
@@ -189,9 +223,11 @@ def upload_processed_video(
     bucket: str = "results"
 ) -> str:
     remote_path = f"{match_id}/processed.mp4"
+    deadline = time.monotonic() + _UPLOAD_BUDGET_SEC
     _upload_with_retry(
-        lambda: _upload_resumable(local_path, bucket, remote_path, "video/mp4"),
+        lambda: _upload_resumable(local_path, bucket, remote_path, "video/mp4", deadline),
         label=f"processed video {match_id}",
+        deadline=deadline,
     )
     return remote_path
 
@@ -218,7 +254,7 @@ def upload_heatmap_png(
                 },
             )
 
-    _upload_with_retry(_do, label=f"{filename} {match_id}")
+    _upload_with_retry(_do, label=f"{filename} {match_id}", deadline=time.monotonic() + _UPLOAD_BUDGET_SEC)
     return remote_path
 
 
