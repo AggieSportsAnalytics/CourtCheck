@@ -159,14 +159,12 @@ def upload_results_parallel(
 
     # The processed video is the one mandatory artifact — raise rather than let the
     # caller mark the match "done" with no playable video (heatmaps stay optional).
+    # We deliberately do NOT sweep the optional uploads here: heatmap keys are
+    # deterministic (<match_id>/*.png) with x-upsert, so on a reprocess they may
+    # belong to a prior successful run whose row still references them. A first-time
+    # failure only leaves small, unreferenced PNGs; safe cleanup needs attempt-
+    # specific keys (future work).
     if results.get("results_path") is None:
-        # Sweep any optional artifacts that DID upload so a failed run leaves no orphans.
-        orphans = [p for k, p in results.items() if k != "results_path" and p]
-        if orphans:
-            try:
-                get_supabase().storage.from_("results").remove(orphans)
-            except Exception as e:
-                print(f"[Storage] Could not remove orphaned artifacts {orphans}: {e}")
         raise RuntimeError(f"processed video upload failed for match {match_id}")
 
     return results
