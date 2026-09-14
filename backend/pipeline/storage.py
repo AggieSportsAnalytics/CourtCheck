@@ -161,7 +161,7 @@ def _upload_with_retry(upload_fn, label: str, deadline: float):
 
 def _tus_offset(client: httpx.Client, location: str, auth: dict, timeout: float) -> int:
     """Return the server's current durable offset for a TUS upload (to resume)."""
-    resp = client.head(location, headers={**auth, "Tus-Resumable": "1.0.0"}, timeout=timeout)
+    resp = client.head(location, headers={**auth, "Tus-Resumable": "1.0.0", "x-upsert": "true"}, timeout=timeout)
     resp.raise_for_status()
     return int(resp.headers["Upload-Offset"])
 
@@ -234,6 +234,11 @@ def _upload_resumable(
                             "Tus-Resumable": "1.0.0",
                             "Upload-Offset": str(offset),
                             "Content-Type": "application/offset+octet-stream",
+                            # Supabase evaluates upsert when the object is finalized, i.e. on the
+                            # PATCH that completes the upload. Without it here, reprocessing a
+                            # recording whose processed.mp4 already exists fails with 409 Conflict
+                            # (observed on production 2026-09-14, match e6ba4268).
+                            "x-upsert": "true",
                         },
                         content=chunk,
                         timeout=_timeout(),
