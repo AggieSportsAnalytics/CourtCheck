@@ -1,12 +1,13 @@
-import torch
-import torchvision.transforms as transforms
 import cv2
-from torchvision import models
 import numpy as np
 
 
 class CourtLineDetector:
     def __init__(self, model_path, device='cuda'):
+        import torch
+        import torchvision.transforms as transforms
+        from torchvision import models
+
         self.device = device
         self.model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
         self.model.fc = torch.nn.Linear(self.model.fc.in_features, 14*2)
@@ -21,6 +22,8 @@ class CourtLineDetector:
         ])
 
     def predict(self, image):
+        import torch
+
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         image_tensor = self.transform(image_rgb).unsqueeze(0).to(self.device)
         with torch.no_grad():

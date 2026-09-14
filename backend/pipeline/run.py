@@ -5,14 +5,14 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 
-from backend.models import BallDetector, CourtLineDetector, PlayerTracker, BounceDetector, ActionRecognition, PoseStrokeClassifier, TrajectoryRectifier
+from backend.models import CourtLineDetector
 from backend.vision import HomographyEstimator, CourtReference, draw_ball_trace, draw_court_keypoints_and_lines, draw_minimap_ball_and_bounces, draw_minimap_players, draw_player_bboxes, draw_stroke_labels
 from backend.vision import SwingDetector, extract_pose_sequence
 from backend.vision.calibration import load_calibration
+from backend.vision.camera_identify import CameraMatch, filename_camera_hint, identify_from_frames, load_fingerprints
 from backend.vision.heatmaps import generate_minimap_heatmaps, generate_player_shot_dot_map
 from backend.vision.postprocess import detect_shot_frames
 
-from backend.pipeline.storage import upload_processed_video, upload_heatmap_png, get_supabase, make_streamable_mp4, upload_results_parallel, ProcessedVideoUploadError, PROCESSED_VIDEO_UPLOAD_ERROR
 from backend.pipeline.config import PipelineConfig
 from backend.pipeline.rallies import (
     RALLY_GAP_SECONDS,
@@ -1744,25 +1744,69 @@ def generate_scouting_report(
         return None
 
 
-_OPPONENT_COURT_MAP = {
-    "2": "uc_davis_court2",
-    "4": "uc_davis_court4",
-    "6": "uc_davis_court6",
-}
-
-
 def _resolve_camera_id(video_path: str) -> str | None:
     """
-    Infer camera_id from the video filename.
+    Infer an advisory camera hint from the video filename; never override detection.
     Matches filenames containing 'Court' followed by a court number (e.g. StMarys_Court2.mp4).
-    Returns None if no match — pipeline falls back to per-frame court detection.
+    Returns None if no match. Used only when automatic identification finds nothing.
     """
-    import re
-    stem = Path(video_path).stem
-    match = re.search(r'[Cc]ourt(\d+)', stem)
-    if match:
-        return _OPPONENT_COURT_MAP.get(match.group(1))
-    return None
+    return filename_camera_hint(video_path)
+
+
+_CAMERA_STARTUP_SPREAD = 6
+
+
+def _identify_camera_for_video(video_path: str, config: PipelineConfig, court_detector) -> CameraMatch:
+    """Sample spread-out startup frames and identify a camera without changing config."""
+    fingerprints = load_fingerprints(Path(config.camera_fingerprints_path).parent, config.camera_fingerprints_path)
+    if config.camera_identify_frames < 1 or config.court_detection_startup_frames < 1:
+        raise ValueError("Camera identification frame counts must be positive")
+    frames = []
+    cap = cv2.VideoCapture(video_path)
+    try:
+        if not cap.isOpened():
+            raise ValueError(f"Cannot open video for camera identification: {video_path}")
+        limit = config.court_detection_startup_frames * _CAMERA_STARTUP_SPREAD
+        total = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        if np.isfinite(total) and total > 0:
+            limit = min(limit, int(total))
+        indices = np.linspace(0, limit - 1, min(config.camera_identify_frames, limit), dtype=int)
+        for index in indices:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, int(index))
+            ok, frame = cap.read()
+            if ok:
+                frames.append(frame)
+            else:
+                print(f"[Camera] Could not read sampled frame {index}", flush=True)
+    finally:
+        cap.release()
+    return identify_from_frames(
+        frames, court_detector, fingerprints,
+        min_ncc=config.camera_match_min_ncc,
+        min_margin=config.camera_match_min_ncc_margin,
+        min_points=config.camera_match_min_points,
+    )
+
+
+def _record_camera_match(supabase, match_id: str, camera_id: str | None, match: CameraMatch, hint: str | None):
+    """Write optional camera metadata; pre-migration failures must not fail a run."""
+    def finite_or_none(value):
+        return float(value) if value is not None and np.isfinite(value) else None
+
+    metadata = {
+        "reason": match.reason,
+        "best": finite_or_none(match.best),
+        "runner_up": finite_or_none(match.runner_up),
+        "hint": hint,
+        "scores": {camera: finite_or_none(distance) for camera, distance in match.scores.items()},
+        "keypoint_camera_id": match.keypoint_camera_id,
+        "keypoint_scores": {camera: finite_or_none(distance) for camera, distance in match.keypoint_scores.items()},
+        "keypoint_agrees": match.keypoint_agrees,
+    }
+    try:
+        supabase.table("matches").update({"camera_id": camera_id, "camera_match": metadata}).eq("id", match_id).execute()
+    except Exception as e:
+        print(f"[Camera] Decision write failed (camera columns may be missing): {e}", flush=True)
 
 
 def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, config: PipelineConfig = None):
@@ -1770,6 +1814,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
     Main pipeline entry point (Modal-compatible).
     """
     import sys
+    from backend.models import BallDetector, PlayerTracker, BounceDetector, ActionRecognition, PoseStrokeClassifier, TrajectoryRectifier
+    from backend.pipeline.storage import upload_processed_video, upload_heatmap_png, get_supabase, make_streamable_mp4, upload_results_parallel, ProcessedVideoUploadError, PROCESSED_VIDEO_UPLOAD_ERROR
     # Belt-and-suspenders in case the Modal Image env var doesn't take.
     try:
         sys.stdout.reconfigure(line_buffering=True)
@@ -1786,10 +1832,11 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         # step muxes audio from this so annotated playback isn't silent.
         original_video_path = video_path
 
-        # Auto-resolve camera_id from filename unless explicitly set by caller
-        if config.camera_id == PipelineConfig.camera_id:
-            resolved = _resolve_camera_id(video_path)
-            config.camera_id = resolved
+        # Retain the filename logs for continuity; this is only an advisory hint.
+        filename_hint = _resolve_camera_id(video_path)
+        print(f"[Camera] filename hint={filename_hint}", flush=True)
+        if config.camera_id is None:
+            resolved = filename_hint
             if resolved:
                 print(f"[Pipeline] Camera ID resolved from filename: {resolved}", flush=True)
             else:
@@ -1965,22 +2012,58 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
         calibrated_H_ref = None
         calibrated_H_frame = None
         calibrated_keypoints = None
+        cal_H_ref, cal_H_frame, cal_kps = None, None, None
+        camera_match = CameraMatch(config.camera_id, {}, None, None, 0, "explicit" if config.camera_id else "disabled")
         if config.calibration_path and config.camera_id:
             cal_H_ref, cal_H_frame, cal_kps = load_calibration(config.calibration_path, config.camera_id)
-            if cal_H_ref is not None:
-                calibrated_H_ref = cal_H_ref
-                calibrated_H_frame = cal_H_frame
-                calibrated_keypoints = cal_kps
-                print(f"[Pipeline] Calibration: {config.camera_id} loaded")
+        elif config.camera_id is None and config.camera_auto_identify:
+            try:
+                court_detector = CourtLineDetector(
+                    model_path=os.path.join(WEIGHTS_DIR, "keypoints_model.pth"),
+                    device=device,
+                )
+                camera_match = _identify_camera_for_video(video_path, config, court_detector)
+                if camera_match.camera_id:
+                    cal_H_ref, cal_H_frame, cal_kps = load_calibration(config.calibration_path, camera_match.camera_id)
+                    if cal_H_ref is not None:
+                        config.camera_id = camera_match.camera_id
+            except Exception as e:
+                print(f"[Camera] Identification failed; continuing with fallback: {e}", flush=True)
+                camera_match = CameraMatch(None, {}, None, None, 0, "error")
+            print(
+                f"[Camera] identified={camera_match.camera_id or 'none'} reason={camera_match.reason} "
+                f"best={camera_match.best} runner_up={camera_match.runner_up} hint={filename_hint} "
+                f"keypoint_camera_id={camera_match.keypoint_camera_id} keypoint_agrees={camera_match.keypoint_agrees} "
+                f"keypoint_scores={camera_match.keypoint_scores}",
+                flush=True,
+            )
+            if camera_match.camera_id and filename_hint:
+                agreement = "agrees" if camera_match.camera_id == filename_hint else "disagrees"
+                print(f"[Camera] filename hint {agreement} with detected camera", flush=True)
+            if cal_H_ref is None and filename_hint and config.calibration_path:
+                try:
+                    cal_H_ref, cal_H_frame, cal_kps = load_calibration(config.calibration_path, filename_hint)
+                    if cal_H_ref is not None:
+                        config.camera_id = filename_hint
+                        print("[Camera] falling back to filename hint", flush=True)
+                except Exception as e:
+                    print(f"[Camera] Filename hint calibration failed; using court detection: {e}", flush=True)
+
+        if cal_H_ref is not None:
+            calibrated_H_ref = cal_H_ref
+            calibrated_H_frame = cal_H_frame
+            calibrated_keypoints = cal_kps
+            print(f"[Pipeline] Calibration: {config.camera_id} loaded")
 
         # If no calibration was loaded, detect the court once on the first N frames.
         # This replaces per-frame detection in Pass 2 — the camera is fixed.
         if calibrated_H_ref is None:
             print(f"[Pipeline] No calibration — running court detection on first {config.court_detection_startup_frames} frames")
-            court_detector = CourtLineDetector(
-                model_path=os.path.join(WEIGHTS_DIR, "keypoints_model.pth"),
-                device=device,
-            )
+            if court_detector is None:
+                court_detector = CourtLineDetector(
+                    model_path=os.path.join(WEIGHTS_DIR, "keypoints_model.pth"),
+                    device=device,
+                )
             cap_startup = cv2.VideoCapture(video_path)
             startup_frames = []
             for _ in range(config.court_detection_startup_frames):
@@ -1995,6 +2078,9 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 print(f"[Pipeline] Court detected from startup — reusing for all frames")
             else:
                 print("[Pipeline] WARNING: Court detection failed on startup frames")
+
+        if not local_mode:
+            _record_camera_match(supabase, match_id, config.camera_id, camera_match, filename_hint)
 
         # ---------- Pass 1: Ball + Player tracking + pose extraction ----------
         cap = cv2.VideoCapture(video_path)

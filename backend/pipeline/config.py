@@ -1,14 +1,27 @@
 # Pipeline Config class to replace colab global flags
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Tuple
-import torch
 
 # Absolute path to calibration_frames/ regardless of working directory
 _CALIBRATION_DIR = os.path.join(os.path.dirname(__file__), '..', 'calibration_frames')
 _DEFAULT_CALIBRATION_PATH = os.path.normpath(
     os.path.join(_CALIBRATION_DIR, 'court_calibration.json')
 )
+_DEFAULT_FINGERPRINTS_PATH = os.path.normpath(
+    os.path.join(_CALIBRATION_DIR, 'camera_fingerprints.json')
+)
+
+
+def _default_device() -> str:
+    # Importing config and explicitly choosing CPU must work without torch.
+    try:
+        import torch
+    except ModuleNotFoundError as exc:
+        if exc.name != "torch":
+            raise
+        return "cpu"
+    return "cuda" if torch.cuda.is_available() else "cpu"
 
 
 @dataclass
@@ -16,7 +29,7 @@ class PipelineConfig:
     """Central configuration for the tennis analysis pipeline"""
 
     # ========== Device ==========
-    device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    device: str = field(default_factory=_default_device)
 
     # ========== Video Processing ==========
     enforce_720p: bool = False
@@ -91,7 +104,14 @@ class PipelineConfig:
     # Path to court_calibration.json produced by backend.tools.calibrate_court.
     # When set together with camera_id, per-frame court detection is skipped.
     calibration_path: Optional[str] = _DEFAULT_CALIBRATION_PATH
-    camera_id: Optional[str] = 'uc_davis_court1_zoomed'
+    camera_fingerprints_path: str = _DEFAULT_FINGERPRINTS_PATH
+    camera_id: Optional[str] = None  # An explicit ID always overrides identification.
+    camera_auto_identify: bool = True  # Match startup backgrounds to reference frames.
+    camera_match_min_ncc: float = 0.75  # Minimum median background correlation.
+    camera_match_min_ncc_margin: float = 0.12  # Required lead over the runner-up.
+    camera_match_min_points: int = 10  # Overlapping points for the diagnostic cross-check.
+    # Sample evenly across the first court_detection_startup_frames * 6 frames.
+    camera_identify_frames: int = 5
 
     # ========== Bounce Detection ==========
     # CatBoost regressor confidence threshold (0-1). Higher = fewer but more certain bounces.
