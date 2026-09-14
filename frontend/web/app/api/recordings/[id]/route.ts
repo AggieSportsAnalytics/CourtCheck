@@ -51,7 +51,7 @@ export async function GET(
 
     const { id } = await params;
 
-    const FULL_COLS = "id, name, status, progress, processing_stage, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, player_shot_map_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, scouting_report, player_id, favorited, keypoints, notes, shots, coverage_grid, position_summary, net_approach_summary, error_summary, rallies, rally_summary";
+    const FULL_COLS = "id, name, status, progress, processing_stage, error, results_path, input_path, created_at, fps, num_frames, bounce_heatmap_path, player_heatmap_path, player_shot_map_path, bounce_count, shot_count, rally_count, forehand_count, backhand_count, serve_count, in_bounds_bounces, out_bounds_bounces, scouting_report, player_id, favorited, keypoints, notes, shots, coverage_grid, position_summary, net_approach_summary, error_summary, rallies, rally_summary, camera_id, camera_match";
     // Pre-migration safety: if a column the API references hasn't been added
     // to `matches` yet, Postgres returns "column matches.<name> does not
     // exist". Retry up to N times, each time stripping ONLY the column named
@@ -69,6 +69,8 @@ export async function GET(
       "error_summary",
       "rallies",
       "rally_summary",
+      "camera_id",
+      "camera_match",
     ]);
     let { data, error } = await supabaseAdmin
       .from("matches")
@@ -163,6 +165,8 @@ export async function GET(
         error: data.error || null,
         videoUrl,
         inputPath: data.input_path ?? null,
+        cameraId: data.camera_id ?? null,
+        cameraMatch: data.camera_match ?? null,
         bounceHeatmapUrl,
         playerHeatmapUrl,
         playerShotMapUrl,
