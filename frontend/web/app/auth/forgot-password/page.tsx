@@ -22,6 +22,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
+  const [resent, setResent] = useState(false)
 
   async function sendLink() {
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
@@ -50,14 +51,18 @@ export default function ForgotPasswordPage() {
   }
 
   async function handleResend() {
-    if (!email) return
+    if (!email || loading) return
     setError('')
+    setResent(false)
+    setLoading(true)
     try {
       await sendLink()
+      setResent(true)
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to resend.'
-      setError(message)
+      console.error('Password reset resend failed', err)
+      setError('We could not send the link. Press Resend to try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -100,11 +105,14 @@ export default function ForgotPasswordPage() {
               <button
                 type="button"
                 onClick={handleResend}
+                disabled={loading}
                 className="text-court font-medium border-b border-current cursor-pointer"
               >
                 Resend
               </button>
             </p>
+            {error && <p role="alert" className="text-clay text-[0.95rem] mt-3">{error}</p>}
+            {resent && <p role="status" className="text-court text-[0.95rem] mt-3">Sent again.</p>}
             <div className="mt-7">
               <Link
                 href="/auth/login"

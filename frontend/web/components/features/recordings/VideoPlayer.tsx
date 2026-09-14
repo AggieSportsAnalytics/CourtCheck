@@ -25,6 +25,8 @@ interface VideoPlayerProps {
   title?: string;
   /** Optional poster shown before metadata loads. */
   poster?: string;
+  onError?: () => void;
+  onLoadedMetadata?: () => void;
 }
 
 function formatTime(seconds: number): string {
@@ -45,7 +47,7 @@ const SPEED_OPTIONS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2] as const;
  * panel, keypoint timeline) can seek/observe currentTime without prop drilling.
  */
 const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(function VideoPlayer(
-  { src, title, poster },
+  { src, title, poster, onError, onLoadedMetadata },
   externalRef,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -244,7 +246,11 @@ const VideoPlayer = forwardRef<HTMLVideoElement, VideoPlayerProps>(function Vide
           if (typeof r === 'number' && Number.isFinite(r)) setSpeed(r);
         }}
         onTimeUpdate={() => setCurrentTime(videoRef.current?.currentTime || 0)}
-        onLoadedMetadata={() => setDuration(videoRef.current?.duration || 0)}
+        onError={onError}
+        onLoadedMetadata={() => {
+          setDuration(videoRef.current?.duration || 0);
+          onLoadedMetadata?.();
+        }}
         onContextMenu={(e) => e.preventDefault()}
         playsInline
       />

@@ -49,33 +49,6 @@ type Props = {
 export const SHOT_MAP_EXTEND_BEHIND = 4;
 export const SHOT_MAP_EXTEND_SIDE = 2;
 
-/** Sample data — mock M. Lin's shots landing on opponent's side. */
-export const SAMPLE_SHOTS: ShotDot[] = [
-  // Forehand cross-court winners landing deep on opponent's right
-  { x: 21, y: 5, stroke: 'forehand' },
-  { x: 23, y: 7, stroke: 'forehand' },
-  { x: 19, y: 11, stroke: 'forehand' },
-  { x: 24, y: 9, stroke: 'forehand' },
-  { x: 22, y: 14, stroke: 'forehand' },
-  { x: 25, y: 13, stroke: 'forehand' },
-  { x: 20, y: 17, stroke: 'forehand' },
-  { x: 23, y: 18, stroke: 'forehand' },
-  // Backhand cross-court (opponent's left)
-  { x: 5, y: 6, stroke: 'backhand' },
-  { x: 7, y: 9, stroke: 'backhand' },
-  { x: 4, y: 13, stroke: 'backhand' },
-  { x: 6, y: 16, stroke: 'backhand' },
-  { x: 8, y: 11, stroke: 'backhand' },
-  { x: 3, y: 8, stroke: 'backhand' },
-  // Serves into service boxes
-  { x: 18, y: 25, stroke: 'serve' },
-  { x: 21, y: 28, stroke: 'serve' },
-  { x: 24, y: 32, stroke: 'serve' },
-  { x: 7, y: 24, stroke: 'serve' },
-  { x: 5, y: 30, stroke: 'serve' },
-  { x: 9, y: 34, stroke: 'serve' },
-];
-
 export function shotMapCounts(dots: ShotDot[]): Partial<Record<StrokeKey, number>> {
   const counts: Partial<Record<StrokeKey, number>> = {};
   STROKES.forEach((s) => {

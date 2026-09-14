@@ -52,6 +52,16 @@ const NAV_ITEMS: NavItem[] = [
   },
 ]
 
+const MOBILE_NAV_ITEMS: NavItem[] = [
+  ...NAV_ITEMS,
+  {
+    name: 'Account',
+    href: '/settings',
+    icon: <UserCircle className="size-[18px]" strokeWidth={1.75} />,
+    match: (p) => p.startsWith('/settings') || p.startsWith('/profile'),
+  },
+]
+
 export default function Sidebar({ user, onSignOut }: Props) {
   const pathname = usePathname() || '/'
   const [collapsed, setCollapsed] = useState(false)
@@ -124,7 +134,7 @@ export default function Sidebar({ user, onSignOut }: Props) {
         onClick={toggleCollapse}
         aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        className="sidebar-collapse absolute z-[51] size-[22px] before:absolute before:-inset-[12px] before:content-[''] rounded-full border border-line bg-paper text-ink-mute hover:border-ink hover:text-ink flex items-center justify-center transition-colors cursor-pointer shadow-sm"
+        className="sidebar-collapse [@media(max-width:1100px)]:hidden absolute z-[51] size-[22px] before:absolute before:-inset-[12px] before:content-[''] rounded-full border border-line bg-paper text-ink-mute hover:border-ink hover:text-ink flex items-center justify-center transition-colors cursor-pointer shadow-sm"
         style={{
           top: '50%',
           right: -11,
@@ -276,7 +286,7 @@ export default function Sidebar({ user, onSignOut }: Props) {
       </div>
     </aside>
     <nav className="app-bottom-nav" aria-label="Primary navigation">
-      {NAV_ITEMS.map((item) => {
+      {MOBILE_NAV_ITEMS.map((item) => {
         const active = item.match(pathname)
         return (
           <Link

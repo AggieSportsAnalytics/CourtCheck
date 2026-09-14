@@ -56,6 +56,13 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const playerId: string | null = typeof body.player_id === 'string' ? body.player_id : null;
+    if (body.player_id != null) {
+      const { data: player, error: playerError } = await supabaseAdmin
+        .from('players').select('id').eq('id', playerId ?? '').eq('user_id', user.id).maybeSingle();
+      if (playerError || !player) {
+        return NextResponse.json({ error: 'That player is not on your roster.' }, { status: 400 });
+      }
+    }
     const safeFilename = sanitizeFilename((body.filename as string) || '');
     if (!safeFilename) {
       return NextResponse.json({ error: 'Invalid file type. Allowed: mp4, mov, avi' }, { status: 400 });
@@ -86,7 +93,11 @@ export async function POST(req: Request) {
       player_id: playerId,
     };
     if (customName) insertRow.name = customName;
-    await supabaseAdmin.from("matches").insert([insertRow]);
+    const { error: insertError } = await supabaseAdmin.from("matches").insert([insertRow]);
+    if (insertError) {
+      console.error('Recording insert failed', insertError);
+      return NextResponse.json({ error: 'We could not create the recording. Try the upload again.' }, { status: 500 });
+    }
 
     // match_date column may not exist on the matches table. Attempt a follow-up
     // update so a missing column doesn't break the insert.

@@ -100,6 +100,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unknown template key' }, { status: 400 });
   }
 
+  const { data: ownedPlayers, error: ownedError } = await supabaseAdmin
+    .from('players').select('name').eq('user_id', user.id);
+  if (ownedError) {
+    console.error('[onboarding] read owned roster', ownedError);
+    return NextResponse.json({ error: 'Could not check your roster. Refresh to try again.' }, { status: 500 });
+  }
+  if (user.user_metadata?.onboarded === true || ownedPlayers?.length) {
+    return NextResponse.json({ error: 'Your roster is already set up.' }, { status: 409 });
+  }
+
   let clonedCount = 0;
   if (template === 'uc-davis') {
     const { data: templatePlayers, error: fetchErr } = await fetchTemplatePlayers();
@@ -107,7 +117,14 @@ export async function POST(req: Request) {
       console.error('[onboarding] fetch templates for clone', fetchErr);
       return NextResponse.json({ error: 'Failed to read template' }, { status: 500 });
     }
-    const rows = (templatePlayers ?? []).map((p) => ({
+    const { data: currentPlayers, error: currentError } = await supabaseAdmin
+      .from('players').select('name').eq('user_id', user.id);
+    if (currentError) {
+      console.error('[onboarding] check clone names', currentError);
+      return NextResponse.json({ error: 'Could not check your roster. Refresh to try again.' }, { status: 500 });
+    }
+    const existingNames = new Set((currentPlayers ?? []).map((p) => p.name));
+    const rows = (templatePlayers ?? []).filter((p) => !existingNames.has(p.name)).map((p) => ({
       name: p.name,
       position: p.position,
       year: p.year,

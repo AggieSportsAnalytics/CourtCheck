@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase/client'
@@ -20,12 +20,16 @@ import { BrandMark } from '@/components/brand/BrandMark'
 import { Button } from '@/components/ui/button'
 
 export default function LoginPage() {
+  return <Suspense fallback={<AuthShell><AuthCard>Loading sign in.</AuthCard></AuthShell>}><LoginForm /></Suspense>
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams()
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [stayIn, setStayIn] = useState(true)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(() => searchParams.get('error') ?? '')
   const { signIn } = useAuth()
 
   async function handleSubmit(e: React.FormEvent) {
@@ -108,16 +112,7 @@ export default function LoginPage() {
             </FieldControl>
           </Field>
 
-          <div className="flex items-center justify-between text-[0.95rem] mt-1 mb-2">
-            <label className="flex items-center gap-2 text-ink-soft cursor-pointer">
-              <input
-                type="checkbox"
-                checked={stayIn}
-                onChange={(e) => setStayIn(e.target.checked)}
-                className="size-4 accent-court cursor-pointer"
-              />
-              Stay signed in
-            </label>
+          <div className="flex items-center justify-end text-[0.95rem] mt-1 mb-2">
             <Link
               href="/auth/forgot-password"
               className="text-court font-medium hover:underline"

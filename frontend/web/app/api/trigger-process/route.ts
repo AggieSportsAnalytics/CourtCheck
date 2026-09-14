@@ -2,15 +2,16 @@
 //
 // Two entry paths:
 //   1. First-time processing — called by useVideoUpload after the signed-upload
-//      PUT lands. Body MUST include file_key + match_id (legacy contract).
+//      PUT lands. Body includes match_id; input_path supplies the storage key.
 //   2. Reprocess — called from the recording detail page Reprocess button. Body
-//      may omit file_key; the server derives it from match.input_path and
+//      includes match_id; the server derives the key from match.input_path and
 //      verifies the raw video still exists in storage before kicking off.
 //      Useful after a pipeline algorithm change (e.g. bounce SoT refactor) when
 //      a coach wants to rerun without re-uploading the source.
 
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { after } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 
 export async function POST(req: Request) {
@@ -42,12 +43,11 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => ({}));
     const { match_id } = body;
-    let { file_key } = body;
     if (!match_id) {
       return Response.json({ error: 'Missing match_id' }, { status: 400 });
     }
 
-    // Fetch ownership + input_path. Server derives file_key when missing.
+    // Fetch ownership + input_path. Never trust a client-supplied storage key.
     const { data: match, error: matchError } = await supabaseAdmin
       .from('matches')
       .select('user_id, input_path, status')
@@ -58,14 +58,12 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const file_key = match.input_path;
     if (!file_key) {
-      if (!match.input_path) {
-        return Response.json(
-          { error: 'The original upload is no longer available. Upload the video again to reprocess.' },
-          { status: 409 },
-        );
-      }
-      file_key = match.input_path as string;
+      return Response.json(
+        { error: 'The original upload is no longer available. Upload the recording again to reprocess.' },
+        { status: 409 },
+      );
     }
 
     if (match.status === 'processing') {
@@ -115,7 +113,7 @@ export async function POST(req: Request) {
     // error/progress fields from the previous run so the UI doesn't show
     // a confusing mix of old and new state.
     try {
-      await supabaseAdmin
+      const { error: processingError } = await supabaseAdmin
         .from('matches')
         .update({
           status: 'processing',
@@ -123,85 +121,54 @@ export async function POST(req: Request) {
           processing_stage: 'Queueing compute',
           error: null,
         })
-        .eq('id', match_id);
+        .eq('id', match_id)
+        .eq('user_id', user.id);
+      if (processingError) throw processingError;
     } catch (e) {
       console.warn('trigger-process pre-write failed, retrying without stage', e);
-      await supabaseAdmin
+      const { error: retryError } = await supabaseAdmin
         .from('matches')
         .update({ status: 'processing', progress: 0.005, error: null })
-        .eq('id', match_id);
+        .eq('id', match_id)
+        .eq('user_id', user.id);
+      if (retryError) {
+        console.error('trigger-process pre-write retry failed', retryError);
+        return Response.json({ error: 'We could not start processing. Press Reprocess to try again.' }, { status: 500 });
+      }
     }
 
-    // Fire Modal webhook but DO NOT await the response. Modal's
-    // @modal.fastapi_endpoint binds the HTTP connection to the function
-    // execution — process_video blocks for the entire pipeline (~5 min).
-    // Awaiting it stalls /api/trigger-process from returning to the client,
-    // which means pollStatus on the upload page never starts until the
-    // pipeline is done. That's the "STARTING for the whole upload" bug.
-    //
-    // The pre-write above (progress=0.005, stage='Queueing compute') is
-    // already in the DB, so polling has something to read the moment we
-    // return.
-    //
-    // CRITICAL — do NOT mark the row `failed` just because this fetch
-    // resolves non-ok or rejects. Because process_video holds the connection
-    // open for the WHOLE pipeline, this fetch never resolves cleanly within
-    // the Vercel function's lifetime on the happy path: when Vercel freezes /
-    // kills the function after we return the response (~function timeout, no
-    // maxDuration set → ~15-30s), the still-pending socket to Modal is torn
-    // down. That teardown previously surfaced as a non-ok / abort and the
-    // handler stamped status='failed' ~30s in — which the detail page renders
-    // as "Analysis needs attention." That is the "reprocess cancels itself"
-    // bug: the pipeline kept running on Modal, but the row was already failed.
-    //
-    // run_pipeline (backend/pipeline/run.py) is the SINGLE source of truth for
-    // terminal status and writes `failed` itself on a real pipeline error. So
-    // here we only flag failure when Modal returns a FAST, definitive
-    // rejection (an HTTP status arrives within the abort window — e.g. 401
-    // auth, 4xx bad request, queue-full 5xx) BEFORE the pipeline started. A
-    // timeout / socket teardown is expected and must be ignored.
-    const TRIGGER_PROBE_MS = 8000; // release well before Vercel kills the fn
-    const probe = new AbortController();
-    const probeTimer = setTimeout(() => probe.abort(), TRIGGER_PROBE_MS);
-    fetch(process.env.MODAL_FUNCTION_URL!, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.MODAL_WEBHOOK_SECRET}`,
-      },
-      body: JSON.stringify({ file_key, match_id }),
-      signal: probe.signal,
-    })
-      .then(async (res) => {
+    // Modal holds the connection for the entire pipeline. Keep the dispatch
+    // alive after the response, but treat our probe timeout as expected.
+    const TRIGGER_PROBE_MS = 8000;
+    after(async () => {
+      const probe = new AbortController();
+      const probeTimer = setTimeout(() => probe.abort(), TRIGGER_PROBE_MS);
+      try {
+        const res = await fetch(process.env.MODAL_FUNCTION_URL!, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.MODAL_WEBHOOK_SECRET}`,
+          },
+          body: JSON.stringify({ file_key, match_id }),
+          signal: probe.signal,
+        });
+        if (!res.ok) throw new Error(`Modal rejected trigger (${res.status})`);
+      } catch (err) {
+        if (probe.signal.aborted) return;
+        console.error('Modal dispatch failed', err);
+        const { error: updateError } = await supabaseAdmin
+          .from('matches')
+          .update({ status: 'failed', error: 'We could not start processing. Press Reprocess to try again.' })
+          .eq('id', match_id)
+          .eq('user_id', user.id)
+          .eq('status', 'processing')
+          .lte('progress', 0.005);
+        if (updateError) console.error('Modal failure status update failed', updateError);
+      } finally {
         clearTimeout(probeTimer);
-        // A definitive HTTP status came back fast → the trigger itself was
-        // rejected before the pipeline ran. Safe to mark failed.
-        if (!res.ok) {
-          const errorText = await res.text().catch(() => '');
-          console.error('Modal rejected trigger', res.status, errorText.slice(0, 200));
-          await supabaseAdmin
-            .from('matches')
-            .update({ status: 'failed', error: 'Failed to start compute' })
-            .eq('id', match_id);
-        }
-        // res.ok within the probe window is unusual (Modal blocks for the
-        // whole run) but harmless — leave status as 'processing'.
-      })
-      .catch((err) => {
-        clearTimeout(probeTimer);
-        // AbortError (probe window elapsed) is the EXPECTED happy path: Modal
-        // is still holding the connection because the pipeline is running.
-        // Do NOT touch status — the pipeline owns it from here.
-        if (err instanceof DOMException && err.name === 'AbortError') {
-          return;
-        }
-        // A pre-connection network error (DNS, refused) means the trigger
-        // never landed; log it but still don't override status — the row is
-        // already 'processing' and run_pipeline will never write, so the user
-        // can reprocess again. Marking failed here risks the same teardown
-        // false-positive, so we stay conservative and log only.
-        console.error('Modal trigger fetch error (status left as processing)', err);
-      });
+      }
+    });
 
     return Response.json({ status: 'ok' });
   } catch (e) {

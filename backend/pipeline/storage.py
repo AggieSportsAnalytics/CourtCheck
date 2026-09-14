@@ -19,6 +19,13 @@ _STORAGE_TIMEOUT_SEC = 120.0  # per-request timeout; also capped by the overall 
 _UPLOAD_BUDGET_SEC = 600.0  # overall wall-clock per artifact across retries (< the 1800s job cap)
 _FFMPEG_BUDGET_SEC = 900  # overall encode budget shared across codec attempts (< the 1800s job cap)
 
+PROCESSED_VIDEO_UPLOAD_ERROR = "The analyzed video could not be saved. Press Reprocess to try again."
+
+
+class ProcessedVideoUploadError(RuntimeError):
+    """The required video artifact could not be stored."""
+
+
 def make_streamable_mp4(input_path: str, source_audio_path: str | None = None) -> str:
     """
     Re-encode and remux to a browser-streamable MP4 (moov atom first).
@@ -321,7 +328,13 @@ def upload_results_parallel(
         # We deliberately do NOT sweep optional uploads on failure: heatmap keys are
         # deterministic (<match_id>/*.png) with x-upsert, so on a reprocess they may
         # belong to a prior successful run whose row still references them.
-        results = {"results_path": video_future.result()}
+        try:
+            results = {"results_path": video_future.result()}
+        except Exception as e:
+            # Coach-readable terminal error; run_pipeline writes it to the row.
+            raise ProcessedVideoUploadError(PROCESSED_VIDEO_UPLOAD_ERROR) from e
+        if not results["results_path"]:
+            raise ProcessedVideoUploadError(PROCESSED_VIDEO_UPLOAD_ERROR)
         for key, future in heatmap_futures.items():
             try:
                 results[key] = future.result()

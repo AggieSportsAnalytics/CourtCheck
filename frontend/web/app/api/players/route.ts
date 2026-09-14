@@ -39,7 +39,7 @@ async function getAuthenticatedUser() {
 //     they would either have been cloned ('uc-davis') or intentionally skipped
 //     ('empty').
 //   - Legacy users (onboarded but onboarding_template missing, e.g. backfilled
-//     from before the onboarding flow existed): see demo + own. Keeps their
+//     from before the onboarding flow existed): see templates + own. Keeps their
 //     existing experience unchanged.
 //   - Not-yet-onboarded users: see only their own (which is usually nothing).
 //     Middleware will have redirected them to /onboarding before they hit this.
@@ -51,27 +51,25 @@ export async function GET() {
     }
 
     const meta = (user.user_metadata ?? {}) as { onboarding_template?: string };
-    const includeDemo = !meta.onboarding_template;
+    const includeTemplates = !meta.onboarding_template;
 
     const SELECT_FULL = 'id, name, position, year, photo_url, handedness, user_id, created_at';
     const SELECT_NO_OWNER = 'id, name, position, year, photo_url, handedness, created_at';
     const SELECT_LEGACY = 'id, name, position, year, photo_url, created_at';
 
-    async function tryFetch(cols: string, ownerFilter: boolean) {
+    async function tryFetch(cols: string) {
       let q = supabaseAdmin.from('players').select(cols).order('name', { ascending: true });
-      if (ownerFilter) {
-        q = includeDemo
-          ? q.or(`user_id.is.null,user_id.eq.${user!.id}`)
-          : q.eq('user_id', user!.id);
-      }
+      q = includeTemplates
+        ? q.or(`user_id.is.null,user_id.eq.${user!.id}`)
+        : q.eq('user_id', user!.id);
       return q;
     }
 
-    let { data, error } = await tryFetch(SELECT_FULL, true);
+    let { data, error } = await tryFetch(SELECT_FULL);
     if (error && /does not exist/.test(error.message ?? '')) {
-      ({ data, error } = await tryFetch(SELECT_NO_OWNER, false));
+      ({ data, error } = await tryFetch(SELECT_NO_OWNER));
       if (error && /does not exist/.test(error.message ?? '')) {
-        ({ data, error } = await tryFetch(SELECT_LEGACY, false));
+        ({ data, error } = await tryFetch(SELECT_LEGACY));
       }
     }
 

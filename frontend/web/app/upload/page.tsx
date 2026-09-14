@@ -4,7 +4,8 @@ import { Prose } from '@/components/ui/display';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDropzone } from 'react-dropzone';
+import Link from 'next/link';
+import { useDropzone, type FileRejection } from 'react-dropzone';
 import { useVideoUpload } from '@/hooks';
 import { APP_CONFIG } from '@/constants';
 import BounceLoader from '@/components/upload/BounceLoader';
@@ -31,6 +32,7 @@ export default function UploadPage() {
   // Selected-but-not-yet-uploaded file. Picking a file no longer auto-uploads;
   // the user reviews the metadata and presses the confirm button.
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [rejectionError, setRejectionError] = useState<string | null>(null);
 
   const upload = useVideoUpload(undefined, selectedPlayerId);
   const {
@@ -62,11 +64,14 @@ export default function UploadPage() {
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
+    reset();
+    setRejectionError(null);
     setPendingFile(file);
-  }, []);
+  }, [reset]);
 
   const confirmUpload = useCallback(() => {
     if (!pendingFile) return;
+    setRejectionError(null);
     void handleFile(pendingFile, { name: recordingTitle, matchDate });
   }, [pendingFile, handleFile, recordingTitle, matchDate]);
 
@@ -74,12 +79,22 @@ export default function UploadPage() {
   // "Try again" returns to a clean idle state.
   const handleReset = useCallback(() => {
     setPendingFile(null);
+    setRejectionError(null);
     reset();
   }, [reset]);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
-    accept: { 'video/*': APP_CONFIG.SUPPORTED_VIDEO_FORMATS },
+    onDropRejected: (rejections: FileRejection[]) => {
+      const codes = rejections.flatMap((file) => file.errors.map((error) => error.code));
+      reset();
+      setPendingFile(null);
+      setRejectionError(codes.includes('too-many-files') ? 'Upload one recording at a time.'
+        : codes.includes('file-too-large') ? 'That file is over 500 MB. Trim the recording or export at a lower bitrate.'
+        : 'That file is not a video we can read. Use an MP4, MOV, or AVI recording.');
+    },
+    accept: { 'video/mp4': ['.mp4'], 'video/quicktime': ['.mov'], 'video/x-msvideo': ['.avi'] },
+    multiple: false,
     maxFiles: 1,
     maxSize: APP_CONFIG.MAX_VIDEO_SIZE,
     disabled: status !== 'idle' && status !== 'failed',
@@ -257,7 +272,7 @@ export default function UploadPage() {
                 htmlFor="match-date"
                 className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute"
               >
-                Match date
+                Recording date
               </label>
               <input
                 id="match-date"
@@ -270,6 +285,16 @@ export default function UploadPage() {
             </div>
           </div>
         </form>
+
+      {pane === 'idle' && (rejectionError || error) && (
+        <p role="alert" className="text-clay text-[0.95rem] mb-3">{rejectionError || error}</p>
+      )}
+      {pane === 'processing' && error && (
+        <div role="alert" className="text-clay text-[0.95rem] mb-3">
+          <p>{error}</p>
+          <Link href="/recordings" className="underline inline-flex min-h-11 items-center">Open Recordings</Link>
+        </div>
+      )}
 
       {/* Upload card — single container, swaps panes by state.
           min-height keeps the idle/uploading/processing/done panes at parity

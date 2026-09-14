@@ -71,7 +71,8 @@ function reasonLabel(endReason?: string | null): string {
   return REASON_LABELS.get(endReason ?? 'unknown') ?? 'Not classified';
 }
 
-function fmtTs(sec: number): string {
+function fmtTs(sec: number | null | undefined): string {
+  if (sec == null || !Number.isFinite(sec) || sec < 0) return '–';
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
@@ -204,7 +205,7 @@ export default function RallyTable({ rallies, videoRef, fps }: Props) {
             <div className="mt-4 pt-4 border-t border-line">
               <div className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute mb-2">
                 Rally {rally.rally_idx + 1} · {rally.shot_count} shots ·{' '}
-                {rally.duration_s.toFixed(1)}s
+                {Number.isFinite(rally.duration_s) ? `${rally.duration_s.toFixed(1)}s` : '–'}
               </div>
               <ol className="space-y-1.5">
                 {rally.shots.map((s, i) => (

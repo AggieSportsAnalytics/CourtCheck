@@ -14,7 +14,8 @@ const nextConfig = {
     return [
       // /api/* — also disable caching so signed URLs + user data never cache
       {
-        source: '/api/:path*',
+        // proxy-image is excluded: player photos are static and the route sets its own day-long cache.
+        source: '/api/:path((?!proxy-image).*)',
         headers: [
           { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
           { key: 'Pragma', value: 'no-cache' },

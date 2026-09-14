@@ -207,7 +207,7 @@ function NetApproachTile({
     <div className="cc-coach-tile">
       <TileHead
         eyebrow="Net game"
-        headline={`${data.approaches} approached · ${data.wins} won (${Math.round(data.win_pct)}%).`}
+        headline={`${data.approaches} approached · ${data.wins} won (${Number.isFinite(data.win_pct) ? `${Math.round(data.win_pct)}%` : 'Not recorded'}).`}
       />
       <div className="text-[0.88rem] text-ink-mute mb-2">
         Win rate is a heuristic: the rally ended within 3 seconds with the opponent's ball out.
@@ -238,7 +238,7 @@ function ErrorTile({
   if (!data || data.total === 0) {
     return (
       <div className="cc-coach-tile">
-        <TileHead eyebrow="Your errors" headline="No out-of-bounds bounces." />
+        <TileHead eyebrow="Your errors" headline={data ? 'No out-of-bounds bounces.' : 'Error data not recorded for this recording.'} />
       </div>
     );
   }

@@ -66,12 +66,6 @@ export default function EmptyState({ coachName, dateLine }: Props) {
             </svg>
             Upload your first recording
           </Link>
-          <Link
-            href="/landing"
-            className="inline-flex items-center gap-2.5 px-5 py-3 rounded-full border border-line text-ink text-base font-medium hover:border-ink transition-colors"
-          >
-            See a sample analysis
-          </Link>
         </div>
       </section>
 

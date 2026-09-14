@@ -53,7 +53,9 @@ export async function GET(req: NextRequest) {
     userId: user.id,
     ip: clientIp(req),
     bucket: 'proxy-image',
-    limit: 120,
+    // Roster photos: every roster render fetches one image per player, so 120/hour
+    // was exhausted by a coach browsing a 9-player team for a few minutes.
+    limit: 1200,
     windowSec: 3600,
   });
   if (!rl.ok) return rateLimitResponse(rl.retryAfterSec);

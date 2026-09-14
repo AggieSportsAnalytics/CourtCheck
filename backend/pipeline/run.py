@@ -12,7 +12,7 @@ from backend.vision.calibration import load_calibration
 from backend.vision.heatmaps import generate_minimap_heatmaps, generate_player_shot_dot_map
 from backend.vision.postprocess import detect_shot_frames
 
-from backend.pipeline.storage import upload_processed_video, upload_heatmap_png, get_supabase, make_streamable_mp4, upload_results_parallel
+from backend.pipeline.storage import upload_processed_video, upload_heatmap_png, get_supabase, make_streamable_mp4, upload_results_parallel, ProcessedVideoUploadError, PROCESSED_VIDEO_UPLOAD_ERROR
 from backend.pipeline.config import PipelineConfig
 from backend.pipeline.rallies import (
     RALLY_GAP_SECONDS,
@@ -2561,6 +2561,8 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
                 local_shot_map_path=local_shot_map_path,
             )
             results_path = upload_results.get("results_path")
+            if not results_path:
+                raise ProcessedVideoUploadError(PROCESSED_VIDEO_UPLOAD_ERROR)
             bounce_heatmap_path = upload_results.get("bounce_heatmap_path")
             player_heatmap_path = upload_results.get("player_heatmap_path")
             player_shot_map_path = upload_results.get("player_shot_map_path")
@@ -2697,7 +2699,7 @@ def run_pipeline(video_path: str, match_id: str, local_mode: bool = False, confi
             logging.exception("Pipeline failed for match %s", match_id)
             supabase.table("matches").update({
                 "status": "failed",
-                "error": "Processing failed. Please try again.",
+                "error": PROCESSED_VIDEO_UPLOAD_ERROR if isinstance(e, ProcessedVideoUploadError) else "Processing failed. Please try again.",
                 "progress": 0
             }).eq("id", match_id).execute()
         raise

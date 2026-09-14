@@ -20,6 +20,8 @@ type Props = {
   onAdd: (note: TimedNote) => void;
   onDelete: (originalIdx: number) => void;
   saving: boolean;
+  error: string | null;
+  onRetry: () => void;
 };
 
 /**
@@ -34,6 +36,8 @@ export default function NotesPanel({
   onAdd,
   onDelete,
   saving,
+  error,
+  onRetry,
 }: Props) {
   const [draft, setDraft] = useState('');
   const [nowSec, setNowSec] = useState(0);
@@ -91,11 +95,15 @@ export default function NotesPanel({
     <div className="cc-notes-card bg-paper border border-line rounded-[14px] overflow-hidden flex flex-col min-w-0">
       <div className="flex-1 min-h-0 flex flex-col gap-4" style={{ padding: '22px 22px 24px' }}>
         <div className="flex justify-between items-center">
-          <h3 className="font-display font-medium text-[1.15rem] leading-tight tracking-tight">
+          <h2 className="font-display font-medium text-[1.15rem] leading-tight tracking-tight">
             Timed notes
-          </h3>
+          </h2>
           <span className="font-mono text-[0.82rem] uppercase tracking-[0.12em] text-ink-mute">
-            {saving ? 'Saving' : 'Saved'} ·{' '}
+            {saving ? 'Saving' : error ? (
+              <span className="text-clay" role="alert">
+                Couldn't save. <button type="button" onClick={onRetry} className="underline cursor-pointer">Retry</button>
+              </span>
+            ) : 'Saved'} ·{' '}
             <span
               className="font-display font-medium text-[0.95rem] text-ink mx-0.5"
               style={{ letterSpacing: 0, textTransform: 'none', fontFeatureSettings: '"tnum"' }}
