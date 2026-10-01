@@ -40,7 +40,7 @@ export function DeletePlayerDialog({
     setError(null)
     try {
       const res = await fetch(`/api/players/${player.id}`, { method: 'DELETE' })
-      if (!res.ok && res.status !== 204) {
+      if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         const message = typeof body?.error === 'string' ? body.error.trim() : ''
         throw new Error(

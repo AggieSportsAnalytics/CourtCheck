@@ -109,13 +109,8 @@ export function PlayerFormDialog({ mode, open, onOpenChange, initial, onSaved }:
 
       if (mode === 'add') {
         const body = await res.json().catch(() => ({}))
-        const created = (body?.player ?? null) as RosterPlayer | null
-        onSaved(
-          created ?? {
-            id: crypto.randomUUID(),
-            ...payload,
-          },
-        )
+        const created = body?.player as RosterPlayer | undefined
+        if (created) onSaved(created)
         toast.success(`${trimmedName} added to your roster.`)
       } else {
         // PATCH returns only the changed fields; merge onto the known player.
