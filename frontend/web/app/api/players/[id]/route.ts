@@ -189,3 +189,113 @@ export async function PATCH(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Cascading delete destroys recordings + their storage objects; cap per-user.
+    const rl = await checkRateLimit({
+      userId: user.id,
+      ip: clientIp(req),
+      bucket: 'players-delete',
+      limit: 10,
+      windowSec: 3600,
+    });
+    if (!rl.ok) return rateLimitResponse(rl.retryAfterSec);
+
+    const { id } = await params;
+
+    // Ownership check: only the row's owner can delete. Template rows (user_id null)
+    // are not deletable. 404 (not 403) for non-owned rows to avoid leaking
+    // existence of other users' players.
+    const { data: ownerRow, error: ownerErr } = await fetchPlayerForOwnershipCheck(id);
+    if (ownerErr || !ownerRow) {
+      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+    }
+    if (ownerRow.user_id !== user.id) {
+      return NextResponse.json({ error: 'Player not found' }, { status: 404 });
+    }
+
+    // Cascade: the caller chose to delete this player's recordings too. The
+    // matches.player_id FK has no ON DELETE rule, so the matches rows must go
+    // before the player row or the final delete fails with a FK violation.
+    // Fetch storage paths first so we can clean up the buckets afterward.
+    const { data: matches, error: matchErr } = await supabaseAdmin
+      .from('matches')
+      .select(
+        'id, input_path, results_path, bounce_heatmap_path, player_heatmap_path, player_shot_map_path',
+      )
+      .eq('player_id', id)
+      .eq('user_id', user.id);
+
+    if (matchErr) {
+      console.error('Player delete: match lookup error', matchErr);
+      return NextResponse.json({ error: 'Failed to delete player' }, { status: 500 });
+    }
+
+    if (matches && matches.length > 0) {
+      const { error: matchDeleteErr } = await supabaseAdmin
+        .from('matches')
+        .delete()
+        .eq('player_id', id)
+        .eq('user_id', user.id);
+
+      if (matchDeleteErr) {
+        console.error('Player delete: match delete error', matchDeleteErr);
+        return NextResponse.json({ error: 'Failed to delete recordings' }, { status: 500 });
+      }
+
+      // Rows are gone — clean up storage. Non-blocking: log but don't fail the
+      // request, since the DB (source of truth) is already consistent.
+      const rawPaths = matches
+        .map((m) => m.input_path)
+        .filter(Boolean) as string[];
+      if (rawPaths.length > 0) {
+        const { error: rawError } = await supabaseAdmin.storage
+          .from('raw-videos')
+          .remove(rawPaths);
+        if (rawError) console.error('Storage cleanup error (raw-videos):', rawError);
+      }
+
+      const resultsPaths = matches
+        .flatMap((m) => [
+          m.results_path,
+          m.bounce_heatmap_path,
+          m.player_heatmap_path,
+          m.player_shot_map_path,
+        ])
+        .filter(Boolean) as string[];
+      if (resultsPaths.length > 0) {
+        const { error: resultsError } = await supabaseAdmin.storage
+          .from('results')
+          .remove(resultsPaths);
+        if (resultsError) console.error('Storage cleanup error (results):', resultsError);
+      }
+    }
+
+    // Re-assert ownership in the delete itself (defense in depth against a race
+    // between the ownership fetch above and this write).
+    const { error: delErr } = await supabaseAdmin
+      .from('players')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (delErr) {
+      console.error('Player delete error', delErr);
+      return NextResponse.json({ error: 'Failed to delete player' }, { status: 500 });
+    }
+
+    return new NextResponse(null, { status: 204 });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
