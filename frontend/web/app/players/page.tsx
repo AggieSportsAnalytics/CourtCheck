@@ -4,10 +4,13 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 
 import { PlayerCard, type PlayerCardData } from '@/components/players/PlayerCard'
+import { PlayerActionsMenu } from '@/components/players/PlayerActionsMenu'
+import { PlayerFormDialog, type RosterPlayer } from '@/components/players/PlayerFormDialog'
+import { DeletePlayerDialog } from '@/components/players/DeletePlayerDialog'
 import { Eyebrow } from '@/components/ui/eyebrow'
 import { Display, Num } from '@/components/ui/display'
 import { Button } from '@/components/ui/button'
-import { usePlayersData, useRecordingsData } from '@/lib/hooks/useApiData'
+import { usePlayersData, useRecordingsData, type PlayerRow } from '@/lib/hooks/useApiData'
 
 interface ApiPlayer {
   id: string
@@ -133,8 +136,8 @@ function buildCards(
 export default function PlayersPage() {
   // SWR-cached roster + recordings — shared with the dashboard and detail pages,
   // so navigating between them serves cached data instantly.
-  const { data: pData, error: pErr, isLoading: pLoading } = usePlayersData()
-  const { data: rData, error: rErr, isLoading: rLoading } = useRecordingsData()
+  const { data: pData, error: pErr, isLoading: pLoading, mutate: mutatePlayers } = usePlayersData()
+  const { data: rData, error: rErr, isLoading: rLoading, mutate: mutateRecordings } = useRecordingsData()
   const players = useMemo(
     () => (pData?.players ?? []) as unknown as ApiPlayer[],
     [pData],
@@ -153,6 +156,76 @@ export default function PlayersPage() {
   const [query, setQuery] = useState('')
   const [yearFilter, setYearFilter] = useState<string>('all')
   const [sort, setSort] = useState<SortKey>('name')
+
+  // Roster management (add / edit / delete) dialog state.
+  const [formOpen, setFormOpen] = useState(false)
+  const [formMode, setFormMode] = useState<'add' | 'edit'>('add')
+  const [editingPlayer, setEditingPlayer] = useState<RosterPlayer | null>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deletingPlayer, setDeletingPlayer] = useState<RosterPlayer | null>(null)
+  const [deletingCount, setDeletingCount] = useState(0)
+
+  const openAdd = () => {
+    setEditingPlayer(null)
+    setFormMode('add')
+    setFormOpen(true)
+  }
+  const openEdit = (c: PlayerCardData) => {
+    setEditingPlayer({
+      id: c.id,
+      name: c.name,
+      year: c.year,
+      position: c.position,
+      photo_url: c.photo_url,
+    })
+    setFormMode('edit')
+    setFormOpen(true)
+  }
+  const openDelete = (c: PlayerCardData) => {
+    setDeletingPlayer({
+      id: c.id,
+      name: c.name,
+      year: c.year,
+      position: c.position,
+      photo_url: c.photo_url,
+    })
+    setDeletingCount(c.matchCount)
+    setDeleteOpen(true)
+  }
+
+  // Optimistically patch the SWR roster cache so the grid updates instantly.
+  const handleSaved = (player: RosterPlayer, mode: 'add' | 'edit') => {
+    const row: PlayerRow = {
+      id: player.id,
+      name: player.name,
+      year: player.year,
+      position: player.position,
+      photo_url: player.photo_url,
+      handedness: player.handedness ?? null,
+      created_at: player.created_at ?? new Date().toISOString(),
+    }
+    mutatePlayers(
+      (curr) => {
+        const list = curr?.players ?? []
+        if (mode === 'add') {
+          if (list.some((p) => p.id === row.id)) return curr
+          return { players: [...list, row] }
+        }
+        return { players: list.map((p) => (p.id === row.id ? { ...p, ...row } : p)) }
+      },
+      { revalidate: false },
+    )
+  }
+
+  const handleDeleted = (playerId: string) => {
+    mutatePlayers(
+      (curr) => (curr ? { players: curr.players.filter((p) => p.id !== playerId) } : curr),
+      { revalidate: false },
+    )
+    // The player's recordings were deleted server-side; refresh that cache so
+    // per-player stats and the recordings list reflect the removal.
+    mutateRecordings()
+  }
 
   const cards = useMemo(
     () => buildCards(players, recordings),
@@ -207,6 +280,15 @@ export default function PlayersPage() {
                 </svg>
                 Recordings
               </Link>
+            </Button>
+            <Button variant="primary" size="sm" onClick={openAdd}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <line x1="19" y1="8" x2="19" y2="14" />
+                <line x1="22" y1="11" x2="16" y2="11" />
+              </svg>
+              Add player
             </Button>
             <Button variant="ink" size="sm" asChild>
               <Link href="/upload">
@@ -294,14 +376,42 @@ export default function PlayersPage() {
       {loading ? (
         <SkeletonGrid />
       ) : filtered.length === 0 ? (
-        <EmptyState hasPlayers={players.length > 0} hasFilter={yearFilter !== 'all' || query.trim() !== ''} />
+        <EmptyState
+          hasPlayers={players.length > 0}
+          hasFilter={yearFilter !== 'all' || query.trim() !== ''}
+          onAdd={openAdd}
+        />
       ) : (
         <div className="mb-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((c) => (
-            <PlayerCard key={c.id} player={c} />
+            <div key={c.id} className="relative">
+              <PlayerCard player={c} />
+              <div className="absolute right-5 top-5 z-10">
+                <PlayerActionsMenu
+                  playerName={c.name}
+                  onEdit={() => openEdit(c)}
+                  onDelete={() => openDelete(c)}
+                />
+              </div>
+            </div>
           ))}
         </div>
       )}
+
+      <PlayerFormDialog
+        mode={formMode}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        initial={formMode === 'edit' ? editingPlayer : null}
+        onSaved={(p) => handleSaved(p, formMode)}
+      />
+      <DeletePlayerDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        player={deletingPlayer}
+        recordingCount={deletingCount}
+        onDeleted={handleDeleted}
+      />
     </div>
   )
 }
@@ -333,7 +443,15 @@ function SkeletonGrid() {
   )
 }
 
-function EmptyState({ hasPlayers, hasFilter }: { hasPlayers: boolean; hasFilter: boolean }) {
+function EmptyState({
+  hasPlayers,
+  hasFilter,
+  onAdd,
+}: {
+  hasPlayers: boolean
+  hasFilter: boolean
+  onAdd: () => void
+}) {
   if (hasPlayers && hasFilter) {
     return (
       <div className="cc-card mb-9 flex flex-col items-center gap-3 px-6 py-16 text-center">
@@ -349,11 +467,11 @@ function EmptyState({ hasPlayers, hasFilter }: { hasPlayers: boolean; hasFilter:
         Add players, then assign recordings to them.
       </p>
       <div className="mt-2 flex flex-wrap justify-center gap-2.5">
-        <Button variant="ink" size="sm" asChild>
-          <Link href="/upload">Upload a recording</Link>
+        <Button variant="primary" size="sm" onClick={onAdd}>
+          Add player
         </Button>
         <Button variant="ghost" size="sm" asChild>
-          <Link href="/recordings">Browse recordings</Link>
+          <Link href="/upload">Upload a recording</Link>
         </Button>
       </div>
     </div>
